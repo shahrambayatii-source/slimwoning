@@ -450,298 +450,296 @@ export default function VerkopenPage() {
       </section>
 
       <section className="px-6 pb-14 md:px-10 lg:px-16">
-        <div className="mx-auto max-w-[1200px]">
-          <div className="mb-6">
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-blue-700">
-              Gratis indicatie
-            </p>
-            <h2 className="mt-2 text-3xl font-black tracking-[-0.035em] text-[#071B4D]">
-              Woninggegevens
-            </h2>
-          </div>
+        <div className="mb-6">
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-blue-700">
+            Gratis indicatie
+          </p>
+          <h2 className="mt-2 text-3xl font-black tracking-[-0.035em] text-[#071B4D]">
+            Woninggegevens
+          </h2>
+        </div>
 
-          {!showInsights ? (
-            <form className="grid grid-cols-1 gap-4">
-              {/* Basic Required Fields */}
-              <div className="grid grid-cols-1 gap-4">
-                {/* Adres */}
-                <label className="block">
-                  <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
-                    Adres
-                  </span>
-                  <input
-                    ref={addressInputRef}
-                    placeholder="Straat, nummer, gemeente"
-                    value={address}
-                    onChange={(event) => {
-                      setAddress(event.target.value)
-                      setCity('')
-                      setSelectedPlaceId(null)
-                      setCoordinates(null)
-                      setFormErrors((current) => ({ ...current, address: '' }))
-                      setShowInsights(false)
-                    }}
-                    className="h-13 w-full rounded-2xl border border-blue-100 bg-blue-50/30 px-4 py-4 text-sm font-bold text-[#071B4D] outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-blue-50/50"
-                  />
-                  {formErrors.address && (
-                    <p className="mt-2 text-xs font-semibold text-red-600">{formErrors.address}</p>
-                  )}
-                </label>
-
-                {/* Type woning */}
-                <label className="block">
-                  <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
-                    Type woning
-                  </span>
-                  <div className="relative">
-                    <select
-                      value={propertyType}
-                      onChange={(e) => {
-                        setPropertyType(e.target.value)
-                        setFormErrors((current) => ({ ...current, propertyType: '' }))
-                        setShowInsights(false)
-                      }}
-                      className="h-13 w-full appearance-none rounded-2xl border border-blue-100 bg-blue-50/30 px-4 py-4 pr-12 text-sm font-bold text-[#071B4D] outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-blue-50/50"
-                    >
-                      <option value="">Selecteer type woning</option>
-                      {woningTypes.map((type) => (
-                        <option key={type} value={type}>
-                          {type}
-                        </option>
-                      ))}
-                    </select>
-                    <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-slate-400">
-                      ▾
-                    </span>
-                  </div>
-                  {formErrors.propertyType && (
-                    <p className="mt-2 text-xs font-semibold text-red-600">{formErrors.propertyType}</p>
-                  )}
-                </label>
-
-                {/* Woonoppervlakte */}
-                <label className="block">
-                  <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
-                    Woonoppervlakte
-                  </span>
-                  <input
-                    placeholder="Bijv. 145 m²"
-                    value={livingArea}
-                    onChange={(event) => {
-                      setLivingArea(event.target.value)
-                      setFormErrors((current) => ({ ...current, livingArea: '' }))
-                      setShowInsights(false)
-                    }}
-                    className="h-13 w-full rounded-2xl border border-blue-100 bg-blue-50/30 px-4 py-4 text-sm font-bold text-[#071B4D] outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-blue-50/50"
-                  />
-                  {formErrors.livingArea && (
-                    <p className="mt-2 text-xs font-semibold text-red-600">{formErrors.livingArea}</p>
-                  )}
-                </label>
-
-                {/* Slaapkamers */}
-                <label className="block">
-                  <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
-                    Slaapkamers
-                  </span>
-                  <input
-                    placeholder="Bijv. 3"
-                    value={bedrooms}
-                    onChange={(event) => {
-                      setBedrooms(event.target.value)
-                      setShowInsights(false)
-                    }}
-                    className="h-13 w-full rounded-2xl border border-blue-100 bg-blue-50/30 px-4 py-4 text-sm font-bold text-[#071B4D] outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-blue-50/50"
-                  />
-                </label>
-
-                {/* EPC-label */}
-                <label className="block">
-                  <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
-                    EPC-label
-                  </span>
-                  <input
-                    placeholder="A, B, C..."
-                    value={epcLabel}
-                    onChange={(event) => {
-                      setEpcLabel(event.target.value)
-                      setShowInsights(false)
-                    }}
-                    className="h-13 w-full rounded-2xl border border-blue-100 bg-blue-50/30 px-4 py-4 text-sm font-bold text-[#071B4D] outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-blue-50/50"
-                  />
-                </label>
-
-                {/* Staat van de woning - REQUIRED */}
-                <label className="block">
-                  <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
-                    Staat van de woning
-                  </span>
-                  <div className="relative">
-                    <select
-                      value={woningStaat}
-                      onChange={(e) => {
-                        setWoningStaat(e.target.value)
-                        setFormErrors((current) => ({ ...current, woningStaat: '' }))
-                        setShowInsights(false)
-                      }}
-                      className="h-13 w-full appearance-none rounded-2xl border border-blue-100 bg-blue-50/30 px-4 py-4 pr-12 text-sm font-bold text-[#071B4D] outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-blue-50/50"
-                    >
-                      <option value="">Selecteer staat van de woning</option>
-                      <option value="Instapklaar">Instapklaar</option>
-                      <option value="Goed onderhouden">Goed onderhouden</option>
-                      <option value="Te renoveren">Te renoveren</option>
-                      <option value="Grondige renovatie nodig">Grondige renovatie nodig</option>
-                    </select>
-                    <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-slate-400">
-                      ▾
-                    </span>
-                  </div>
-                  {formErrors.woningStaat && (
-                    <p className="mt-2 text-xs font-semibold text-red-600">{formErrors.woningStaat}</p>
-                  )}
-                </label>
-
-                {/* Richtprijs / gewenste vraagprijs - OPTIONAL */}
-                <label className="block">
-                  <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
-                    Richtprijs / gewenste vraagprijs
-                  </span>
-                  <input
-                    placeholder="Optioneel, bijv. € 425.000"
-                    value={expectedPrice}
-                    onChange={(event) => {
-                      setExpectedPrice(event.target.value)
-                      setShowInsights(false)
-                    }}
-                    className="h-13 w-full rounded-2xl border border-blue-100 bg-blue-50/30 px-4 py-4 text-sm font-bold text-[#071B4D] outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-blue-50/50"
-                  />
-                </label>
-              </div>
-
-              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-                <button
-                  type="button"
-                  onClick={handleSubmitForm}
-                  className="flex-1 rounded-2xl bg-[#071B4D] px-5 py-4 text-sm font-black text-white shadow-lg shadow-blue-900/15 transition hover:-translate-y-0.5 hover:bg-[#0B2A6B]"
-                >
-                  Bereken slimme inschatting
-                </button>
-                <Link
-                  href="/verkopen/schatting"
-                  className="flex-1 rounded-2xl border border-slate-200 bg-white px-5 py-4 text-center text-sm font-black text-[#071B4D] shadow-lg shadow-blue-900/10 transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-lg"
-                >
-                  Uitgebreide schatting
-                </Link>
-              </div>
-            </form>
-          ) : (
+        {!showInsights ? (
+          <form className="grid grid-cols-1 gap-4">
+            {/* Basic Required Fields */}
             <div className="grid grid-cols-1 gap-4">
-              <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5 text-sm text-slate-700">
-                <h3 className="text-lg font-black text-[#071B4D]">Indicatieve woninginzichten</h3>
+              {/* Adres */}
+              <label className="block">
+                <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+                  Adres
+                </span>
+                <input
+                  ref={addressInputRef}
+                  placeholder="Straat, nummer, gemeente"
+                  value={address}
+                  onChange={(event) => {
+                    setAddress(event.target.value)
+                    setCity('')
+                    setSelectedPlaceId(null)
+                    setCoordinates(null)
+                    setFormErrors((current) => ({ ...current, address: '' }))
+                    setShowInsights(false)
+                  }}
+                  className="h-13 w-full rounded-2xl border border-blue-100 bg-blue-50/30 px-4 py-4 text-sm font-bold text-[#071B4D] outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-blue-50/50"
+                />
+                {formErrors.address && (
+                  <p className="mt-2 text-xs font-semibold text-red-600">{formErrors.address}</p>
+                )}
+              </label>
 
-                <div className="mt-4 space-y-4">
-                  <div>
-                    <p className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-500">
-                      Ingevulde gegevens
-                    </p>
-                    <ul className="mt-3 space-y-2 text-sm text-slate-700">
-                      <li>Adres: {address || '-'}</li>
-                      <li>Type woning: {propertyType || '-'}</li>
-                      <li>Woonoppervlakte: {livingArea ? `${livingArea} m²` : '-'}</li>
-                      <li>Slaapkamers: {bedrooms || '-'}</li>
-                      <li>Badkamers: {bathrooms || '-'}</li>
-                      <li>EPC-label: {epcLabel || '-'}</li>
-                      <li>Staat van de woning: {woningStaat || '-'}</li>
-                      <li>Richtprijs / gewenste vraagprijs: {expectedPrice ? expectedPrice : '-'} </li>
-                      {buildYear && <li>Bouwjaar: {buildYear}</li>}
-                      {landArea && <li>Perceeloppervlakte: {landArea}</li>}
-                      {buitenruimte && <li>Buitenruimte: {buitenruimte}</li>}
-                      {parking && <li>Parking: {parking}</li>}
-                      {lift && <li>Lift aanwezig: {lift}</li>}
-                      {renovationYear && <li>Renovatiejaar: {renovationYear}</li>}
-                      {heatingType && <li>Verwarmingstype: {heatingType}</li>}
-                      {solarPanels && <li>Zonnepanelen: {solarPanels}</li>}
-                      {doubleGlass && <li>Dubbel glas: {doubleGlass}</li>}
-                    </ul>
-                  </div>
-
-                  <div>
-                    <p className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-500">
-                      Prijs per m²
-                    </p>
-                    {!expectedPrice.trim() ? (
-                      <p className="mt-3 text-sm text-slate-700">
-                        Geen richtprijs ingevuld. We tonen alleen inzichten op basis van woninggegevens en beschikbare marktinformatie.
-                      </p>
-                    ) : hasValidPricePerM2 ? (
-                      <p className="mt-3 text-sm text-slate-700">
-                        Prijs per m²: ± {getFormattedNumber(userPricePerM2)}/m²
-                      </p>
-                    ) : (
-                      <p className="mt-3 text-sm text-slate-700">
-                        Prijs per m² kan niet worden berekend zonder een geldige vraagprijs en woonoppervlakte.
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <p className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-500">
-                      Vergelijkingsbasis
-                    </p>
-                    <div className="mt-3 text-sm text-slate-700">
-                      {comparisonLoading ? (
-                        <p>Beschikbare woningdata wordt geladen...</p>
-                      ) : hasEnoughComparables ? (
-                        <>
-                          <p>
-                            Deze vergelijking is gemaakt met beschikbare woningdata die overeenkomt met je regio, type woning en oppervlakte.
-                          </p>
-                          <div className="mt-4 space-y-2 rounded-2xl bg-white p-4 text-slate-700 shadow-sm">
-                            <p>
-                              Aantal vergelijkbare panden: <span className="font-semibold">{comparableCount}</span>
-                            </p>
-                            <p>
-                              Gemiddelde prijs per m²: <span className="font-semibold">{getFormattedNumber(comparableAvgPricePerM2)}/m²</span>
-                            </p>
-                            <p>
-                              Ingevoerde prijs per m²: <span className="font-semibold">{hasValidPricePerM2 ? `${getFormattedNumber(userPricePerM2)}/m²` : '-'}</span>
-                            </p>
-                            <p>
-                              Verschil: <span className="font-semibold">{Number.isFinite(comparableDifferencePercent) ? getRoundedPercent(comparableDifferencePercent) : '-'}</span>
-                            </p>
-                          </div>
-                        </>
-                      ) : (
-                        <p>{comparisonMessage}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <p className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-500">
-                      Aandachtspunten
-                    </p>
-                    <ul className="mt-3 space-y-2 text-sm text-slate-700">
-                      <li>Deze inzichten zijn indicatief en gebaseerd op de ingevulde gegevens en beschikbare woningdata.</li>
-                      <li>Dit is geen officiële waardebepaling of vastgoedadvies.</li>
-                      {!hasValidPricePerM2 ? (
-                        <li>Controleer of vraagprijs en woonoppervlakte correct zijn ingevuld voor een betere berekening.</li>
-                      ) : null}
-                    </ul>
-                  </div>
+              {/* Type woning */}
+              <label className="block">
+                <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+                  Type woning
+                </span>
+                <div className="relative">
+                  <select
+                    value={propertyType}
+                    onChange={(e) => {
+                      setPropertyType(e.target.value)
+                      setFormErrors((current) => ({ ...current, propertyType: '' }))
+                      setShowInsights(false)
+                    }}
+                    className="h-13 w-full appearance-none rounded-2xl border border-blue-100 bg-blue-50/30 px-4 py-4 pr-12 text-sm font-bold text-[#071B4D] outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-blue-50/50"
+                  >
+                    <option value="">Selecteer type woning</option>
+                    {woningTypes.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-slate-400">
+                    ▾
+                  </span>
                 </div>
-              </div>
+                {formErrors.propertyType && (
+                  <p className="mt-2 text-xs font-semibold text-red-600">{formErrors.propertyType}</p>
+                )}
+              </label>
 
+              {/* Woonoppervlakte */}
+              <label className="block">
+                <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+                  Woonoppervlakte
+                </span>
+                <input
+                  placeholder="Bijv. 145 m²"
+                  value={livingArea}
+                  onChange={(event) => {
+                    setLivingArea(event.target.value)
+                    setFormErrors((current) => ({ ...current, livingArea: '' }))
+                    setShowInsights(false)
+                  }}
+                  className="h-13 w-full rounded-2xl border border-blue-100 bg-blue-50/30 px-4 py-4 text-sm font-bold text-[#071B4D] outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-blue-50/50"
+                />
+                {formErrors.livingArea && (
+                  <p className="mt-2 text-xs font-semibold text-red-600">{formErrors.livingArea}</p>
+                )}
+              </label>
+
+              {/* Slaapkamers */}
+              <label className="block">
+                <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+                  Slaapkamers
+                </span>
+                <input
+                  placeholder="Bijv. 3"
+                  value={bedrooms}
+                  onChange={(event) => {
+                    setBedrooms(event.target.value)
+                    setShowInsights(false)
+                  }}
+                  className="h-13 w-full rounded-2xl border border-blue-100 bg-blue-50/30 px-4 py-4 text-sm font-bold text-[#071B4D] outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-blue-50/50"
+                />
+              </label>
+
+              {/* EPC-label */}
+              <label className="block">
+                <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+                  EPC-label
+                </span>
+                <input
+                  placeholder="A, B, C..."
+                  value={epcLabel}
+                  onChange={(event) => {
+                    setEpcLabel(event.target.value)
+                    setShowInsights(false)
+                  }}
+                  className="h-13 w-full rounded-2xl border border-blue-100 bg-blue-50/30 px-4 py-4 text-sm font-bold text-[#071B4D] outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-blue-50/50"
+                />
+              </label>
+
+              {/* Staat van de woning - REQUIRED */}
+              <label className="block">
+                <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+                  Staat van de woning
+                </span>
+                <div className="relative">
+                  <select
+                    value={woningStaat}
+                    onChange={(e) => {
+                      setWoningStaat(e.target.value)
+                      setFormErrors((current) => ({ ...current, woningStaat: '' }))
+                      setShowInsights(false)
+                    }}
+                    className="h-13 w-full appearance-none rounded-2xl border border-blue-100 bg-blue-50/30 px-4 py-4 pr-12 text-sm font-bold text-[#071B4D] outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-blue-50/50"
+                  >
+                    <option value="">Selecteer staat van de woning</option>
+                    <option value="Instapklaar">Instapklaar</option>
+                    <option value="Goed onderhouden">Goed onderhouden</option>
+                    <option value="Te renoveren">Te renoveren</option>
+                    <option value="Grondige renovatie nodig">Grondige renovatie nodig</option>
+                  </select>
+                  <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-slate-400">
+                    ▾
+                  </span>
+                </div>
+                {formErrors.woningStaat && (
+                  <p className="mt-2 text-xs font-semibold text-red-600">{formErrors.woningStaat}</p>
+                )}
+              </label>
+
+              {/* Richtprijs / gewenste vraagprijs - OPTIONAL */}
+              <label className="block">
+                <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+                  Richtprijs / gewenste vraagprijs
+                </span>
+                <input
+                  placeholder="Optioneel, bijv. € 425.000"
+                  value={expectedPrice}
+                  onChange={(event) => {
+                    setExpectedPrice(event.target.value)
+                    setShowInsights(false)
+                  }}
+                  className="h-13 w-full rounded-2xl border border-blue-100 bg-blue-50/30 px-4 py-4 text-sm font-bold text-[#071B4D] outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-blue-50/50"
+                />
+              </label>
+            </div>
+
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               <button
                 type="button"
-                onClick={() => setShowInsights(false)}
-                className="mt-2 inline-flex h-14 items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 text-sm font-black text-[#071B4D] shadow-lg shadow-blue-900/10 transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-lg"
+                onClick={handleSubmitForm}
+                className="flex-1 rounded-2xl bg-[#071B4D] px-5 py-4 text-sm font-black text-white shadow-lg shadow-blue-900/15 transition hover:-translate-y-0.5 hover:bg-[#0B2A6B]"
               >
-                Sluiten
+                Bereken slimme inschatting
               </button>
+              <Link
+                href="/verkopen/schatting"
+                className="flex-1 rounded-2xl border border-slate-200 bg-white px-5 py-4 text-center text-sm font-black text-[#071B4D] shadow-lg shadow-blue-900/10 transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-lg"
+              >
+                Uitgebreide schatting
+              </Link>
             </div>
-          )}
-        </div>
+          </form>
+        ) : (
+          <div className="grid grid-cols-1 gap-4">
+            <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5 text-sm text-slate-700">
+              <h3 className="text-lg font-black text-[#071B4D]">Indicatieve woninginzichten</h3>
+
+              <div className="mt-4 space-y-4">
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-500">
+                    Ingevulde gegevens
+                  </p>
+                  <ul className="mt-3 space-y-2 text-sm text-slate-700">
+                    <li>Adres: {address || '-'}</li>
+                    <li>Type woning: {propertyType || '-'}</li>
+                    <li>Woonoppervlakte: {livingArea ? `${livingArea} m²` : '-'}</li>
+                    <li>Slaapkamers: {bedrooms || '-'}</li>
+                    <li>Badkamers: {bathrooms || '-'}</li>
+                    <li>EPC-label: {epcLabel || '-'}</li>
+                    <li>Staat van de woning: {woningStaat || '-'}</li>
+                    <li>Richtprijs / gewenste vraagprijs: {expectedPrice ? expectedPrice : '-'} </li>
+                    {buildYear && <li>Bouwjaar: {buildYear}</li>}
+                    {landArea && <li>Perceeloppervlakte: {landArea}</li>}
+                    {buitenruimte && <li>Buitenruimte: {buitenruimte}</li>}
+                    {parking && <li>Parking: {parking}</li>}
+                    {lift && <li>Lift aanwezig: {lift}</li>}
+                    {renovationYear && <li>Renovatiejaar: {renovationYear}</li>}
+                    {heatingType && <li>Verwarmingstype: {heatingType}</li>}
+                    {solarPanels && <li>Zonnepanelen: {solarPanels}</li>}
+                    {doubleGlass && <li>Dubbel glas: {doubleGlass}</li>}
+                  </ul>
+                </div>
+
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-500">
+                    Prijs per m²
+                  </p>
+                  {!expectedPrice.trim() ? (
+                    <p className="mt-3 text-sm text-slate-700">
+                      Geen richtprijs ingevuld. We tonen alleen inzichten op basis van woninggegevens en beschikbare marktinformatie.
+                    </p>
+                  ) : hasValidPricePerM2 ? (
+                    <p className="mt-3 text-sm text-slate-700">
+                      Prijs per m²: ± {getFormattedNumber(userPricePerM2)}/m²
+                    </p>
+                  ) : (
+                    <p className="mt-3 text-sm text-slate-700">
+                      Prijs per m² kan niet worden berekend zonder een geldige vraagprijs en woonoppervlakte.
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-500">
+                    Vergelijkingsbasis
+                  </p>
+                  <div className="mt-3 text-sm text-slate-700">
+                    {comparisonLoading ? (
+                      <p>Beschikbare woningdata wordt geladen...</p>
+                    ) : hasEnoughComparables ? (
+                      <>
+                        <p>
+                          Deze vergelijking is gemaakt met beschikbare woningdata die overeenkomt met je regio, type woning en oppervlakte.
+                        </p>
+                        <div className="mt-4 space-y-2 rounded-2xl bg-white p-4 text-slate-700 shadow-sm">
+                          <p>
+                            Aantal vergelijkbare panden: <span className="font-semibold">{comparableCount}</span>
+                          </p>
+                          <p>
+                            Gemiddelde prijs per m²: <span className="font-semibold">{getFormattedNumber(comparableAvgPricePerM2)}/m²</span>
+                          </p>
+                          <p>
+                            Ingevoerde prijs per m²: <span className="font-semibold">{hasValidPricePerM2 ? `${getFormattedNumber(userPricePerM2)}/m²` : '-'}</span>
+                          </p>
+                          <p>
+                            Verschil: <span className="font-semibold">{Number.isFinite(comparableDifferencePercent) ? getRoundedPercent(comparableDifferencePercent) : '-'}</span>
+                          </p>
+                        </div>
+                      </>
+                    ) : (
+                      <p>{comparisonMessage}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-500">
+                    Aandachtspunten
+                  </p>
+                  <ul className="mt-3 space-y-2 text-sm text-slate-700">
+                    <li>Deze inzichten zijn indicatief en gebaseerd op de ingevulde gegevens en beschikbare woningdata.</li>
+                    <li>Dit is geen officiële waardebepaling of vastgoedadvies.</li>
+                    {!hasValidPricePerM2 ? (
+                      <li>Controleer of vraagprijs en woonoppervlakte correct zijn ingevuld voor een betere berekening.</li>
+                    ) : null}
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowInsights(false)}
+              className="mt-2 inline-flex h-14 items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 text-sm font-black text-[#071B4D] shadow-lg shadow-blue-900/10 transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-lg"
+            >
+              Sluiten
+            </button>
+          </div>
+        )}
       </section>
 
       <section className="px-6 pb-14 md:px-10 lg:px-16">
