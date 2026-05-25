@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { getWoningkenmerken } from '@/lib/woningkenmerken'
 
 export default function MakelaarDashboardPage() {
   return (
@@ -504,6 +505,19 @@ function MakelaarDashboardContent() {
                     />
                     <InfoCard label="Regio" value={lead.city || 'Gent'} />
                   </div>
+
+                  {getWoningkenmerken(lead).length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {getWoningkenmerken(lead).slice(0, 4).map((kenmerk) => (
+                        <span
+                          key={kenmerk}
+                          className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-black text-blue-700"
+                        >
+                          {kenmerk}
+                        </span>
+                      ))}
+                    </div>
+                  )}
 
                   <div className="mt-4 rounded-xl border border-[#DCE7F7] bg-[#F8FBFF] p-3">
                     <p className="text-sm font-black">

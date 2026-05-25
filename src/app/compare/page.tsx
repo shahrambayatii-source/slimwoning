@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import jsPDF from 'jspdf'
 import { supabase } from '@/lib/supabase'
+import { getWoningkenmerken } from '@/lib/woningkenmerken'
 
 export default function ComparePage() {
   return (
@@ -199,10 +200,25 @@ function CompareContent() {
     return Math.round(price / surface)
   }
 
-  function epcScore(property: any) {
-    if (notApplicableForType(property) && !property.epc) return 0
+  function parseBooleanData(value: any) {
+    if (value === null || value === undefined || value === '') return null
 
-    const epc = String(property.epc || '').toUpperCase()
+    const normalized = String(value).toLowerCase().trim()
+
+    if (['true', 'ja', 'yes', '1'].includes(normalized)) return true
+    if (['false', 'nee', 'no', '0'].includes(normalized)) return false
+
+    return null
+  }
+
+  function firstKnownPropertyValue(...values: any[]) {
+    return values.find((value) => value !== null && value !== undefined && value !== '')
+  }
+
+  function epcScore(property: any) {
+    if (notApplicableForType(property) && !property.epc && !property.epc_code) return 0
+
+    const epc = String(property.epc || property.epc_code || '').toUpperCase()
 
     if (epc.includes('A+')) return 100
     if (epc.includes('A')) return 92
@@ -212,7 +228,45 @@ function CompareContent() {
     if (epc.includes('E')) return 32
     if (epc.includes('F')) return 18
 
-    return property.dubbel_glas ? 60 : 45
+    return 0
+  }
+
+  function sustainabilityScore(property: any) {
+    if (notApplicableForType(property)) return epcScore(property)
+
+    const kenmerken = getWoningkenmerken(property)
+    let total = epcScore(property) || 35
+
+    if (parseBooleanData(property.dubbel_glas) === true) total += 8
+    if (parseBooleanData(property.zonnepanelen) === true) total += 8
+    if (parseBooleanData(property.thermische_zonnepanelen) === true) total += 5
+    if (parseBooleanData(property.warmtepomp) === true) total += 10
+    if (String(property.verwarmingstype || '').toLowerCase().includes('warmtepomp')) total += 8
+    if (kenmerken.includes('Energiezuinig')) total += 8
+    if (numberValue(property.primair_energieverbruik) > 0) total += 4
+    if (numberValue(property.co2_uitstoot) > 0) total += 3
+    if (numberValue(property.bouwjaar) >= 2010) total += 5
+
+    return Math.max(0, Math.min(100, Math.round(total)))
+  }
+
+  function floodDataText(property: any) {
+    const floodValue = firstKnownPropertyValue(
+      property.overstromingscertificaat,
+      property.overstromingsgevoeligheid,
+      property.overstromingsrisico,
+      property.overstroming_zonetype,
+      property.p_score,
+      property.g_score
+    )
+
+    if (!floodValue) return ''
+
+    const pScore = property.p_score ? `P-score ${property.p_score}` : ''
+    const gScore = property.g_score ? `G-score ${property.g_score}` : ''
+    const scores = [pScore, gScore].filter(Boolean).join(', ')
+
+    return `Overstromingsdata beschikbaar${scores ? ` (${scores})` : ''}; controleer het attest.`
   }
 
   function comfortScore(property: any) {
@@ -248,13 +302,16 @@ function CompareContent() {
 
     let total = 0
 
-    total += property.parking ? 18 : 0
-    total += property.tuin ? 18 : 0
-    total += property.terras ? 14 : 0
-    total += property.lift ? 12 : 0
-    total += property.gemeubeld ? 10 : 0
-    total += property.dubbel_glas ? 18 : 0
+    total += parseBooleanData(property.parking) === true ? 18 : 0
+    total += parseBooleanData(property.tuin) === true ? 18 : 0
+    total += parseBooleanData(property.terras) === true ? 14 : 0
+    total += parseBooleanData(property.lift) === true ? 12 : 0
+    total += parseBooleanData(property.gemeubeld) === true ? 10 : 0
+    total += parseBooleanData(property.dubbel_glas) === true ? 18 : 0
     total += numberValue(property.badkamers) >= 2 ? 10 : 0
+    if (getWoningkenmerken(property).includes('Luxe afwerking')) total += 8
+    if (getWoningkenmerken(property).includes('Instapklaar')) total += 7
+    if (getWoningkenmerken(property).includes('Rustig gelegen')) total += 5
 
     return Math.min(100, total)
   }
@@ -356,14 +413,14 @@ function CompareContent() {
           comfortScore(property) * 0.25 +
           locationScore(property) * 0.25 +
           priceScore * 0.2 +
-          epcScore(property) * 0.05
+          sustainabilityScore(property) * 0.05
       )
     }
 
     return Math.round(
       spaceScore(property) * 0.25 +
         comfortScore(property) * 0.2 +
-        epcScore(property) * 0.2 +
+        sustainabilityScore(property) * 0.2 +
         locationScore(property) * 0.2 +
         priceScore * 0.15
     )
@@ -375,14 +432,19 @@ function CompareContent() {
     const category = propertyCategory(property)
     const residential = isResidential(property)
 
-    if (residential && epcScore(property) >= 80) items.push('Sterke energieprestatie')
+    if (residential && epcScore(property) >= 80) items.push('Gunstig EPC-label volgens beschikbare data')
+    getWoningkenmerken(property).forEach((kenmerk) => items.push(kenmerk))
 
     if (residential) {
-      if (property.parking) items.push('Parking aanwezig')
-      if (property.tuin) items.push('Tuin aanwezig')
-      if (property.terras) items.push('Terras aanwezig')
-      if (property.lift) items.push('Lift aanwezig')
-      if (property.dubbel_glas) items.push('Dubbel glas')
+      if (parseBooleanData(property.parking) === true) items.push('Parking aanwezig')
+      if (parseBooleanData(property.tuin) === true) items.push('Tuin aanwezig')
+      if (parseBooleanData(property.terras) === true) items.push('Terras aanwezig')
+      if (parseBooleanData(property.lift) === true) items.push('Lift aanwezig')
+      if (parseBooleanData(property.dubbel_glas) === true) items.push('Dubbel glas')
+      if (parseBooleanData(property.zonnepanelen) === true) items.push('Zonnepanelen aanwezig volgens beschikbare data')
+      if (parseBooleanData(property.warmtepomp) === true) items.push('Warmtepomp aanwezig volgens beschikbare data')
+      if (numberValue(property.primair_energieverbruik) > 0) items.push('Primair energieverbruik beschikbaar')
+      if (numberValue(property.co2_uitstoot) > 0) items.push('CO₂-uitstoot beschikbaar')
     }
 
     if (category === 'land') {
@@ -397,8 +459,8 @@ function CompareContent() {
       items.push('Ruime bewoonbare oppervlakte')
     }
 
-    if (pricePerM2(property) > 0 && pricePerM2(property) < 3500) {
-      items.push('Interessante prijs per m²')
+    if (pricePerM2(property) > 0) {
+      items.push('Prijs per m² beschikbaar voor vergelijking')
     }
 
     if (analysis?.supermarket) items.push('Supermarkt in de buurt')
@@ -412,8 +474,12 @@ function CompareContent() {
     if (analysis?.shopping) items.push('Winkelcentrum in de buurt')
 
     if (property.address) items.push('Adres beschikbaar voor locatieanalyse')
+    const floodText = floodDataText(property)
+    if (floodText) items.push(floodText)
 
-    return items.length ? items : ['Goede basisgegevens beschikbaar']
+    return items.length
+      ? items
+      : ['Onvoldoende gegevens beschikbaar voor een betrouwbare inschatting.']
   }
 
   function autoMinus(property: any) {
@@ -422,11 +488,22 @@ function CompareContent() {
     const category = propertyCategory(property)
     const residential = isResidential(property)
 
-    if (residential && epcScore(property) < 50) items.push('Energieprestatie kan beter')
-    if (residential && !property.parking) items.push('Geen parking opgegeven')
+    if (residential && property.epc && epcScore(property) < 50) {
+      items.push('EPC-label vraagt extra controle op basis van beschikbare data')
+    }
 
-    if (residential && !property.tuin && property.woning_type === 'Huis') {
-      items.push('Geen tuin opgegeven')
+    if (residential && parseBooleanData(property.parking) === false) items.push('Parking staat als niet aanwezig in de data')
+
+    if (residential && parseBooleanData(property.tuin) === false && property.woning_type === 'Huis') {
+      items.push('Tuin staat als niet aanwezig in de data')
+    }
+
+    if (residential && parseBooleanData(property.dubbel_glas) === false) {
+      items.push('Dubbel glas staat als niet aanwezig in de data')
+    }
+
+    if (residential && parseBooleanData(property.warmtepomp) === false && String(property.verwarmingstype || '').toLowerCase().includes('mazout')) {
+      items.push('Verwarming op mazout vraagt extra controle op basis van beschikbare data')
     }
 
     if (category === 'land') {
@@ -471,7 +548,7 @@ function CompareContent() {
 
     return items.length
       ? items
-      : ['Geen grote minpunten gevonden op basis van de gegevens']
+      : ['Onvoldoende gegevens beschikbaar voor een betrouwbare inschatting.']
   }
   function nearbyPdfSummary(analysis: any) {
     if (!analysis) return 'Nog geen locatiegegevens beschikbaar'
@@ -830,14 +907,14 @@ function CompareContent() {
     pdf.setFont('helvetica', 'normal')
     pdf.setFontSize(10)
     pdf.setTextColor(muted)
-    pdf.text('Professionele vastgoedvergelijking op prijs, EPC, ruimte en ligging.', margin, y + 9)
+    pdf.text('Indicatieve vastgoedvergelijking op basis van beschikbare woningdata.', margin, y + 9)
 
     y += 22
 
     const topW = (pageWidth - margin * 2 - 12) / 3
     drawTopStat(margin, y, topW, 'Aantal woningen', String(properties.length))
-    drawTopStat(margin + topW + 6, y, topW, 'Beste algemene keuze', bestOverall?.title || '-')
-    drawTopStat(margin + (topW + 6) * 2, y, topW, 'Beste prijs per m²', bestPriceM2?.title || '-')
+    drawTopStat(margin + topW + 6, y, topW, 'Hoogste indicatieve score', bestOverall?.title || '-')
+    drawTopStat(margin + (topW + 6) * 2, y, topW, 'Laagste prijs per m²', bestPriceM2?.title || '-')
 
     y += 36
 
@@ -954,7 +1031,7 @@ function CompareContent() {
         pdf.text('EPC n.v.t.', panelX + 6, py + 48)
       }
 
-      drawScoreCircle(panelX + panelW - 45, py + 31, totalScore(property), blue, 'SlimScore')
+      drawScoreCircle(panelX + panelW - 45, py + 31, totalScore(property), blue, 'Indicatief')
       drawScoreCircle(panelX + panelW - 18, py + 31, locationScore(property), green, 'LocatieScore')
 
       py += 74
@@ -1106,8 +1183,9 @@ function CompareContent() {
             </h1>
 
             <p className="mt-4 max-w-3xl text-lg text-gray-400">
-              Slimme vergelijking op prijs, ruimte, comfort, EPC,
-              ligging, voorzieningen in de buurt en prijs per m².
+              Indicatieve vergelijking op basis van beschikbare woningdata:
+              prijs, ruimte, comfort, EPC, ligging, voorzieningen in de buurt
+              en prijs per m².
             </p>
           </div>
 
@@ -1130,31 +1208,31 @@ function CompareContent() {
 
         <section className="mb-8 grid grid-cols-1 gap-5 md:grid-cols-4">
           <InsightCard
-            label="Beste algemene keuze"
+            label="Hoogste indicatieve totaalscore"
             title={bestOverall?.title || '-'}
-            text="Hoogste totaalscore op basis van ruimte, comfort, energie, locatie en prijs."
+            text="Indicatieve score op basis van beschikbare woningdata. Niet definitief; controleer tijdens plaatsbezoek."
           />
 
           <InsightCard
-            label="Beste prijs per m²"
+            label="Laagste prijs per m²"
             title={bestPriceM2?.title || '-'}
             text={
               bestPriceM2
-                ? `Ongeveer € ${pricePerM2(bestPriceM2)} per m².`
-                : '-'
+                ? `Ongeveer € ${pricePerM2(bestPriceM2)} per m², alleen op basis van vraagprijs en beschikbare oppervlakte.`
+                : 'Onvoldoende gegevens beschikbaar voor een betrouwbare inschatting.'
             }
           />
 
           <InsightCard
-            label="Beste EPC"
+            label="Gunstigste beschikbare EPC"
             title={bestEnergy?.title || '-'}
-            text="Sterkste energieprestatie binnen deze vergelijking."
+            text="Alleen gebaseerd op het beschikbare EPC-label. Ontbrekende energiegegevens beperken de betrouwbaarheid."
           />
 
           <InsightCard
-            label="Beste ligging"
+            label="Hoogste indicatieve locatiescore"
             title={bestLocation?.title || '-'}
-            text="Beste score op adres, coördinaten en voorzieningen in de buurt."
+            text="Indicatief op basis van adres, coördinaten en beschikbare voorzieningenanalyse."
           />
         </section>
 
@@ -1230,7 +1308,7 @@ function CompareContent() {
                 </div>
 
                 <div className="mb-6 grid grid-cols-2 gap-3">
-                  <Stat label="SlimScore" value={`${totalScore(property)}/100`} />
+                  <Stat label="Indicatieve score" value={`${totalScore(property)}/100`} />
                   <Stat
                     label="Prijs per m²"
                     value={
@@ -1243,7 +1321,7 @@ function CompareContent() {
                   <Stat
                     label={mainSurfaceLabel(property)}
                     value={`${mainSurface(property) || '-'} m²`}
-                    note="Werkelijke oppervlakte"
+                    note="Beschikbare oppervlakte"
                   />
             <Stat
               label="Locatie"
@@ -1297,13 +1375,17 @@ function CompareContent() {
                       {property.lift && <Badge text="Lift" />}
                       {property.gemeubeld && <Badge text="Gemeubeld" />}
                       {property.dubbel_glas && <Badge text="Dubbel glas" />}
+                      {getWoningkenmerken(property).slice(0, 4).map((kenmerk) => (
+                        <Badge key={kenmerk} text={kenmerk} />
+                      ))}
 
                       {!property.parking &&
                         !property.tuin &&
                         !property.terras &&
                         !property.lift &&
                         !property.gemeubeld &&
-                        !property.dubbel_glas && (
+                        !property.dubbel_glas &&
+                        getWoningkenmerken(property).length === 0 && (
                           <p className="text-sm text-gray-500">
                             Geen voorzieningen beschikbaar
                           </p>
@@ -1330,14 +1412,15 @@ function CompareContent() {
           </h2>
 
           <p className="mt-4 leading-8 text-gray-600">
-            Op basis van de ingevoerde gegevens lijkt{' '}
+            Op basis van de beschikbare woningdata heeft{' '}
             <strong className="text-[#111827]">{bestOverall?.title || '-'}</strong>{' '}
-            de sterkste algemene keuze. Voor prijsbewuste kopers is{' '}
+            momenteel de hoogste indicatieve totaalscore. Voor prijs per m² komt{' '}
             <strong className="text-[#111827]">{bestPriceM2?.title || '-'}</strong>{' '}
-            interessant door de beste prijs per m². Voor energiezuinig wonen
+            het laagst uit op basis van vraagprijs en beschikbare oppervlakte. Op EPC-label
             scoort{' '}
             <strong className="text-[#111827]">{bestEnergy?.title || '-'}</strong>{' '}
-            het beste.
+            het gunstigst. Deze conclusie is indicatief, niet definitief, en moet tijdens
+            plaatsbezoek en dossiercontrole bevestigd worden.
           </p>
         </section>
 

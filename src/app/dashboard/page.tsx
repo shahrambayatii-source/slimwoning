@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { getWoningkenmerken } from '@/lib/woningkenmerken'
 
 export default function DashboardPage() {
   const [properties, setProperties] = useState<any[]>([])
@@ -120,6 +121,19 @@ export default function DashboardPage() {
                 <p className="text-gray-500">
                   {property.city}
                 </p>
+
+                {getWoningkenmerken(property).length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {getWoningkenmerken(property).slice(0, 3).map((kenmerk) => (
+                      <span
+                        key={kenmerk}
+                        className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700"
+                      >
+                        {kenmerk}
+                      </span>
+                    ))}
+                  </div>
+                )}
 
                 <Link href={`/properties/${property.id}`}>
                   <button className="mt-4 w-full rounded-xl bg-[#071B4D] px-4 py-3 font-bold text-white transition hover:opacity-90">

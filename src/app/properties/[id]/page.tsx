@@ -4,10 +4,9 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { getWoningkenmerken } from '@/lib/woningkenmerken'
 
 import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api'
-
-const googleLibraries: 'places'[] = ['places']
 
 export default function PropertyDetailsPage() {
   const params = useParams()
@@ -31,7 +30,7 @@ export default function PropertyDetailsPage() {
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
-    libraries: googleLibraries,
+    libraries: ['places'],
   })
 
   useEffect(() => {
@@ -294,6 +293,42 @@ export default function PropertyDetailsPage() {
     }).format(payment)
   }
 
+  // --- Slim zoeken / match analysis helpers ---
+  function getWoonMatchScore() {
+    let score = 76
+
+    if (property?.city) score += 5
+    if (property?.price) score += 5
+    if (property?.bewoonbare_oppervlakte) score += 4
+    if (property?.slaapkamers) score += 4
+    if (property?.parking) score += 2
+    if (property?.tuin) score += 2
+    if (property?.terras) score += 2
+
+    return Math.min(score, 96)
+  }
+
+  function getWoonMatchPoints() {
+    const city = property?.city || 'deze regio'
+
+    return [
+      {
+        title: 'Ligging',
+        text: `Interessante ligging in ${city} met relevante vastgoedvraag.`,
+      },
+      {
+        title: 'Prijsindicatie',
+        text: property?.price
+          ? `Vraagprijs van ${formatPrice(property.price)} past binnen een duidelijke zoekcategorie.`
+          : 'Prijsinformatie kan verder helpen om de match nauwkeuriger te maken.',
+      },
+      {
+        title: 'Woonprofiel',
+        text: `${cleanWoningType(property?.woning_type)} met kenmerken die geschikt kunnen zijn voor gerichte zoekers.`,
+      },
+    ]
+  }
+
   function cleanWoningType(value: any) {
     const text = String(value || '').trim()
 
@@ -345,7 +380,7 @@ export default function PropertyDetailsPage() {
 
   return (
     <div className="min-h-screen bg-[#f6f8fb] px-5 py-8 text-[#111827] md:px-10">
-      <div className="mx-auto max-w-7xl">
+      <div className="mx-auto max-w-[1500px]">
         <div className="mb-8 flex items-center justify-between">
           <Link
             href="/properties"
@@ -362,26 +397,45 @@ export default function PropertyDetailsPage() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.45fr_0.75fr]">
+        <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1.6fr_0.8fr]">
           <div>
             <div className="relative overflow-hidden rounded-[2.5rem] bg-white shadow-2xl">
               <img
                 src={property.image}
                 alt={property.title}
-                className="h-[420px] w-full object-cover md:h-[620px]"
+                className="h-[500px] w-full object-cover md:h-[720px]"
               />
 
               <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent" />
 
-              <div className="absolute left-6 top-6 flex gap-3">
-                <div className="rounded-full bg-white/95 px-5 py-3 text-sm font-bold text-[#111827] shadow-xl backdrop-blur">
-                  EPC {property.epc || '-'}
-                </div>
+              <div className="absolute bottom-8 right-8">
+                <div className="inline-flex items-center overflow-visible text-white drop-shadow-xl">
+                  <div className="flex h-11 items-center rounded-l-lg bg-[#263746] px-4 text-xl font-black uppercase leading-none tracking-[0.04em]">
+                    EPC
+                  </div>
 
-                <div className="rounded-full bg-blue-700 px-5 py-3 text-sm font-bold text-white shadow-xl">
-                  Nieuw
+                  <div
+                    className="relative flex h-11 min-w-[58px] items-center justify-center bg-[#6BCB45] px-4 text-xl font-black leading-none"
+                    style={{
+                      clipPath: 'polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%, 10px 50%)',
+                    }}
+                  >
+                    {property.epc || '-'}
+                  </div>
                 </div>
               </div>
+
+              {property.created_at &&
+                Date.now() - new Date(property.created_at).getTime() <
+                  15 * 24 * 60 * 60 * 1000 && (
+                  <div className="absolute left-8 top-8 flex items-center drop-shadow-xl">
+                    <div className="relative flex h-10 items-center rounded-r-md bg-red-600 pl-10 pr-6 text-xl font-black italic leading-none text-white">
+                      <span className="absolute left-[-24px] top-0 h-0 w-0 border-y-[20px] border-r-[24px] border-y-transparent border-r-red-600" />
+                      <span className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full border-[3px] border-white/90 bg-white/20" />
+                      Nieuw
+                    </div>
+                  </div>
+                )}
             </div>
 
             <div className="mt-8 rounded-[2rem] bg-white p-8 shadow-xl">
@@ -461,6 +515,57 @@ export default function PropertyDetailsPage() {
               <p className="leading-8 text-gray-600">
                 {property.description || 'Geen beschrijving beschikbaar.'}
               </p>
+            </SectionCard>
+
+            {getWoningkenmerken(property).length > 0 && (
+              <SectionCard title="Woningkenmerken">
+                <div className="flex flex-wrap gap-2">
+                  {getWoningkenmerken(property).map((kenmerk) => (
+                    <span
+                      key={kenmerk}
+                      className="rounded-full bg-blue-50 px-3 py-1.5 text-xs font-black text-blue-700"
+                    >
+                      {kenmerk}
+                    </span>
+                  ))}
+                </div>
+              </SectionCard>
+            )}
+
+            <SectionCard title="Slim zoeken">
+              <div className="overflow-hidden rounded-[1.75rem] border border-emerald-100 bg-gradient-to-br from-emerald-50/80 via-white to-blue-50/80">
+                <div className="flex flex-col gap-5 border-b border-emerald-100 px-6 py-6 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.24em] text-emerald-700">
+                      SlimWoning woonmatch
+                    </p>
+                    <h3 className="mt-3 text-3xl font-black leading-tight text-[#071B4D]">
+                      Waarom past deze woning bij jouw zoekprofiel?
+                    </h3>
+                    <p className="mt-3 max-w-2xl text-base leading-8 text-gray-600">
+                      SlimWoning bekijkt locatie, prijs en woningkenmerken om sneller relevante woningen te herkennen.
+                    </p>
+                  </div>
+
+                  <div className="rounded-[1.5rem] bg-emerald-700 px-6 py-5 text-white shadow-xl shadow-emerald-900/15">
+                    <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-100">
+                      Matchscore
+                    </p>
+                    <p className="mt-2 text-4xl font-black">
+                      {getWoonMatchScore()}%
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 px-6 py-6 md:grid-cols-3">
+                  {getWoonMatchPoints().map((point) => (
+                    <div key={point.title} className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-emerald-100">
+                      <p className="text-sm font-black text-[#071B4D]">{point.title}</p>
+                      <p className="mt-2 text-sm leading-6 text-gray-500">{point.text}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </SectionCard>
 
             <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">

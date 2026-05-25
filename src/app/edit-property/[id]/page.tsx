@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { WONINGKENMERKEN_OPTIONS, toggleWoningkenmerk } from '@/lib/woningkenmerken'
 
 export default function EditPropertyPage() {
   const params = useParams()
@@ -25,6 +26,7 @@ export default function EditPropertyPage() {
   const [verwarmingstype, setVerwarmingstype] = useState('')
   const [pluspunten, setPluspunten] = useState('')
   const [minpunten, setMinpunten] = useState('')
+  const [woningkenmerken, setWoningkenmerken] = useState<string[]>([])
 
   const [parking, setParking] = useState(false)
   const [tuin, setTuin] = useState(false)
@@ -71,6 +73,7 @@ export default function EditPropertyPage() {
     setVerwarmingstype(data.verwarmingstype || '')
     setPluspunten(data.pluspunten || '')
     setMinpunten(data.minpunten || '')
+    setWoningkenmerken(Array.isArray(data.woningkenmerken) ? data.woningkenmerken : [])
 
     setParking(Boolean(data.parking))
     setTuin(Boolean(data.tuin))
@@ -156,6 +159,7 @@ export default function EditPropertyPage() {
         verwarmingstype: verwarmingstype.trim(),
         pluspunten: pluspunten.trim(),
         minpunten: minpunten.trim(),
+        woningkenmerken,
         parking,
         tuin,
         terras,
@@ -320,6 +324,19 @@ export default function EditPropertyPage() {
               <option value="Vloerverwarming">Vloerverwarming</option>
               <option value="Niet opgegeven">Niet opgegeven</option>
             </select>
+          </div>
+        </FormSection>
+
+        <FormSection title="Woningkenmerken">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {WONINGKENMERKEN_OPTIONS.map((kenmerk) => (
+              <CheckBox
+                key={kenmerk}
+                label={kenmerk}
+                checked={woningkenmerken.includes(kenmerk)}
+                onChange={() => setWoningkenmerken((current) => toggleWoningkenmerk(current, kenmerk))}
+              />
+            ))}
           </div>
         </FormSection>
 

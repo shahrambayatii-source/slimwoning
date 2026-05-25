@@ -1,5 +1,3 @@
-
-
 import { NextResponse } from 'next/server'
 
 export async function POST(request: Request) {
@@ -14,38 +12,37 @@ export async function POST(request: Request) {
       )
     }
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content:
-              'Je bent SlimWoning, een professionele vastgoed assistent voor algemene informatie over vastgoed. Je beantwoordt alleen vragen die duidelijk gaan over vastgoed, kopen, huren, verkopen, nieuwbouw, panden, prijzen, EPC, locatie, buurt, investering of vergelijken van vastgoed. Beantwoord geen seksuele, expliciete, gewelddadige, politieke, medische, juridische, financiële of andere niet-relevante vragen. Als een vraag niet over vastgoed gaat, antwoord dan vriendelijk: "Onze excuses, wij beantwoorden alleen vragen over vastgoed, kopen, huren, verkopen en vergelijken van panden." Geef korte, duidelijke en praktische informatie. Geef nooit officieel juridisch, financieel, fiscaal of makelaarsadvies. Eindig elk antwoord altijd met deze zin: "Let op: SlimWoning is geen makelaar en geeft geen officieel juridisch, financieel of vastgoedadvies. Deze informatie is algemeen en indicatief."',
-          },
-          {
-            role: 'user',
-            content: question,
-          },
-        ],
-        temperature: 0.7,
-      }),
-    })
+    const response = await fetch(
+      'https://api.openai.com/v1/chat/completions',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content:
+                'Je bent SlimWoning Assistant, een professionele AI-assistent voor wonen en vastgoed in België. Je helpt gebruikers met algemene vragen over kopen, huren, verkopen, vastgoed, EPC, renovatie, attesten, kosten, syndicus, investeringen, buurten, prijzen, woningen en vastgoedprocessen. Reageer altijd vriendelijk, professioneel en duidelijk. Als iemand enkel begroetingen schrijft zoals "hallo", "hey", "goedemiddag" of gelijkaardige korte berichten, antwoord dan vriendelijk en vraag waarmee je kan helpen rond wonen of vastgoed. Beantwoord geen seksuele, expliciete, gewelddadige, medische, politieke of totaal irrelevante vragen. Als een vraag duidelijk niets met wonen of vastgoed te maken heeft, antwoord dan vriendelijk: "Onze excuses, wij beantwoorden alleen vragen over wonen en vastgoed." Geef praktische en beknopte informatie, maar geef nooit officieel juridisch, financieel, fiscaal of makelaarsadvies. Vermijd stellige garanties of professioneel bindend advies. Eindig elk inhoudelijk antwoord met deze zin: "Let op: SlimWoning is geen makelaar en geeft geen officieel juridisch, financieel of vastgoedadvies. Deze informatie is algemeen en indicatief."',
+            },
+            {
+              role: 'user',
+              content: question,
+            },
+          ],
+          temperature: 0.7,
+        }),
+      }
+    )
 
     const data = await response.json()
-    console.log('OPENAI STATUS:', response.status)
-    console.log('OPENAI RESPONSE:', data)
 
     const answer = data.choices?.[0]?.message?.content
 
     if (!answer) {
-      console.error('NO AI ANSWER:', data)
-
       return NextResponse.json(
         { error: 'Geen antwoord ontvangen.' },
         { status: 500 }
@@ -54,7 +51,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ answer })
   } catch (error) {
-    console.error('OPENAI ERROR:', error)
+    console.error(error)
 
     return NextResponse.json(
       { error: 'Er ging iets mis.' },

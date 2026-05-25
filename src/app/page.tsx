@@ -3,6 +3,12 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@supabase/supabase-js'
+import dynamic from 'next/dynamic'
+
+const BelgiumMap = dynamic(
+  () => import('@/components/BelgiumMap'),
+  { ssr: false }
+)
 
 type LocationSuggestion = {
   id: string
@@ -38,8 +44,129 @@ const belgiumPostcodes: LocationSuggestion[] = [
   { id: '9000-gent', label: '9000 Gent' },
 ]
 
+function getCityFromLocation(value: string) {
+  const normalized = value.trim().toLowerCase()
+  if (!normalized) return ''
+
+  const knownCities = [
+    'Zaventem',
+    'Nossegem',
+    'Sterrebeek',
+    'Brussel',
+    'Antwerpen',
+    'Gent',
+    'Leuven',
+    'Brugge',
+    'Boechout',
+    'Hove',
+    'Hasselt',
+  ]
+
+  return knownCities.find((city) => normalized.includes(city.toLowerCase())) || value.trim()
+}
+
+const defaultMapTiles = [
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/10/522/341.png',
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/10/523/341.png',
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/10/524/341.png',
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/10/525/341.png',
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/10/522/342.png',
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/10/523/342.png',
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/10/524/342.png',
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/10/525/342.png',
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/10/522/343.png',
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/10/523/343.png',
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/10/524/343.png',
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/10/525/343.png',
+]
+
+
+const zaventemMapTiles = [
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/12/2097/1372.png',
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/12/2098/1372.png',
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/12/2099/1372.png',
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/12/2100/1372.png',
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/12/2097/1373.png',
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/12/2098/1373.png',
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/12/2099/1373.png',
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/12/2100/1373.png',
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/12/2097/1374.png',
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/12/2098/1374.png',
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/12/2099/1374.png',
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/12/2100/1374.png',
+]
+
+function makeMapTileGrid(x: number, y: number, zoom = 12) {
+  return [
+    `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${zoom}/${x - 1}/${y - 1}.png`,
+    `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${zoom}/${x}/${y - 1}.png`,
+    `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${zoom}/${x + 1}/${y - 1}.png`,
+    `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${zoom}/${x + 2}/${y - 1}.png`,
+    `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${zoom}/${x - 1}/${y}.png`,
+    `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${zoom}/${x}/${y}.png`,
+    `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${zoom}/${x + 1}/${y}.png`,
+    `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${zoom}/${x + 2}/${y}.png`,
+    `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${zoom}/${x - 1}/${y + 1}.png`,
+    `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${zoom}/${x}/${y + 1}.png`,
+    `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${zoom}/${x + 1}/${y + 1}.png`,
+    `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${zoom}/${x + 2}/${y + 1}.png`,
+  ]
+}
+
+const focusedMapTilesByCity: Record<string, string[]> = {
+  zaventem: zaventemMapTiles,
+  boechout: makeMapTileGrid(2099, 1368),
+  hove: makeMapTileGrid(2098, 1368),
+  leuven: makeMapTileGrid(2101, 1373),
+  gent: makeMapTileGrid(2090, 1370),
+  antwerpen: makeMapTileGrid(2098, 1367),
+  brugge: makeMapTileGrid(2084, 1367),
+  hasselt: makeMapTileGrid(2108, 1372),
+}
+
+const defaultMapPins = [
+  { city: 'Brugge', count: 14, top: '25%', left: '14%' },
+  { city: 'Gent', count: 18, top: '39%', left: '26%' },
+  { city: 'Antwerpen', count: 31, top: '22%', left: '48%' },
+  { city: 'Hove', count: 7, top: '31%', left: '48%' },
+  { city: 'Boechout', count: 12, top: '29%', left: '52%' },
+  { city: 'Zaventem', count: 8, top: '45%', left: '58%' },
+  { city: 'Leuven', count: 24, top: '47%', left: '64%' },
+  { city: 'Hasselt', count: 11, top: '39%', left: '82%' },
+]
+
+const cityMapCenters: Record<string, [number, number]> = {
+  brussel: [50.8503, 4.3517],
+  zaventem: [50.8798, 4.4723],
+  leuven: [50.8798, 4.7005],
+  antwerpen: [51.2194, 4.4025],
+  gent: [51.0543, 3.7174],
+  brugge: [51.2093, 3.2247],
+  hasselt: [50.9307, 5.3325],
+}
+
+const mapCardOffsets: [number, number][] = [
+  [-0.018, -0.024],
+  [0.016, 0.018],
+  [0.026, -0.012],
+  [-0.024, 0.022],
+]
+
+function getPropertyImage(property: Property) {
+  return (
+    property.image_url ||
+    property.image ||
+    property.photo_url ||
+    property.main_image ||
+    property.images?.[0] ||
+    'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?q=80&w=1200&auto=format&fit=crop'
+  )
+}
+
 export default function HomePage() {
   const [locationQuery, setLocationQuery] = useState('')
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([])
+  const [showHeroSearch, setShowHeroSearch] = useState(true)
   const [locationSuggestions, setLocationSuggestions] = useState<LocationSuggestion[]>([])
   const [locationLoading, setLocationLoading] = useState(false)
   const [showLocationSuggestions, setShowLocationSuggestions] = useState(false)
@@ -56,15 +183,212 @@ export default function HomePage() {
   const [aiAnswer, setAiAnswer] = useState('')
   const [savingAlert, setSavingAlert] = useState(false)
   const [searchAlertSaved, setSearchAlertSaved] = useState(false)
+  const [showSearchAlertForm, setShowSearchAlertForm] = useState(false)
+  const [searchAlertEmail, setSearchAlertEmail] = useState('')
   const [guestQuestionsUsed, setGuestQuestionsUsed] = useState(0)
+  const [assistantEmail, setAssistantEmail] = useState('')
+  const [assistantEmailSent, setAssistantEmailSent] = useState(false)
   const [showGuestLimitMessage, setShowGuestLimitMessage] = useState(false)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [authChecked, setAuthChecked] = useState(false)
+  const [detectedLatitude, setDetectedLatitude] = useState<number | null>(null)
+  const [detectedLongitude, setDetectedLongitude] = useState<number | null>(null)
+  const [radiusKm, setRadiusKm] = useState(40)
+  const [showRadiusCircle, setShowRadiusCircle] = useState(true)
+  const [smartFilters, setSmartFilters] = useState<string[]>([])
+  const [showSmartFilters, setShowSmartFilters] = useState(false)
   const FREE_LIMIT = 3
+  const typedCity = getCityFromLocation(locationQuery)
+  const selectedCities = selectedLocations
+    .map((location) => getCityFromLocation(location))
+    .filter(Boolean)
+  const activeCities = selectedCities.length > 0 ? selectedCities : typedCity ? [typedCity] : []
+  const focusedCity = activeCities.length === 1 ? activeCities[0] : ''
+  const focusedCityKey = focusedCity.toLowerCase()
+  const heroMapTiles = focusedCityKey && focusedMapTilesByCity[focusedCityKey]
+    ? focusedMapTilesByCity[focusedCityKey]
+    : defaultMapTiles
+  const heroMapPins = activeCities.length > 0
+    ? defaultMapPins.filter((pin) =>
+        activeCities.some((city) => city.toLowerCase() === pin.city.toLowerCase())
+      )
+    : defaultMapPins
+  const searchCities = activeCities.join(',')
+  const compactMapCards = activeCities.length > 0
+  const selectedHomesCount = heroMapPins.reduce((total, pin) => total + pin.count, 0)
+  const mapListings = latestProperties.slice(0, 12).map((property, index) => {
+    const city = property.city || 'België'
+    const baseCenter = cityMapCenters[city.toLowerCase()] || cityMapCenters.brussel
+    const offset = mapCardOffsets[index % mapCardOffsets.length]
+
+    return {
+      id: property.id,
+      source: 'listing',
+      tag: index === 0 ? 'NIEUW' : index === 1 ? 'TOP WONING' : city.toUpperCase(),
+      title: property.title || 'Woning',
+      city,
+      position: [baseCenter[0] + offset[0], baseCenter[1] + offset[1]] as [number, number],
+      price: `€ ${(property.price || 0).toLocaleString('nl-BE')}`,
+      image: getPropertyImage(property),
+    }
+  })
+  const smartFilterOptions = [
+    'Rustig wonen',
+    'Dicht bij werk',
+    'Goed voor gezinnen',
+    'Interessant als investering',
+    'Veel groen',
+  ]
+
+  function toggleSmartFilter(value: string) {
+    setSmartFilters((current) =>
+      current.includes(value)
+        ? current.filter((filter) => filter !== value)
+        : [...current, value]
+    )
+  }
+
+  const heroSponsoredCards = (() => {
+    if (activeCities.length === 1) {
+      const city = activeCities[0]
+
+      return [
+        {
+          label: 'Uitgelicht',
+          title: `Villa in ${city}`,
+          price: '€ 645.000',
+          image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=900&q=80',
+          alt: `Uitgelichte woning in ${city}`,
+        },
+        {
+          label: 'Top woning',
+          title: `Gezinswoning ${city}`,
+          price: '€ 525.000',
+          image: 'https://images.unsplash.com/photo-1605276374104-dee2a0ed3cd6?auto=format&fit=crop&w=900&q=80',
+          alt: `Top woning in ${city}`,
+        },
+        {
+          label: 'Nieuw',
+          title: `Appartement ${city}`,
+          price: '€ 395.000',
+          image: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=900&q=80',
+          alt: `Nieuwe woning in ${city}`,
+        },
+      ]
+    }
+
+    if (activeCities.length > 1) {
+      const sponsoredSlots = ['Uitgelicht', 'Top woning', 'Nieuw']
+
+      return activeCities.slice(0, 3).map((city, index) => {
+        const label = sponsoredSlots[index]
+
+        return {
+          label,
+          title:
+            label === 'Uitgelicht'
+              ? `Villa in ${city}`
+              : label === 'Top woning'
+                ? `Gezinswoning ${city}`
+                : `Appartement ${city}`,
+          price: label === 'Nieuw' ? '€ 395.000' : label === 'Top woning' ? '€ 525.000' : '€ 645.000',
+          image:
+            label === 'Nieuw'
+              ? 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=900&q=80'
+              : label === 'Top woning'
+                ? 'https://images.unsplash.com/photo-1605276374104-dee2a0ed3cd6?auto=format&fit=crop&w=900&q=80'
+                : 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=900&q=80',
+          alt: `${label} in ${city}`,
+        }
+      })
+    }
+
+    return [
+      {
+        label: 'Uitgelicht',
+        title: 'Villa nabij Gent',
+        price: '€ 645.000',
+        image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=900&q=80',
+        alt: 'Uitgelichte woning in België',
+      },
+      {
+        label: 'Nieuw',
+        title: 'Appartement Antwerpen',
+        price: '€ 395.000',
+        image: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=900&q=80',
+        alt: 'Nieuw appartement in België',
+      },
+      {
+        label: 'Top woning',
+        title: 'Gezinswoning Leuven',
+        price: '€ 525.000',
+        image: 'https://images.unsplash.com/photo-1605276374104-dee2a0ed3cd6?auto=format&fit=crop&w=900&q=80',
+        alt: 'Top woning in Leuven',
+      },
+    ]
+  })()
+
+  function addSelectedLocation(value: string) {
+    const trimmed = value.trim()
+
+    if (!trimmed) return
+
+    setSelectedLocations((current) => {
+      if (current.some((location) => location.toLowerCase() === trimmed.toLowerCase())) {
+        return current
+      }
+
+      return [...current, trimmed]
+    })
+    setLocationQuery('')
+    setLocationSuggestions([])
+    setShowLocationSuggestions(false)
+  }
+
+  function removeSelectedLocation(value: string) {
+    setSelectedLocations((current) => current.filter((location) => location !== value))
+  }
 
   useEffect(() => {
-    const used = localStorage.getItem('slimmo_guest_questions')
+    async function loadAuthAndGuestLimit() {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const { data: userData } = await supabase.auth.getUser()
+      const hasUser = Boolean(sessionData.session?.user || userData.user)
 
-    if (used) {
-      setGuestQuestionsUsed(Number(used))
+      setIsLoggedIn(hasUser)
+      setAuthChecked(true)
+
+      if (hasUser) {
+        setGuestQuestionsUsed(0)
+        setShowGuestLimitMessage(false)
+        localStorage.removeItem('slimmo_guest_questions')
+        return
+      }
+
+      const used = localStorage.getItem('slimmo_guest_questions')
+
+      if (used) {
+        setGuestQuestionsUsed(Number(used))
+      }
+    }
+
+    loadAuthAndGuestLimit()
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      const hasUser = Boolean(session?.user)
+
+      setIsLoggedIn(hasUser)
+      setAuthChecked(true)
+
+      if (hasUser) {
+        setGuestQuestionsUsed(0)
+        setShowGuestLimitMessage(false)
+        localStorage.removeItem('slimmo_guest_questions')
+      }
+    })
+
+    return () => {
+      listener.subscription.unsubscribe()
     }
   }, [])
 
@@ -117,8 +441,7 @@ export default function HomePage() {
           const label = [postcode, city].filter(Boolean).join(' ')
 
           if (label) {
-            setLocationQuery(label)
-            setShowLocationSuggestions(false)
+            addSelectedLocation(label)
           } else {
             alert('Locatie gevonden, maar gemeente kon niet worden bepaald.')
           }
@@ -209,7 +532,7 @@ export default function HomePage() {
       alert('Voer eerst een vraag in.')
       return
     }
-    if (guestQuestionsUsed >= FREE_LIMIT) {
+    if (authChecked && !isLoggedIn && guestQuestionsUsed >= FREE_LIMIT) {
       setShowGuestLimitMessage(true)
       return
     }
@@ -236,36 +559,44 @@ export default function HomePage() {
 
       if (error) {
         console.log(error)
-        alert('Vraag kon niet worden verzonden.')
+        alert(error.message)
         return
       }
 
       if (aiData.answer) {
         setAiAnswer(aiData.answer)
+        setAssistantEmailSent(false)
       }
 
-      const newCount = guestQuestionsUsed + 1
+      if (!isLoggedIn) {
+        const newCount = guestQuestionsUsed + 1
 
-      setGuestQuestionsUsed(newCount)
+        setGuestQuestionsUsed(newCount)
 
-      localStorage.setItem(
-        'slimmo_guest_questions',
-        String(newCount)
-      )
+        localStorage.setItem(
+          'slimmo_guest_questions',
+          String(newCount)
+        )
+
+        setShowGuestLimitMessage(newCount >= FREE_LIMIT)
+      } else {
+        setShowGuestLimitMessage(false)
+      }
 
       setQuestionSent(true)
       setQuestionText('')
       setQuestionEmail('')
-    } catch (error) {
+    } catch (error: any) {
       console.log(error)
-      alert('Vraag kon niet worden verzonden.')
+      alert(error?.message || 'Vraag kon niet worden verzonden.')
     } finally {
       setSendingQuestion(false)
     }
   }
 
   async function saveSearchAlert() {
-    if (!questionEmail.trim()) {
+    if (!searchAlertEmail.trim()) {
+      setShowSearchAlertForm(true)
       alert('Voer eerst een e-mailadres in.')
       return
     }
@@ -274,8 +605,8 @@ export default function HomePage() {
       setSavingAlert(true)
 
       const { error } = await supabase.from('search_alerts').insert({
-        email: questionEmail.trim(),
-        location: locationQuery || null,
+        email: searchAlertEmail.trim(),
+        location: searchCities || locationQuery || null,
         property_type: propertyType || null,
         min_price: Number(minPrice) || 0,
         max_price: Number(maxPrice) || 0,
@@ -289,7 +620,8 @@ export default function HomePage() {
       }
 
       setSearchAlertSaved(true)
-      setQuestionEmail('')
+      setSearchAlertEmail('')
+      setShowSearchAlertForm(false)
     } catch (error) {
       console.log(error)
       alert('Zoekopdracht kon niet worden opgeslagen.')
@@ -299,197 +631,228 @@ export default function HomePage() {
   }
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#f5f7fb] text-[#111827]">
+    <main className="min-h-screen overflow-hidden bg-[#f4f7fb] text-[#111827]">
       <style>{`
-        @keyframes pulsePlay {
-          0%,100% { transform: scale(1); }
-          50% { transform: scale(1.08); }
+        .leaflet-container {
+          background: #dbeafe;
         }
 
-        @keyframes progressMove {
-          0% { width: 20%; }
-          50% { width: 70%; }
-          100% { width: 92%; }
-        }
-
-        @keyframes glowCard {
-          0%,100% { box-shadow: 0 0 0 rgba(37,99,235,0.15); }
-          50% { box-shadow: 0 18px 40px rgba(37,99,235,0.28); }
-        }
-
-        .demo-play {
-          animation: pulsePlay 2s ease-in-out infinite;
-        }
-
-        .demo-progress {
-          animation: progressMove 5s ease-in-out infinite;
-        }
-
-        .demo-glow {
-          animation: glowCard 3s ease-in-out infinite;
+        .leaflet-tile {
+          filter: saturate(1.12) contrast(1.04) brightness(1.06);
         }
       `}</style>
-      <section className="relative px-4 py-4 md:px-8 md:py-5 lg:px-20">
-        <div className="absolute left-[-12rem] top-[-8rem] h-[30rem] w-[30rem] rounded-full bg-blue-500/12 blur-3xl" />
-        <div className="absolute right-[-10rem] top-16 h-[28rem] w-[28rem] rounded-full bg-sky-400/10 blur-3xl" />
-        <div className="absolute bottom-[-10rem] right-1/4 h-[24rem] w-[24rem] rounded-full bg-slate-300/20 blur-3xl" />
+      <section className="relative bg-[#f4f7fb] px-4 pb-8 pt-0 md:px-8 md:pb-10 md:pt-0 lg:px-20">
 
-        <div className="relative mx-auto max-w-3xl">
-          <div className="grid min-h-[300px] grid-cols-1 items-center gap-5 lg:grid-cols-[0.8fr_0.85fr] xl:gap-6">
-            <div className="relative pt-2">
-              <div className="w-full max-w-md">
-                <div className="mb-3 flex items-center justify-between">
-                  <div>
-                    <h1 className="mt-1 max-w-md text-2xl font-black tracking-[-0.04em] text-[#0B1F4D] md:text-3xl">
-                      Vergelijk woningen zonder gedoe.
-                    </h1>
-                  </div>
-                  <div className="rounded-full border border-blue-100 bg-white/70 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] text-blue-700 shadow-sm">
-                    0:30
-                  </div>
-                </div>
-                <div className="rounded-xl bg-transparent p-0">
-                  <div className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.1em] text-gray-400">
-                    <span className="text-blue-700">1 Selecteer</span>
-                    <span>→</span>
-                    <span className="text-blue-700">2 Vergelijk</span>
-                    <span>→</span>
-                    <span className="text-blue-700">3 PDF</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-100">
-                      <div className="h-20 overflow-hidden bg-blue-50">
-                        <img
-                          src="https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=900&q=80"
-                          alt="Woning A"
-                          className="h-full w-full object-cover"
-                        />
-                      </div>
-                      <div className="p-2.5">
-                        <p className="text-[10px] font-bold text-gray-500">Woning A</p>
-                        <p className="mt-1 text-sm font-black text-[#0B1F4D]">€ 450.000</p>
-                        <div className="mt-1.5 grid grid-cols-2 gap-2 text-[9px] font-bold text-gray-500">
-                          <span>EPC B</span>
-                          <span>120 m²</span>
-                        </div>
-                        <div className="mt-1.5 h-1 rounded-full bg-gray-200">
-                          <div className="h-1 w-[72%] rounded-full bg-blue-500" />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="demo-glow relative overflow-hidden rounded-xl bg-white shadow-md ring-2 ring-blue-600">
-                      <div className="absolute right-3 top-3 z-10 rounded-full bg-blue-700 px-2 py-1 text-[10px] font-black text-white">
-                        Beste
-                      </div>
-                      <div className="h-20 overflow-hidden bg-blue-50">
-                        <img
-                          src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=900&q=80"
-                          alt="Woning B"
-                          className="h-full w-full object-cover"
-                        />
-                      </div>
-                      <div className="p-2.5">
-                        <p className="text-[10px] font-bold text-gray-500">Woning B</p>
-                        <p className="mt-1 text-sm font-black text-[#0B1F4D]">€ 420.000</p>
-                        <div className="mt-1.5 grid grid-cols-2 gap-2 text-[9px] font-bold text-gray-500">
-                          <span>EPC A</span>
-                          <span>135 m²</span>
-                        </div>
-                        <div className="mt-1.5 h-1 rounded-full bg-gray-200">
-                          <div className="demo-progress h-1 rounded-full bg-blue-700" />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mt-2 rounded-lg border border-blue-100 bg-white/55 p-2">
-                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-blue-700">
-                      AI conclusie
-                    </p>
-                    <p className="mt-1 text-[11px] font-bold leading-4 text-[#0B1F4D]">
-                      Woning B scoort beter op prijs, EPC en locatie. PDF rapport klaar.
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-2 flex items-center gap-2 rounded-lg bg-white/45 px-2.5 py-1.5 ring-1 ring-white/70">
-                  <button className="demo-play flex h-6 w-6 items-center justify-center rounded-full bg-blue-700 text-[9px] text-white shadow-lg shadow-blue-700/20">
-                    ▶
-                  </button>
-                  <div className="flex-1">
-                    <div className="h-1 overflow-hidden rounded-full bg-gray-200">
-                      <div className="demo-progress h-1 rounded-full bg-blue-700" />
-                    </div>
-                  </div>
-                  <p className="text-[10px] font-bold text-gray-500">
-                    0:18
-                  </p>
-                </div>
+        <div className="relative left-1/2 z-0 mb-[-5rem] h-[320px] w-screen -translate-x-1/2 overflow-hidden bg-[#f4f7fb] md:h-[380px]">
+          <img
+            src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=2400&q=100"
+            alt="Luxe moderne woningen"
+            className="absolute inset-0 h-full w-full object-cover object-center"
+          />
+
+          <div className="absolute inset-0 bg-gradient-to-r from-[#071B4D]/42 via-[#071B4D]/12 to-transparent" />
+
+
+          <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#f4f7fb] via-[#f4f7fb]/88 to-transparent" />
+
+          <div className="absolute -right-24 top-10 h-72 w-72 rounded-full bg-blue-200/30 blur-3xl" />
+        </div>
+        <div className="relative z-10 mx-auto mt-10 max-w-[1400px]">
+          <div className="relative -mt-1 overflow-hidden rounded-[2.75rem] border border-white/70 bg-[#F8FBFF]/95 shadow-2xl shadow-blue-900/10 backdrop-blur-xl">
+            <div className="relative min-h-[732px] overflow-hidden bg-white p-4 md:p-6 lg:min-h-[724px]">
+              <div className={`absolute inset-x-4 h-[460px] overflow-hidden rounded-[2rem] bg-[#f4f7fb] transition-all duration-300 md:inset-x-6 ${showHeroSearch ? 'top-[15.5rem] md:top-[14.5rem]' : 'top-4 md:top-6'}`}>
+                <BelgiumMap
+                  center={detectedLatitude && detectedLongitude ? [detectedLatitude, detectedLongitude] : undefined}
+                  radiusKm={radiusKm}
+                  height="100%"
+                  showRadius={showRadiusCircle}
+                  selectedCities={activeCities}
+                  properties={mapListings}
+                />
               </div>
-            </div>
 
-            <div className="relative flex items-center justify-center lg:justify-end">
-              <div className="absolute -inset-8 rounded-[3rem] bg-gradient-to-br from-blue-600/8 via-sky-400/8 to-slate-200/20 blur-2xl" />
 
-              <div className="relative mt-1 ml-auto w-full max-w-sm rounded-xl border border-white/80 bg-white/80 p-3 shadow-md shadow-blue-900/5 backdrop-blur-sm md:p-4">
-                <div className="mb-2 flex items-center gap-3 border-b border-gray-200">
-                  <button className="relative pb-3 text-xs font-extrabold text-blue-700">
-                    Te koop
-                    <span className="absolute bottom-[-1px] left-0 h-1 w-full rounded-full bg-blue-700" />
-                  </button>
-                  <button className="pb-3 text-xs font-bold text-gray-500">
-                    Te huur
-                  </button>
-                </div>
-                <div className="mb-3">
-                  <label className="mb-1.5 block text-[11px] font-bold text-gray-700">
-                    Voeg een locatie toe
-                  </label>
-                  <div className="relative">
-                    <input
-                      value={locationQuery}
-                      onChange={(event) => setLocationQuery(event.target.value)}
-                      onFocus={() => {
-                        if (locationSuggestions.length > 0) {
-                          setShowLocationSuggestions(true)
-                        }
-                      }}
-                      placeholder="Gemeente of postcode"
-                      className="w-full rounded-lg border border-gray-200 bg-[#f8fafc] px-3 py-2 pr-9 text-xs font-medium outline-none transition focus:border-blue-600 focus:bg-white"
-                    />
+
+              {!showHeroSearch && (
+                <button
+                  type="button"
+                  onClick={() => setShowHeroSearch(true)}
+                  className="absolute left-1/2 top-6 z-50 -translate-x-1/2 rounded-2xl border border-white/80 bg-white/95 px-5 py-3 text-sm font-black text-blue-700 shadow-2xl shadow-blue-900/15 backdrop-blur-2xl transition hover:-translate-x-1/2 hover:-translate-y-0.5 hover:bg-white"
+                >
+                  Toon zoekfilters
+                </button>
+              )}
+
+              {showHeroSearch && (
+              <div className="relative z-40 rounded-[2rem] border border-blue-100 bg-white/95 p-4 shadow-2xl shadow-blue-900/10 backdrop-blur-2xl">
+                <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="inline-flex w-fit items-center gap-4 rounded-2xl border border-white/90 bg-white/95 px-4 pt-3 shadow-xl shadow-blue-900/8 backdrop-blur-2xl">
+                    <button className="relative pb-3 text-sm font-extrabold text-blue-700">
+                      Te koop
+                      <span className="absolute bottom-[-1px] left-0 h-1 w-full rounded-full bg-blue-700" />
+                    </button>
+                    <button className="pb-3 text-sm font-bold text-gray-500">
+                      Te huur
+                    </button>
                     <button
                       type="button"
-                      onClick={useCurrentLocation}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-xl text-blue-700 transition hover:scale-110"
-                      aria-label="Gebruik mijn locatie"
+                      onClick={() => setShowSmartFilters((value) => !value)}
+                      className={`relative pb-3 text-sm font-extrabold transition ${
+                        smartFilters.length > 0 || showSmartFilters
+                          ? 'text-emerald-700'
+                          : 'text-gray-500 hover:text-emerald-700'
+                      }`}
                     >
-                      ⌖
+                      Slim zoeken
+                      {(smartFilters.length > 0 || showSmartFilters) && (
+                        <span className="absolute bottom-[-1px] left-0 h-1 w-full rounded-full bg-emerald-600" />
+                      )}
+                      {smartFilters.length > 0 && (
+                        <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-700">
+                          {smartFilters.length}
+                        </span>
+                      )}
                     </button>
-                    {showLocationSuggestions && (
-                      <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl">
-                        {locationSuggestions.map((suggestion) => (
-                          <button
-                            key={suggestion.id}
-                            type="button"
-                            onClick={() => {
-                              setLocationQuery(suggestion.label)
-                              setShowLocationSuggestions(false)
-                            }}
-                            className="block w-full px-5 py-3 text-left text-xs font-bold text-[#0B1F4D] transition hover:bg-[#eef5ff]"
-                          >
-                            {suggestion.label}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                    {locationLoading && (
-                      <p className="mt-2 text-xs font-semibold text-blue-700">
-                        Gemeenten zoeken...
-                      </p>
-                    )}
+                  </div>
+
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <button
+                      type="button"
+                      onClick={() => setShowSearchAlertForm((value) => !value)}
+                      className="inline-flex h-11 items-center justify-center rounded-2xl border border-blue-100 bg-blue-50 px-4 text-xs font-black text-blue-700 shadow-sm shadow-blue-900/5 transition hover:-translate-y-0.5 hover:bg-blue-100"
+                    >
+                      Bewaar zoekopdracht per e-mail
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowHeroSearch(false)}
+                      className="inline-flex h-11 items-center justify-center rounded-2xl bg-[#071B4D] px-4 text-xs font-black text-white shadow-lg shadow-blue-900/10 transition hover:-translate-y-0.5 hover:bg-blue-900"
+                    >
+                      Kaart groter maken
+                    </button>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                  <div>
-                    <label className="mb-1.5 block text-[11px] font-bold text-gray-700">
+
+                {showSearchAlertForm && (
+                  <div className="mb-3 rounded-2xl border border-blue-100 bg-blue-50/70 p-3">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <input
+                        type="email"
+                        value={searchAlertEmail}
+                        onChange={(event) => setSearchAlertEmail(event.target.value)}
+                        placeholder="E-mailadres"
+                        className="h-11 flex-1 rounded-xl border border-blue-100 bg-white px-4 text-sm font-semibold text-[#071B4D] outline-none transition focus:border-blue-600"
+                      />
+                      <button
+                        type="button"
+                        onClick={saveSearchAlert}
+                        disabled={savingAlert}
+                        className="inline-flex h-11 items-center justify-center rounded-xl bg-[#071B4D] px-4 text-xs font-black text-white shadow-lg shadow-blue-900/10 transition hover:-translate-y-0.5 hover:bg-blue-900 disabled:opacity-50"
+                      >
+                        {savingAlert ? 'Opslaan...' : 'Bewaar zoekopdracht'}
+                      </button>
+                    </div>
+                    <p className="mt-2 text-xs font-semibold text-gray-600">
+                      Bewaar je zoekopdracht en ontvang een e-mail wanneer er nieuwe panden verschijnen die passen bij je gekozen gemeenten en filters.
+                    </p>
+                  </div>
+                )}
+
+                <div className="mt-4">
+                  {showSmartFilters && (
+                    <div className="mt-3 rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4">
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-700">
+                        Slim zoeken
+                      </p>
+                      <h3 className="mt-1 text-sm font-black text-[#071B4D]">
+                        Waar zoek je naar?
+                      </h3>
+
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {smartFilterOptions.map((filter) => {
+                          const isActive = smartFilters.includes(filter)
+
+                          return (
+                            <button
+                              key={filter}
+                              type="button"
+                              onClick={() => toggleSmartFilter(filter)}
+                              className={`rounded-full border px-3 py-2 text-xs font-black transition ${
+                                isActive
+                                  ? 'border-emerald-600 bg-emerald-600 text-white shadow-lg shadow-emerald-900/15'
+                                  : 'border-emerald-100 bg-white text-[#071B4D] hover:-translate-y-0.5 hover:border-emerald-300 hover:bg-emerald-50'
+                              }`}
+                            >
+                              {filter}
+                            </button>
+                          )
+                        })}
+                      </div>
+
+                      {smartFilters.length > 0 && (
+                        <p className="mt-3 text-xs font-bold text-emerald-700">
+                          SlimWoning verfijnt de kaart op basis van: {smartFilters.join(', ')}.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1.35fr_1fr_0.95fr_0.9fr_0.9fr_9.5rem] lg:items-start">
+                  <div className="rounded-2xl border border-white/90 bg-white/95 p-3 shadow-xl shadow-blue-900/8 backdrop-blur-2xl">
+                    <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-gray-500">
+                      Locatie
+                    </label>
+                    <div className="relative">
+                      <input
+                        value={locationQuery}
+                        onChange={(event) => setLocationQuery(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ',') {
+                            event.preventDefault()
+                            addSelectedLocation(locationQuery)
+                          }
+                        }}
+                        onFocus={() => {
+                          if (locationSuggestions.length > 0) {
+                            setShowLocationSuggestions(true)
+                          }
+                        }}
+                        placeholder={selectedLocations.length > 0 ? 'Nog een gemeente toevoegen' : 'Gemeente of postcode'}
+                        className="h-12 w-full rounded-2xl border border-gray-200 bg-white px-4 pr-11 text-sm font-semibold text-[#071B4D] outline-none transition focus:border-blue-600"
+                      />
+                      <button
+                        type="button"
+                        onClick={useCurrentLocation}
+                        className="absolute right-3 top-6 -translate-y-1/2 text-xl text-blue-700 transition hover:scale-110"
+                        aria-label="Gebruik mijn locatie"
+                      >
+                        ⌖
+                      </button>
+                      {showLocationSuggestions && (
+                        <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-40 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl">
+                          {locationSuggestions.map((suggestion) => (
+                            <button
+                              key={suggestion.id}
+                              type="button"
+                              onClick={() => addSelectedLocation(suggestion.label)}
+                              className="block w-full px-5 py-3 text-left text-xs font-bold text-[#0B1F4D] transition hover:bg-[#eef5ff]"
+                            >
+                              {suggestion.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {locationLoading && (
+                        <p className="mt-2 text-xs font-semibold text-blue-700">
+                          Gemeenten zoeken...
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-white/90 bg-white/95 p-3 shadow-xl shadow-blue-900/8 backdrop-blur-2xl">
+                    <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-gray-500">
                       Type vastgoed
                     </label>
                     <div className="relative">
@@ -503,7 +866,7 @@ export default function HomePage() {
                             setBedrooms(0)
                           }
                         }}
-                        className="h-9 w-full appearance-none rounded-lg border border-blue-600 bg-white px-2.5 pr-8 text-[11px] font-semibold leading-none text-blue-700 outline-none"
+                        className="h-12 w-full appearance-none rounded-2xl border border-blue-100 bg-white px-4 pr-10 text-sm font-bold text-[#071B4D] outline-none transition focus:border-blue-600"
                       >
                         <option>Selecteer...</option>
                         <option>Huis</option>
@@ -521,24 +884,22 @@ export default function HomePage() {
                         <option>Opbrengsteigendom</option>
                         <option>Andere</option>
                       </select>
-
-                      <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm font-black text-blue-700">
+                      <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-blue-700">
                         ▼
                       </span>
                     </div>
                   </div>
 
-                  <div className={bedroomsDisabled ? 'opacity-40' : ''}>
-                    <label className="mb-1.5 block text-[11px] font-bold text-gray-700">
-                      Minimum aantal slaapkamers
+                  <div className={`rounded-2xl border border-white/90 bg-white/95 p-3 shadow-xl shadow-blue-900/8 backdrop-blur-2xl ${bedroomsDisabled ? 'opacity-40' : ''}`}>
+                    <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-gray-500">
+                      Slaapkamers
                     </label>
-
-                    <div className="flex items-center overflow-hidden rounded-lg border border-blue-600 bg-white">
+                    <div className="flex h-12 items-center overflow-hidden rounded-2xl border border-blue-100 bg-white">
                       <button
                         type="button"
                         disabled={bedroomsDisabled}
                         onClick={() => setBedrooms((value) => Math.max(0, value - 1))}
-                        className="flex h-9 w-9 items-center justify-center bg-gray-100 text-sm font-black text-gray-500 transition hover:bg-gray-200"
+                        className="flex h-12 w-11 items-center justify-center bg-[#F4F7FC] text-base font-black text-gray-500 transition hover:bg-gray-200"
                       >
                         -
                       </button>
@@ -549,174 +910,195 @@ export default function HomePage() {
                         type="button"
                         disabled={bedroomsDisabled}
                         onClick={() => setBedrooms((value) => value + 1)}
-                        className="flex h-9 w-9 items-center justify-center border-l border-blue-600 bg-white text-sm font-black text-blue-700 transition hover:bg-blue-50"
+                        className="flex h-12 w-11 items-center justify-center border-l border-blue-100 bg-white text-base font-black text-blue-700 transition hover:bg-blue-50"
                       >
                         +
                       </button>
                     </div>
-                    {bedroomsDisabled && (
-                      <p className="mt-2 text-xs font-semibold text-gray-500">
-                        Slaapkamers niet van toepassing voor dit type vastgoed.
-                      </p>
-                    )}
                   </div>
-                  <div>
-                    <label className="mb-1.5 block text-[11px] font-bold text-gray-700">
-                      Minimum
+
+                  <div className="rounded-2xl border border-white/90 bg-white/95 p-3 shadow-xl shadow-blue-900/8 backdrop-blur-2xl">
+                    <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-gray-500">
+                      Minimumprijs
                     </label>
                     <input
                       type="number"
                       value={minPrice}
                       onChange={(event) => setMinPrice(event.target.value)}
-                      className="w-full rounded-lg border border-blue-600 bg-white px-3 py-2 text-xs font-semibold text-blue-700 outline-none"
+                      className="h-12 w-full rounded-2xl border border-blue-100 bg-white px-4 text-sm font-bold text-[#071B4D] outline-none transition focus:border-blue-600"
                       placeholder="€ 0"
                     />
                   </div>
-                  <div>
-                    <label className="mb-1.5 block text-[11px] font-bold text-gray-700">
-                      Maximum
+
+                  <div className="rounded-2xl border border-white/90 bg-white/95 p-3 shadow-xl shadow-blue-900/8 backdrop-blur-2xl">
+                    <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-gray-500">
+                      Maximumprijs
                     </label>
                     <input
                       type="number"
                       value={maxPrice}
                       onChange={(event) => setMaxPrice(event.target.value)}
-                      className="w-full rounded-lg border border-blue-600 bg-white px-3 py-2 text-xs font-semibold text-blue-700 outline-none"
+                      className="h-12 w-full rounded-2xl border border-blue-100 bg-white px-4 text-sm font-bold text-[#071B4D] outline-none transition focus:border-blue-600"
                       placeholder="€ 0"
                     />
                   </div>
-                </div>
-                <div className="mt-2 flex items-center justify-between">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setBedrooms(0)
-                      setMinPrice('0')
-                      setMaxPrice('0')
-                    }}
-                    className="text-xs font-semibold text-blue-700 underline underline-offset-4"
-                  >
-                    Reset
-                  </button>
-                </div>
-                <Link
-                  href={{
-                    pathname: '/properties',
-                    query: {
-                      search: locationQuery,
-                      city: locationQuery,
-                      maxPrice,
-                    },
-                  }}
-                  className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-blue-700 px-4 py-2.5 text-xs font-extrabold text-white shadow-md shadow-blue-700/15 transition hover:bg-blue-800"
-                >
-                  <span className="text-lg">⌕</span>
-                  Zoeken
-                </Link>
-                <div className="mt-2 rounded-lg border border-blue-100 bg-blue-50/50 p-2 shadow-sm shadow-blue-900/5">
-                  <p className="text-[11px] font-black text-[#0B1F4D]">
-                    Ontvang nieuwe panden per e-mail
-                  </p>
-                  <p className="mt-1 text-xs text-gray-600">
-                    Bewaar je zoekopdracht en ontvang meldingen wanneer nieuwe panden matchen.
-                  </p>
-                  <div className="mt-2 flex gap-2">
-                    <input
-                      type="email"
-                      value={questionEmail}
-                      onChange={(event) => {
-                        setQuestionEmail(event.target.value)
-                        setSearchAlertSaved(false)
+
+                  <div className="rounded-2xl border border-white/90 bg-white/95 p-2 shadow-2xl shadow-blue-900/14 backdrop-blur-2xl">
+                    <Link
+                      href={{
+                        pathname: '/properties',
+                        query: {
+                          search: searchCities || locationQuery,
+                          city: activeCities[0] || locationQuery,
+                          cities: searchCities || undefined,
+                          radiusKm: detectedLatitude && detectedLongitude ? String(radiusKm) : undefined,
+                          lat: detectedLatitude || undefined,
+                          lng: detectedLongitude || undefined,
+                          maxPrice,
+                        },
                       }}
-                      placeholder="E-mailadres"
-                      className="h-9 flex-1 rounded-lg border border-gray-200 bg-white px-2.5 text-xs font-medium outline-none transition focus:border-blue-600"
-                    />
+                      className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#071B4D] px-5 text-sm font-black text-white shadow-xl shadow-blue-900/15 transition hover:-translate-y-0.5 hover:bg-blue-900"
+                    >
+                      Zoeken
+                    </Link>
                     <button
                       type="button"
-                      onClick={saveSearchAlert}
-                      disabled={savingAlert}
-                      className="rounded-lg bg-blue-700 px-3 text-xs font-black text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
+                      onClick={() => {
+                        setBedrooms(0)
+                        setMinPrice('0')
+                        setMaxPrice('0')
+                        setLocationQuery('')
+                        setSelectedLocations([])
+                        setSmartFilters([])
+                      }}
+                      className="mt-2 block w-full text-center text-xs font-bold text-blue-700 underline underline-offset-4"
                     >
-                      {savingAlert ? 'Opslaan...' : 'Bewaar'}
+                      Filters wissen
                     </button>
                   </div>
-                  {searchAlertSaved && (
-                    <p className="mt-2 text-xs font-bold text-green-600">
-                      Zoekopdracht opgeslagen ✓
-                    </p>
-                  )}
                 </div>
+
+                {selectedLocations.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2 rounded-2xl border border-blue-100 bg-blue-50/60 p-3">
+                    {selectedLocations.map((location) => (
+                      <button
+                        key={location}
+                        type="button"
+                        onClick={() => removeSelectedLocation(location)}
+                        className="inline-flex items-center gap-2 rounded-full bg-blue-700 px-3 py-1.5 text-xs font-black text-white shadow-md shadow-blue-900/10 transition hover:-translate-y-0.5 hover:bg-blue-900"
+                      >
+                        {getCityFromLocation(location)}
+                        <span className="text-white/80">×</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+
+                {searchAlertSaved && (
+                  <p className="mt-2 text-center text-[11px] font-black text-emerald-600">
+                    Zoekopdracht opgeslagen
+                  </p>
+                )}
               </div>
+              )}
+
+
+
+
+
             </div>
           </div>
-        </div>
-          <div className="relative mx-auto mt-4 max-w-4xl rounded-xl border border-blue-100 bg-white/75 p-3 shadow-md shadow-blue-900/5 backdrop-blur-sm md:p-4">
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-[0.85fr_1.15fr] lg:items-start">
+
+          <div className="relative mx-auto mt-8 max-w-[1400px] rounded-[2rem] border border-blue-100 bg-white/90 p-5 shadow-xl shadow-blue-900/5 backdrop-blur-xl md:p-6">
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
               <div>
-                <h2 className="mt-1 text-xl font-black tracking-[-0.03em] text-[#0B1F4D] md:text-2xl">
-                  Meer weten over een pand?
+                <h2 className="mt-2 text-2xl font-black tracking-[-0.035em] text-[#071B4D] md:text-3xl">
+                  SlimWoning Assistant
                 </h2>
-                <p className="mt-2 max-w-md text-sm leading-6 text-gray-600">
-                  Vergelijk vastgoed en stel je vragen online.
+                <p className="mt-3 text-sm font-bold text-gray-500">
+                  Slimme hulp voor wonen, kopen, huren en vastgoed.
                 </p>
                 {aiAnswer && (
-                  <div className="mt-16 max-w-md rounded-2xl border border-blue-100 bg-white/80 p-4 shadow-sm shadow-blue-900/5">
-                    <p className="text-sm font-black text-[#0B1F4D]">
-                      Antwoord bewaren?
-                    </p>
-                    <p className="mt-1 text-sm leading-6 text-gray-600">
-                      Laat je e-mailadres achter als je later verder wilt gaan met je vraag.
-                    </p>
-                    <div className="relative mt-3">
-                      <input
-                        type="email"
-                        value={questionEmail}
-                        placeholder="E-mailadres"
-                        onChange={(event) => setQuestionEmail(event.target.value)}
-                        className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 pr-14 text-sm font-medium text-[#111827] outline-none transition focus:border-blue-600"
-                      />
+                  <div className="mt-5 flex flex-wrap gap-2">
+                    {[
+                      'Wat betekent EPC?',
+                      'Welke kosten komen bij kopen?',
+                      'Waarop letten bij huren?',
+                      'Welke attesten zijn nodig?',
+                    ].map((example) => (
                       <button
+                        key={example}
                         type="button"
-                        className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-blue-700 text-sm font-black text-white transition hover:bg-blue-800"
-                        aria-label="Bewaren"
+                        onClick={() => {
+                          setQuestionText(example)
+                          setQuestionSent(false)
+                          setShowGuestLimitMessage(false)
+                          setAiAnswer('')
+                        }}
+                        className="rounded-full border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-black text-blue-700 transition hover:-translate-y-0.5 hover:bg-blue-100"
                       >
-                        ✓
+                        {example}
                       </button>
-                    </div>
+                    ))}
                   </div>
                 )}
               </div>
+
               <div>
                 <textarea
                   value={questionText}
-                  disabled={false}
-                  placeholder="Wil je kopen, huren of eerst vastgoed vergelijken?"
+                  placeholder="Stel je vraag over kopen, huren, verkopen, renoveren, EPC, attesten of kosten..."
                   onChange={(event) => {
                     setQuestionText(event.target.value)
                     setQuestionSent(false)
                     setShowGuestLimitMessage(false)
                     setAiAnswer('')
                   }}
-                  className="min-h-[95px] w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-[#111827] outline-none transition focus:border-blue-600"
+                  className="min-h-[110px] w-full rounded-2xl border border-blue-100 bg-white px-4 py-3 text-sm font-medium text-[#111827] outline-none transition focus:border-blue-600 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400"
                 />
-                <div className="mt-3 flex items-center gap-4">
+                <div className="mt-3 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                  {!aiAnswer && !questionSent && (
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        'Wat betekent EPC?',
+                        'Welke kosten komen bij kopen?',
+                      ].map((example) => (
+                        <button
+                          key={example}
+                          type="button"
+                          onClick={() => {
+                            setQuestionText(example)
+                            setQuestionSent(false)
+                            setShowGuestLimitMessage(false)
+                            setAiAnswer('')
+                          }}
+                          className="rounded-full border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-black text-blue-700 transition hover:-translate-y-0.5 hover:bg-blue-100"
+                        >
+                          {example}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
                   <button
                     type="button"
                     onClick={sendQuestion}
                     disabled={sendingQuestion}
-                    className="inline-flex items-center justify-center rounded-xl bg-blue-700 px-5 py-2.5 text-sm font-extrabold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="ml-auto rounded-2xl bg-[#071B4D] px-6 py-3 text-sm font-black text-white shadow-xl shadow-blue-900/15 transition hover:-translate-y-0.5 hover:bg-blue-900 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {sendingQuestion ? 'Verzenden...' : 'Vraag versturen'}
+                    {sendingQuestion ? 'Verzenden...' : 'Vraag stellen'}
                   </button>
-                  {questionSent && (
-                    <p className="text-sm font-bold text-green-600">
-                      Vraag verzonden ✓
-                    </p>
-                  )}
                 </div>
-                {showGuestLimitMessage && guestQuestionsUsed >= FREE_LIMIT && (
+                {questionSent && (
+                  <p className="mt-3 text-sm font-bold text-green-600">
+                    Vraag verzonden ✓
+                  </p>
+                )}
+                {authChecked && !isLoggedIn && showGuestLimitMessage && (
                   <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 p-4">
                     <p className="text-sm font-bold text-[#0B1F4D]">
-                      Maak een account aan om Slimmo onbeperkt te gebruiken.
+                      Je hebt je 3 gratis vragen gebruikt. Maak een account aan om onbeperkt vragen te stellen.
                     </p>
                     <Link
                       href="/register"
@@ -729,73 +1111,206 @@ export default function HomePage() {
                 {aiAnswer && (
                   <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50/80 p-5 shadow-sm shadow-blue-900/5">
                     <p className="text-xs font-black uppercase tracking-[0.2em] text-blue-700">
-                      SlimWoning
+                      SlimWoning Assistent
                     </p>
                     <p className="mt-3 whitespace-pre-line text-sm leading-7 text-[#0B1F4D]">
                       {aiAnswer}
                     </p>
+                    <div className="mt-5 rounded-2xl border border-blue-100 bg-white/80 p-4">
+                      <p className="text-sm font-black text-[#071B4D]">
+                        Wil je dit antwoord per e-mail ontvangen?
+                      </p>
+                      <div className="mt-3 flex flex-col gap-3 sm:flex-row">
+                        <input
+                          type="email"
+                          value={assistantEmail}
+                          onChange={(event) => setAssistantEmail(event.target.value)}
+                          placeholder="Jouw e-mailadres"
+                          className="h-11 flex-1 rounded-xl border border-blue-100 bg-white px-4 text-sm font-medium text-[#111827] outline-none transition focus:border-blue-600"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!assistantEmail.trim()) {
+                              alert('Voer eerst een e-mailadres in.')
+                              return
+                            }
+                            setAssistantEmailSent(true)
+                          }}
+                          className="h-11 rounded-xl bg-[#071B4D] px-5 text-sm font-black text-white transition hover:bg-blue-900"
+                        >
+                          Versturen
+                        </button>
+                      </div>
+                      {assistantEmailSent && (
+                        <p className="mt-3 text-xs font-bold text-emerald-600">
+                          Antwoord wordt naar je e-mail gestuurd ✓
+                        </p>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
             </div>
           </div>
-      </section>
 
-      <section className="px-4 pb-12 pt-2 md:px-8 lg:px-20">
-        <div className="mx-auto max-w-4xl">
-          <div className="mb-7 flex items-end justify-between gap-6">
-            <div>
-              <p className="text-sm font-black uppercase tracking-[0.2em] text-blue-700">
-                Nieuw toegevoegd
-              </p>
-              <h2 className="mt-1 text-2xl font-black tracking-[-0.035em] text-[#0B1F4D] md:text-3xl">
-                Nieuwste woningen
-              </h2>
-            </div>
-            <Link
-              href="/properties"
-              className="text-sm font-bold text-blue-700 transition hover:text-blue-900"
-            >
-              Bekijk alles →
-            </Link>
-          </div>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-            {latestProperties.map((property) => (
+          <div className="mt-8">
+            <div className="mb-7 flex items-end justify-between gap-6">
+              <div>
+                <p className="text-sm font-black uppercase tracking-[0.2em] text-blue-700">
+                  Nieuw toegevoegd
+                </p>
+                <h2 className="mt-1 text-2xl font-black tracking-[-0.035em] text-[#0B1F4D] md:text-3xl">
+                  Nieuwste woningen
+                </h2>
+              </div>
               <Link
-                key={property.id}
-                href={`/properties/${property.id}`}
-                className="block overflow-hidden rounded-xl bg-white shadow-sm shadow-slate-900/5 ring-1 ring-slate-100 transition hover:-translate-y-1 hover:shadow-md hover:shadow-slate-900/10"
+                href="/properties"
+                className="text-sm font-bold text-blue-700 transition hover:text-blue-900"
               >
-                <div className="h-28 bg-gradient-to-br from-blue-100 via-white to-blue-200">
-                  {(() => {
-                    const imageSrc =
-                      property.image_url ||
-                      property.image ||
-                      property.photo_url ||
-                      property.main_image ||
-                      property.images?.[0]
-                    return imageSrc ? (
-                      <img
-                        src={imageSrc}
-                        alt={property.title || 'Property'}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : null
-                  })()}
-                </div>
-                <div className="p-3">
-                  <p className="text-sm font-bold uppercase tracking-[0.16em] text-blue-700">
-                    {property.city || 'België'}
-                  </p>
-                  <h3 className="mt-1 text-base font-black text-[#0B1F4D]">
-                    {property.title || 'Woning'}
-                  </h3>
-                  <p className="mt-2 text-base font-black text-blue-700">
-                    € {property.price?.toLocaleString() || '0'}
-                  </p>
-                </div>
+                Bekijk alles →
               </Link>
-            ))}
+            </div>
+            <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-4">
+              {latestProperties.map((property) => (
+                <Link
+                  key={property.id}
+                  href={`/properties/${property.id}`}
+                  className="block overflow-hidden rounded-lg bg-white shadow-sm shadow-slate-900/5 ring-1 ring-slate-100 transition hover:-translate-y-1 hover:shadow-md hover:shadow-slate-900/10"
+                >
+                  <div className="h-40 bg-gradient-to-br from-blue-100 via-white to-blue-200">
+                    {(() => {
+                      const imageSrc =
+                        property.image_url ||
+                        property.image ||
+                        property.photo_url ||
+                        property.main_image ||
+                        property.images?.[0]
+                      return imageSrc ? (
+                        <img
+                          src={imageSrc}
+                          alt={property.title || 'Woning'}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : null
+                    })()}
+                  </div>
+                  <div className="p-2.5">
+                    <p className="text-xs font-bold uppercase tracking-[0.14em] text-blue-700">
+                      {property.city || 'België'}
+                    </p>
+                    <h3 className="mt-1 text-sm font-black leading-5 text-[#0B1F4D]">
+                      {property.title || 'Woning'}
+                    </h3>
+                    <p className="mt-1.5 text-sm font-black text-blue-700">
+                      € {property.price?.toLocaleString() || '0'}
+                    </p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <div className="relative mx-auto mt-8 max-w-[1400px] rounded-[2rem] border border-blue-100 bg-gradient-to-br from-white via-blue-50/40 to-cyan-50/30 p-5 shadow-[0_24px_80px_rgba(37,99,235,0.10)] backdrop-blur-xl md:p-6">
+            <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+              <div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <p className="text-xs font-black uppercase tracking-[0.2em] text-blue-700">
+                    Veel gezocht
+                  </p>
+                  <span className="rounded-full bg-blue-50 px-3 py-1 text-[11px] font-black text-blue-700">
+                    Slim inzicht
+                  </span>
+                </div>
+                <h2 className="mt-2 text-2xl font-black tracking-[-0.035em] text-[#071B4D] md:text-3xl">
+                  Populaire regio’s
+                </h2>
+                <p className="mt-2 text-sm font-semibold text-slate-500">
+                  Ontdek woningen in veelgevraagde Belgische steden.
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+              {[
+                {
+                  city: 'Gent',
+                  count: '18 woningen',
+                  averagePrice: '€ 382.000',
+                  averageEpc: 'B',
+                },
+                {
+                  city: 'Antwerpen',
+                  count: '31 woningen',
+                  averagePrice: '€ 349.000',
+                  averageEpc: 'C',
+                },
+                {
+                  city: 'Leuven',
+                  count: '24 woningen',
+                  averagePrice: '€ 421.000',
+                  averageEpc: 'B',
+                },
+                {
+                  city: 'Brugge',
+                  count: '14 woningen',
+                  averagePrice: '€ 365.000',
+                  averageEpc: 'C',
+                },
+              ].map((item) => (
+                <Link
+                  key={item.city}
+                  href={{
+                    pathname: '/properties',
+                    query: {
+                      search: item.city,
+                      city: item.city,
+                    },
+                  }}
+                  className="group relative overflow-hidden rounded-2xl border border-blue-100 bg-white/75 p-5 shadow-sm backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-blue-300 hover:shadow-[0_18px_50px_rgba(37,99,235,0.16)]"
+                >
+                  <div className="absolute inset-x-5 top-0 h-[3px] rounded-full bg-gradient-to-r from-blue-600 via-cyan-400 to-emerald-400" />
+
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-blue-700">
+                        Regio
+                      </p>
+                      <h3 className="mt-2 text-xl font-black text-[#071B4D]">
+                        {item.city}
+                      </h3>
+                      <span className="mt-2 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-black text-emerald-700">
+                        AI-match 92%
+                      </span>
+                    </div>
+
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#071B4D] to-blue-700 text-sm font-black text-white shadow-lg shadow-blue-900/20 transition group-hover:translate-x-1">
+                      →
+                    </span>
+                  </div>
+
+                  <div className="mt-5 space-y-3">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                      <span className="text-xs font-bold text-slate-500">🏠 Woningen</span>
+                      <span className="text-sm font-black text-[#071B4D]">{item.count}</span>
+                    </div>
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                      <span className="text-xs font-bold text-slate-500">€ Gem. prijs</span>
+                      <span className="text-sm font-black text-[#071B4D]">{item.averagePrice}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-500">⚡ Gem. EPC</span>
+                      <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-black text-emerald-700">
+                        {item.averageEpc}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mt-5 inline-flex rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 px-4 py-2 text-xs font-black text-white shadow-sm">
+                    Bekijk woningen
+                  </div>
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
       </section>
