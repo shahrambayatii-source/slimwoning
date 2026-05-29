@@ -38,13 +38,9 @@ function PropertiesContent() {
   const [properties, setProperties] = useState<any[]>([])
   const [openRenovatieScanId, setOpenRenovatieScanId] = useState<number | null>(null)
   const openRenovatieScanProperty = useMemo(() => {
-    if (!openRenovatieScanId) return null
+    if (openRenovatieScanId === null) return null
 
-    return (
-      properties.find(
-        (property) => Number(property.id) === openRenovatieScanId
-      ) || null
-    )
+    return properties.find((property) => Number(property.id) === openRenovatieScanId) || null
   }, [openRenovatieScanId, properties])
   const [marketComparables, setMarketComparables] = useState<any[]>([])
   const [favoriteIds, setFavoriteIds] = useState<number[]>([])
