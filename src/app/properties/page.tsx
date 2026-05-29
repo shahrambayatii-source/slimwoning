@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { calculateEnergyInsight } from '@/lib/energy-calculator'
 import { exportEnergyReport } from '@/lib/export-energy-report'
+import { getRenovatieScan } from '@/lib/renovatie-scan'
 import { getWoningkenmerken } from '@/lib/woningkenmerken'
 import { GoogleMap, InfoWindow, Marker, useJsApiLoader } from '@react-google-maps/api'
 
@@ -3890,6 +3891,120 @@ function PropertiesContent() {
             </div>
           </div>
         )}
+
+        {openRenovatieScanProperty && (() => {
+          const renovatieScan = getRenovatieScan(openRenovatieScanProperty)
+
+          return (
+            <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
+              <div className="relative max-h-[85vh] w-full max-w-3xl overflow-y-auto rounded-[2rem] bg-white p-6 shadow-2xl">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-black uppercase tracking-wide text-orange-600">
+                      Renovatie
+                    </p>
+                    <h3 className="mt-2 text-2xl font-black text-[#071B4D]">
+                      🔨 SlimWoning Renovatie Scan
+                    </h3>
+                    <p className="mt-2 text-sm font-bold text-gray-500">
+                      {openRenovatieScanProperty.title || 'Indicatieve renovatiescan'}
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setOpenRenovatieScanId(null)}
+                    className="grid h-10 w-10 place-items-center rounded-full bg-gray-100 text-xl font-black text-gray-600"
+                  >
+                    ×
+                  </button>
+                </div>
+
+                <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="rounded-2xl border border-orange-100 bg-orange-50 p-5">
+                    <p className="text-xs font-black uppercase tracking-wide text-orange-600">
+                      Renovatieniveau
+                    </p>
+                    <p className="mt-2 text-xl font-black text-orange-900">
+                      {renovatieScan.renovatieniveau}
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-100 bg-slate-50 p-5">
+                    <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+                      Geschatte renovatiecategorie
+                    </p>
+                    <p className="mt-2 text-base font-black leading-6 text-[#071B4D]">
+                      {renovatieScan.renovatiecategorie}
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+                    <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+                      Betrouwbaarheid
+                    </p>
+                    <p className="mt-2 text-lg font-black text-[#071B4D]">
+                      {renovatieScan.betrouwbaarheid}
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+                    <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+                      Indicatieve kostenrange
+                    </p>
+                    <p className="mt-2 text-lg font-black text-[#071B4D]">
+                      {renovatieScan.kostenrange}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5">
+                    <h4 className="text-lg font-black text-emerald-900">Pluspunten</h4>
+                    <div className="mt-3 space-y-2">
+                      {renovatieScan.pluspunten.map((pluspunt, index) => (
+                        <p key={index} className="text-sm font-bold leading-6 text-emerald-800">
+                          • {pluspunt}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-amber-100 bg-amber-50 p-5">
+                    <h4 className="text-lg font-black text-amber-900">Aandachtspunten</h4>
+                    <div className="mt-3 space-y-2">
+                      {renovatieScan.aandachtspunten.map((aandachtspunt, index) => (
+                        <p key={index} className="text-sm font-bold leading-6 text-amber-800">
+                          • {aandachtspunt}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {renovatieScan.beperkteFotoInformatie && (
+                  <p className="mt-5 rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm font-black text-slate-700">
+                    Beperkte foto-informatie beschikbaar.
+                  </p>
+                )}
+
+                <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50 p-5">
+                  <p className="text-sm font-bold leading-6 text-blue-900">
+                    Deze scan is indicatief op basis van beschikbare gegevens en foto’s. Het is geen offerte, bouwkundig advies of professionele beoordeling.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setOpenRenovatieScanId(null)}
+                  className="mx-auto mt-6 inline-flex items-center justify-center rounded-xl bg-[#071B4D] px-6 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-[#0B2A6B]"
+                >
+                  Sluiten
+                </button>
+              </div>
+            </div>
+          )
+        })()}
 
         {openEnergyScanProperty && (() => {
           void energyScanRefreshKey
