@@ -971,7 +971,7 @@ function PropertiesContent() {
             property.beschrijving ||
             property.location_description ||
             '',
-          photos: getPropertyImages(property).slice(0, 6),
+          photos: getPropertyImages(property).slice(0, 12),
         }),
       })
       const data = await response.json()
@@ -4105,6 +4105,9 @@ function PropertiesContent() {
             renovatiePhotoAnalysis,
           )
           const renovatieHeroImage = getPropertyPrimaryImage(openRenovatieScanProperty)
+          const zichtbareRenovatiezones = Object.entries(renovatieScan.renovatiezones).filter(
+            ([, status]) => status !== 'niet_zichtbaar'
+          )
           const renovationAreaLabels: Record<string, string> = {
             walls: 'Muren',
             floors: 'Vloeren',
@@ -4242,21 +4245,27 @@ function PropertiesContent() {
                           </ul>
                           {renovatieScan.kamersGezien.length > 0 && (
                             <p className="mt-3 text-xs font-bold text-[#64748B]">
-                              Ruimtes gezien: {renovatieScan.kamersGezien.join(', ')}
+                              Ruimtes gezien: {renovatieScan.kamersGezien.join(', ')} · Foto’s geanalyseerd: {renovatieScan.fotoDekking.aantalFotos}
                             </p>
                           )}
                         </div>
 
                         <div>
                           <h4 className="text-base font-black text-[#071B4D]">Waargenomen componenten</h4>
-                          <div className="mt-3 grid grid-cols-2 gap-2 text-xs font-black text-[#64748B]">
-                            {Object.entries(renovatieScan.renovatiezones).map(([zone, status]) => (
-                              <div key={zone} className="rounded-xl border border-blue-100 bg-[#F6F8FC] px-3 py-2">
-                                <span className="block text-[#071B4D]">{renovationAreaLabels[zone] || zone}</span>
-                                <span className="mt-1 block">{renovationStatusLabels[String(status)] || String(status).replace('_', ' ')}</span>
-                              </div>
-                            ))}
-                          </div>
+                          {zichtbareRenovatiezones.length > 0 ? (
+                            <div className="mt-3 grid grid-cols-2 gap-2 text-xs font-black text-[#64748B]">
+                              {zichtbareRenovatiezones.map(([zone, status]) => (
+                                <div key={zone} className="rounded-xl border border-blue-100 bg-[#F6F8FC] px-3 py-2">
+                                  <span className="block text-[#071B4D]">{renovationAreaLabels[zone] || zone}</span>
+                                  <span className="mt-1 block">{renovationStatusLabels[String(status)] || String(status).replace('_', ' ')}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="mt-3 text-sm font-semibold leading-6 text-[#64748B]">
+                              Geen afzonderlijke componenten zichtbaar genoeg om te beoordelen. Niet-zichtbare onderdelen staan apart bij Niet beoordeeld.
+                            </p>
+                          )}
                         </div>
                       </div>
                     </section>
