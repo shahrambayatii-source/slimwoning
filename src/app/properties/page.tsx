@@ -4117,7 +4117,7 @@ function PropertiesContent() {
           return (
             <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/45 p-3 backdrop-blur-sm sm:p-4">
               <div className="relative max-h-[90vh] w-[95vw] max-w-5xl overflow-y-auto rounded-[28px] border border-blue-100 bg-white shadow-2xl">
-                <header className="relative h-[180px] overflow-hidden rounded-t-[28px]">
+                <header className="relative h-[150px] overflow-hidden rounded-t-[28px] sm:h-[160px]">
                   {renovatieHeroImage ? (
                     <Image
                       src={renovatieHeroImage}
@@ -4137,7 +4137,7 @@ function PropertiesContent() {
                         'linear-gradient(to bottom, rgba(7,27,77,0.35), rgba(7,27,77,0.75))',
                     }}
                   />
-                  <div className="absolute inset-0 flex items-end justify-between gap-4 p-5 sm:p-7">
+                  <div className="absolute inset-0 flex items-center justify-between gap-4 px-5 py-4 sm:px-7 sm:py-5">
                     <div className="min-w-0 text-white">
                       <p className="text-xs font-black uppercase tracking-[0.24em] text-orange-200">
                         Renovatie
