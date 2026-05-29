@@ -3937,7 +3937,7 @@ function PropertiesContent() {
                     </div>
                   </div>
 
-                  <div className="mt-3 flex flex-nowrap items-center gap-1 overflow-visible">
+                  <div className="mt-3 flex flex-wrap items-center gap-2 lg:flex-nowrap">
                     <button
                       type="button"
                       onClick={(event) => {
@@ -3945,7 +3945,7 @@ function PropertiesContent() {
                         event.stopPropagation()
                         setOpenInsightId(Number(property.id))
                       }}
-                      className="rounded-full border border-blue-200 bg-blue-50 px-2 py-1 text-[11px] font-black leading-none whitespace-nowrap text-blue-700 transition hover:bg-blue-100"
+                      className="rounded-full border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-none whitespace-nowrap text-blue-700 transition hover:bg-blue-100 sm:text-[13px]"
                     >
                       Analyse
                     </button>
@@ -3958,7 +3958,7 @@ function PropertiesContent() {
                         setManualEnergyData({})
                         setOpenEnergyScanId(Number(property.id))
                       }}
-                      className="rounded-full border border-green-200 bg-green-50 px-2 py-1 text-[11px] font-black leading-none whitespace-nowrap text-green-700 transition hover:bg-green-100"
+                      className="rounded-full border border-green-200 bg-green-50 px-3 py-2 text-xs font-semibold leading-none whitespace-nowrap text-green-700 transition hover:bg-green-100 sm:text-[13px]"
                     >
                       Energie
                     </button>
@@ -3970,7 +3970,7 @@ function PropertiesContent() {
                         event.stopPropagation()
                         startRenovatiePhotoAnalysis(property)
                       }}
-                      className="rounded-full border border-orange-200 bg-orange-50 px-2 py-1 text-[11px] font-black leading-none whitespace-nowrap text-orange-700 transition hover:bg-orange-100"
+                      className="rounded-full border border-orange-200 bg-orange-50 px-3 py-2 text-xs font-semibold leading-none whitespace-nowrap text-orange-700 transition hover:bg-orange-100 sm:text-[13px]"
                     >
                       Renovatie
                     </button>
@@ -3982,7 +3982,7 @@ function PropertiesContent() {
                         event.stopPropagation()
                         toggleCompare(Number(property.id))
                       }}
-                      className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-black leading-none whitespace-nowrap text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="rounded-full border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold leading-none whitespace-nowrap text-amber-700 transition hover:bg-amber-100 sm:text-[13px] disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {compareIds.includes(Number(property.id)) ? 'Geselecteerd' : 'Vergelijk'}
                     </button>
