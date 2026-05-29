@@ -2158,6 +2158,760 @@ function PropertiesContent() {
     return () => clearTimeout(timer)
   }, [mapInstance, isLoaded, mapKey, submittedSearchKey, appliedSearch, city])
 
+
+  function renderRenovatieScanOverview(
+    renovatieScanProperty: any,
+    options: { showCloseButton?: boolean; onClose?: () => void } = {}
+  ) {
+          const renovatiePhotoCount = getPropertyPhotoCount(renovatieScanProperty)
+          const renovatiePropertyId = Number(renovatieScanProperty.id)
+          const renovatiePhotoAnalysis = renovatiePhotoAnalyses[renovatiePropertyId] || null
+          const isRenovatiePhotoLoading = Boolean(renovatiePhotoLoading[renovatiePropertyId])
+          const renovatiePhotoError = renovatiePhotoErrors[renovatiePropertyId] || ''
+          const renovatieScan = getRenovatieScan(
+            renovatieScanProperty,
+            renovatiePhotoCount,
+            renovatiePhotoAnalysis,
+          )
+          const zichtbareRenovatiezones = Object.entries(renovatieScan.renovatiezones).filter(
+            ([, status]) => status !== 'niet_zichtbaar'
+          )
+          const renovationAreaLabels: Record<string, string> = {
+            walls: 'Muren',
+            floors: 'Vloeren',
+            windows: 'Ramen',
+            kitchen: 'Keuken',
+            bathroom: 'Badkamer',
+            ceiling: 'Plafond',
+            roof: 'Dak',
+            installations: 'Installaties',
+            insulation: 'Isolatie',
+          }
+          const renovationStatusLabels: Record<string, string> = {
+            modern_zichtbaar: 'Modern zichtbaar',
+            verzorgd_zichtbaar: 'Verzorgd zichtbaar',
+            verouderd_zichtbaar: 'Verouderd zichtbaar',
+            beperkt_zichtbaar: 'Beperkt zichtbaar',
+            niet_zichtbaar: 'Niet zichtbaar',
+          }
+
+    return (
+                <div className="bg-[#F6F8FC] p-4 sm:p-6">
+                  <div className="rounded-[28px] border border-blue-100 bg-white p-8 shadow-sm">
+                    <section>
+                      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                        <div>
+                          <p className="text-xs font-black uppercase tracking-wide text-[#64748B]">
+                            Staat van afwerking
+                          </p>
+                          <div className="mt-3 flex flex-wrap items-center gap-3">
+                            <span className="inline-flex w-fit rounded-full border border-orange-100 bg-orange-50 px-4 py-1.5 text-sm font-black text-orange-700">
+                              {isRenovatiePhotoLoading
+                                ? 'Foto’s worden geanalyseerd...'
+                                : renovatieScan.renovatieniveau}
+                            </span>
+                            <p className="text-sm font-semibold leading-6 text-[#64748B]">
+                              Er worden geen kosten berekend in Renovatie Scan v2.
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="grid gap-4 text-sm md:min-w-[320px] md:grid-cols-1">
+                          <div>
+                            <p className="text-[11px] font-black uppercase tracking-wide text-[#64748B]">
+                              Toelichting
+                            </p>
+                            <p className="mt-1 font-semibold leading-6 text-[#64748B]">
+                              {renovatieScan.renovatiecategorie}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-[11px] font-black uppercase tracking-wide text-[#64748B]">
+                              Betrouwbaarheid
+                            </p>
+                            <p className="mt-1 font-semibold leading-6 text-[#64748B]">
+                              {renovatieScan.betrouwbaarheid}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+
+                    <section className="mt-5 border-t border-blue-50 pt-5">
+                      {isRenovatiePhotoLoading ? (
+                        <div className="rounded-2xl border border-orange-100 bg-orange-50 p-4 text-sm font-bold text-orange-700">
+                          Foto’s worden geanalyseerd...
+                        </div>
+                      ) : renovatiePhotoError ? (
+                        <div className="rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-bold text-red-700">
+                          {renovatiePhotoError} De scan toont voorlopig alleen wat niet visueel is vastgesteld.
+                        </div>
+                      ) : (
+                        <p className="text-sm font-semibold leading-6 text-[#64748B]">
+                          {renovatieScan.fotoAnalyseSamenvatting}
+                        </p>
+                      )}
+                    </section>
+
+                    <section className="mt-5 border-t border-blue-50 pt-5">
+                      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                        <div>
+                          <h4 className="text-base font-black text-[#071B4D]">Waargenomen elementen</h4>
+                          <ul className="mt-3 space-y-2 text-sm font-semibold leading-6 text-[#64748B]">
+                            {renovatieScan.visueleObservaties.map((observatie, index) => (
+                              <li key={index} className="flex gap-2">
+                                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#F97316]" />
+                                <span>{observatie}</span>
+                              </li>
+                            ))}
+                          </ul>
+                          {renovatieScan.kamersGezien.length > 0 && (
+                            <p className="mt-3 text-xs font-bold text-[#64748B]">
+                              Ruimtes gezien: {renovatieScan.kamersGezien.join(', ')} · Foto’s geanalyseerd: {renovatieScan.fotoDekking.aantalFotos}
+                            </p>
+                          )}
+                        </div>
+
+                        <div>
+                          <h4 className="text-base font-black text-[#071B4D]">Waargenomen componenten</h4>
+                          {zichtbareRenovatiezones.length > 0 ? (
+                            <div className="mt-3 grid grid-cols-2 gap-2 text-xs font-black text-[#64748B]">
+                              {zichtbareRenovatiezones.map(([zone, status]) => (
+                                <div key={zone} className="rounded-xl border border-blue-100 bg-[#F6F8FC] px-3 py-2">
+                                  <span className="block text-[#071B4D]">{renovationAreaLabels[zone] || zone}</span>
+                                  <span className="mt-1 block">{renovationStatusLabels[String(status)] || String(status).replace('_', ' ')}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="mt-3 text-sm font-semibold leading-6 text-[#64748B]">
+                              Geen afzonderlijke componenten zichtbaar genoeg om te beoordelen. Niet-zichtbare onderdelen staan apart bij Niet beoordeeld.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </section>
+
+                    <section className="mt-5 border-t border-blue-50 pt-5">
+                      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                        <div>
+                          <h4 className="text-base font-black text-[#071B4D]">Zichtbare pluspunten</h4>
+                          <ul className="mt-3 space-y-2 text-sm font-semibold leading-6 text-[#64748B]">
+                            {renovatieScan.pluspunten.map((pluspunt, index) => (
+                              <li key={index} className="flex gap-2">
+                                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#071B4D]" />
+                                <span>{pluspunt}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+
+                        <div>
+                          <h4 className="text-base font-black text-[#071B4D]">Mogelijke aandachtspunten</h4>
+                          <ul className="mt-3 space-y-2 text-sm font-semibold leading-6 text-[#64748B]">
+                            {renovatieScan.aandachtspunten.map((aandachtspunt, index) => (
+                              <li key={index} className="flex gap-2">
+                                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#071B4D]" />
+                                <span>{aandachtspunt}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    </section>
+
+
+                    {renovatieScan.nietBeoordeeld.length > 0 && (
+                      <section className="mt-5 border-t border-blue-50 pt-5">
+                        <h4 className="text-base font-black text-[#071B4D]">Niet beoordeeld</h4>
+                        <ul className="mt-3 grid grid-cols-1 gap-2 text-sm font-semibold leading-6 text-[#64748B] sm:grid-cols-2">
+                          {renovatieScan.nietBeoordeeld.map((onderdeel, index) => (
+                            <li key={index} className="rounded-xl border border-blue-100 bg-[#F6F8FC] px-3 py-2">
+                              {onderdeel}
+                            </li>
+                          ))}
+                        </ul>
+                      </section>
+                    )}
+
+                    <section className="mt-5 border-t border-blue-50 pt-5">
+                      <h4 className="text-base font-black text-[#071B4D]">Gebaseerd op</h4>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {renovatieScan.gebaseerdOp.map((datapunt, index) => (
+                          <span key={index} className="rounded-full border border-blue-100 bg-[#F6F8FC] px-3 py-1 text-xs font-black text-[#64748B] shadow-sm">
+                            {datapunt}
+                          </span>
+                        ))}
+                      </div>
+                    </section>
+
+                    {renovatieScan.beperkteFotoInformatie && (
+                      <p className="mt-5 border-t border-blue-50 pt-5 text-sm font-semibold leading-6 text-[#64748B]">
+                        Beperkte foto-informatie beschikbaar.
+                      </p>
+                    )}
+
+                    <footer className="mt-5 border-t border-blue-50 pt-5 text-xs font-semibold leading-5 text-[#64748B]">
+                      <p>
+                        {renovatieScan.fotoAnalyseStatus === 'geanalyseerd'
+                          ? 'Foto’s zijn visueel door AI beoordeeld op basis van zichtbare elementen.'
+                          : 'Foto’s werden niet visueel beoordeeld.'}
+                      </p>
+                      <p className="mt-2">
+                        Deze beoordeling is gebaseerd op zichtbare elementen in beschikbare foto&apos;s, met woninggegevens alleen als context. Het betreft geen bouwkundig rapport, expertiseverslag of professionele inspectie.
+                      </p>
+                    </footer>
+
+                    {options.showCloseButton && (
+                      <button
+                        type="button"
+                        onClick={options.onClose}
+                        className="mx-auto mt-5 inline-flex items-center justify-center rounded-xl bg-[#071B4D] px-6 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-[#0B2A6B]"
+                      >
+                        Sluiten
+                      </button>
+                    )}
+                  </div>
+                </div>
+    )
+  }
+
+  function renderEnergyScanOverview(
+    energyScanProperty: any,
+    options: { embedded?: boolean; reportId?: string; showActions?: boolean; onClose?: () => void } = {}
+  ) {
+          void energyScanRefreshKey
+
+          const hasEnergyValue = (value: unknown) =>
+            value !== null && value !== undefined && String(value).trim() !== ''
+
+          const manualData = manualEnergyData[Number(energyScanProperty.id)] || {}
+
+          const enrichedEnergyScanProperty = {
+            ...energyScanProperty,
+            bouwjaar: manualData.bouwjaar || energyScanProperty.bouwjaar,
+            renovatiejaar: manualData.renovatiejaar || energyScanProperty.renovatiejaar,
+            dakisolatie: manualData.dakisolatie ?? energyScanProperty.dakisolatie,
+            muurisolatie: manualData.isolatie ?? energyScanProperty.muurisolatie,
+            vloerisolatie: manualData.isolatie ?? energyScanProperty.vloerisolatie,
+            dubbel_glas: manualData.ramenVervangen ?? energyScanProperty.dubbel_glas,
+            hr_glas: manualData.ramenVervangen ?? energyScanProperty.hr_glas,
+            verwarmingstype: manualData.verwarmingstype || energyScanProperty.verwarmingstype,
+          }
+          const energyInsight = calculateEnergyInsight(enrichedEnergyScanProperty)
+          const formatter = new Intl.NumberFormat('nl-BE', {
+            style: 'currency',
+            currency: 'EUR',
+            maximumFractionDigits: 0,
+          })
+
+          const missingEnergyFields = {
+            bouwjaar: !hasEnergyValue(energyScanProperty.bouwjaar),
+            laatsteRenovatiejaar: !hasEnergyValue(energyScanProperty.laatste_renovatiejaar),
+            hrGlas: !hasEnergyValue(energyScanProperty.hr_glas) && !hasEnergyValue(energyScanProperty.dubbel_glas),
+            isolatie: !hasEnergyValue(energyScanProperty.muurisolatie) && !hasEnergyValue(energyScanProperty.vloerisolatie),
+            dakGeisoleerd: !hasEnergyValue(energyScanProperty.dakisolatie),
+            verwarmingstype: !hasEnergyValue(energyScanProperty.verwarmingstype),
+            ramenVervangen: !hasEnergyValue(energyScanProperty.ramen_vervangen),
+            dakVernieuwd: !hasEnergyValue(energyScanProperty.dak_vernieuwd),
+          }
+          const showManualEnergyInputs = Object.values(missingEnergyFields).some(Boolean)
+
+          const setManualEnergyValue = (key: string, value: unknown) => {
+            const propertyId = Number(energyScanProperty.id)
+
+            setManualEnergyData((current) => ({
+              ...current,
+              [propertyId]: {
+                ...(current[propertyId] || {}),
+                [key]: value,
+              },
+            }))
+          }
+
+          const renderYesNoToggle = (key: string, label: string) => (
+            <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+              <p className="text-sm font-black text-[#071B4D]">{label}</p>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                {[
+                  { label: 'Ja', value: true },
+                  { label: 'Nee', value: false },
+                ].map((option) => (
+                  <button
+                    key={option.label}
+                    type="button"
+                    onClick={() => setManualEnergyValue(key, option.value)}
+                    className={`h-10 rounded-xl border text-sm font-black transition ${
+                      manualData[key] === option.value
+                        ? 'border-[#0B1F4D] bg-[#0B1F4D] text-white'
+                        : 'border-gray-200 bg-gray-50 text-gray-600 hover:border-blue-200 hover:bg-blue-50'
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )
+
+          const energyScanEpc = String(
+            energyScanProperty.epc ||
+            energyScanProperty.epc_code ||
+            ''
+          ).toUpperCase().trim()
+
+          const hasGoodEnergyScanEpc = [
+            'A+++++',
+            'A++++',
+            'A+++',
+            'A++',
+            'A+',
+            'A',
+            'B',
+          ].includes(energyScanEpc)
+
+          const estimatedCost = energyInsight.estimatedMax > 0
+            ? `${formatter.format(energyInsight.estimatedMin)} - ${formatter.format(energyInsight.estimatedMax)}`
+            : hasGoodEnergyScanEpc
+              ? 'Geen verplichte energierenovatie gevonden'
+              : 'Nog niet genoeg data'
+
+          const realEnergyNotes = getRealEnergyNotes(energyScanProperty)
+          const mainReason = energyInsight.recommendations[0] || 'Geen duidelijke energierenovatie gevonden met de beschikbare data.'
+          const checkItems = energyInsight.prioritizedRecommendations
+
+          const confidenceReason =
+            energyInsight.confidence === 'high'
+              ? 'Hoog, omdat de belangrijkste energiegegevens beschikbaar zijn.'
+              : energyInsight.confidence === 'medium'
+                ? 'Gemiddeld, omdat sommige woninggegevens ontbreken.'
+                : 'Laag, omdat belangrijke renovatie- of isolatiegegevens ontbreken.'
+
+          const yearlySavings = energyInsight.yearlySavingsEstimate
+            ? `${formatter.format(energyInsight.yearlySavingsEstimate.min)} - ${formatter.format(energyInsight.yearlySavingsEstimate.max)} / jaar`
+            : 'Niet betrouwbaar genoeg in te schatten'
+
+          const getEpcBadgeClass = (label: string) => {
+            const cleanLabel = label.toUpperCase()
+
+            if (['A+++++', 'A++++', 'A+++', 'A++', 'A+', 'A', 'B'].some((item) => cleanLabel.includes(item))) {
+              return 'border-emerald-200 bg-emerald-100 text-emerald-800'
+            }
+
+            if (cleanLabel.includes('C') || cleanLabel.includes('D')) {
+              return 'border-yellow-200 bg-yellow-100 text-yellow-800'
+            }
+
+            if (cleanLabel.includes('E') || cleanLabel.includes('F') || cleanLabel.includes('G')) {
+              return 'border-red-200 bg-red-100 text-red-800'
+            }
+
+            return 'border-gray-200 bg-gray-100 text-gray-700'
+          }
+
+          const getPriorityBadgeClass = (priority: string) => {
+            if (priority === 'Wettelijk relevant') return 'bg-red-100 text-red-700'
+            if (priority === 'Belangrijk') return 'bg-orange-100 text-orange-700'
+            if (priority === 'Aanbevolen') return 'bg-blue-100 text-blue-700'
+            return 'bg-gray-100 text-gray-600'
+          }
+
+    const reportId = options.reportId || 'energy-report-content'
+
+    return (
+      <div
+        id={reportId}
+        className={options.embedded
+          ? 'rounded-[2rem] bg-white p-6 shadow-sm md:p-8'
+          : 'max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-[2rem] bg-white p-6 shadow-2xl md:p-8'}
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-black uppercase tracking-wide text-amber-600">
+              EnergieScan
+            </p>
+            <h3 className="mt-2 text-3xl font-black text-[#071B4D]">
+              {energyScanProperty.title || 'Energie-inschatting'}
+            </h3>
+            <p className="mt-3 max-w-xl text-sm font-bold leading-6 text-gray-500">
+              Dit is geen offerte. Dit is een indicatieve scan op basis van de beschikbare woningdata.
+            </p>
+          </div>
+
+          {options.onClose && (
+            <button
+              type="button"
+              onClick={options.onClose}
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-gray-100 text-2xl font-black text-gray-600 transition hover:bg-gray-200"
+            >
+              ×
+            </button>
+          )}
+        </div>
+
+                <div className="mt-6 rounded-[1.5rem] border border-gray-100 bg-[#F8FAFC] p-5 shadow-sm">
+                  <p className="text-xs font-black uppercase tracking-wide text-gray-500">
+                    AI Samenvatting
+                  </p>
+                  <p className="mt-3 max-w-3xl text-sm font-bold leading-6 text-[#071B4D]">
+                    {energyInsight.aiSummary}
+                  </p>
+                </div>
+
+                <div className="mt-5 rounded-[1.5rem] border border-slate-100 bg-white p-5 shadow-sm">
+                  <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+                    Beschikbare energiedata
+                  </p>
+                  <div className="mt-3 space-y-2">
+                    {realEnergyNotes.map((note, index) => (
+                      <p key={index} className="text-sm font-bold leading-6 text-slate-700">
+                        {note}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-5 rounded-[1.5rem] border border-blue-100 bg-blue-50/60 p-5 shadow-sm">
+                  <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-wide text-blue-700">
+                        EPC-traject
+                      </p>
+                      <p className="mt-2 text-sm font-bold leading-6 text-blue-900">
+                        {energyInsight.epcTrajectory.text}
+                      </p>
+                    </div>
+
+                    <div className="flex shrink-0 items-center gap-3">
+                      <span className={`rounded-full border px-3 py-1 text-xs font-black ${getEpcBadgeClass(energyInsight.epcTrajectory.current)}`}>
+                        {energyInsight.epcTrajectory.current}
+                      </span>
+                      <span className="text-lg font-black text-blue-400">→</span>
+                      <span className={`rounded-full border px-3 py-1 text-xs font-black ${getEpcBadgeClass(energyInsight.epcTrajectory.target)}`}>
+                        mogelijk richting {energyInsight.epcTrajectory.target}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-7 grid grid-cols-1 items-start gap-5 xl:grid-cols-3">
+                  <div className="rounded-[26px] border border-[#9FE7C4] bg-[#EEF9F4] px-6 py-6 shadow-sm">
+                    <p className="text-[13px] font-extrabold uppercase leading-[1.35] tracking-tight text-[#007A55]">
+                      Energie-inschatting
+                    </p>
+                    <div className="mt-4 h-[2px] w-11 rounded-full bg-current opacity-80" />
+                    <p
+                      className="mt-7 w-full max-w-none text-[13px] font-bold leading-[1.75] tracking-normal text-[#005B4A]"
+                      style={{ wordBreak: 'normal', overflowWrap: 'normal', hyphens: 'none' }}
+                    >
+                      {estimatedCost}
+                    </p>
+                    <p className="mt-4 text-[12px] font-semibold leading-5 text-[#005B4A]/75">
+                      {energyInsight.costConfidence}
+                    </p>
+
+                    {energyInsight.costBreakdown.length > 0 && (
+                      <div className="mt-5 space-y-3 border-t border-[#9FE7C4] pt-4">
+                        {energyInsight.costBreakdown.map((item) => (
+                          <div key={item.workType}>
+                            <p className="text-[12px] font-black text-[#005B4A]">
+                              {item.workType}
+                            </p>
+                            <p className="mt-1 text-[12px] font-semibold leading-5 text-[#005B4A]/80">
+                              {item.formula} ≈ {formatter.format(item.estimatedMin)} – {formatter.format(item.estimatedMax)}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="rounded-[26px] border border-[#F3D27A] bg-[#FFFBEF] px-6 py-6 shadow-sm">
+                    <p className="text-[13px] font-extrabold uppercase leading-[1.35] tracking-tight text-[#B45309]">
+                      Belangrijkste aandachtspunt
+                    </p>
+                    <div className="mt-4 h-[2px] w-11 rounded-full bg-current opacity-80" />
+                    <p
+                      className="mt-7 w-full max-w-none text-[13px] font-bold leading-[1.75] tracking-normal text-[#7C2D12]"
+                      style={{ wordBreak: 'normal', overflowWrap: 'normal', hyphens: 'none' }}
+                    >
+                      {mainReason}
+                    </p>
+                  </div>
+
+                  <div className="rounded-[26px] border border-[#BDD4FF] bg-[#F5F8FF] px-6 py-6 shadow-sm">
+                    <p className="text-[13px] font-extrabold uppercase leading-[1.35] tracking-tight text-[#2453FF]">
+                      Betrouwbaarheid
+                    </p>
+                    <div className="mt-4 h-[2px] w-11 rounded-full bg-current opacity-80" />
+                    <p
+                      className="mt-7 w-full max-w-none text-[13px] font-bold leading-[1.75] tracking-normal text-[#1E3A8A]"
+                      style={{ wordBreak: 'normal', overflowWrap: 'normal', hyphens: 'none' }}
+                    >
+                      {confidenceReason}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <div className="rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm">
+                    <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
+                      Toekomstbestendigheid
+                    </p>
+                    <p className="mt-3 text-lg font-black text-[#071B4D]">
+                      {energyInsight.futureProofScore.level}
+                    </p>
+                    <p className="mt-2 text-xs font-bold leading-5 text-gray-600">
+                      {energyInsight.futureProofScore.text}
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-red-100 bg-white p-4 shadow-sm">
+                    <p className="text-xs font-black uppercase tracking-wide text-red-700">
+                      Energierisico
+                    </p>
+                    <p className="mt-3 text-lg font-black text-[#071B4D]">
+                      {energyInsight.energyRisk.level}
+                    </p>
+                    <p className="mt-2 text-xs font-bold leading-5 text-gray-600">
+                      {energyInsight.energyRisk.text}
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-blue-100 bg-white p-4 shadow-sm">
+                    <p className="text-xs font-black uppercase tracking-wide text-blue-700">
+                      Verwachte energiebesparing
+                    </p>
+                    <p className="mt-3 text-lg font-black text-[#071B4D]">
+                      {yearlySavings}
+                    </p>
+                    <p className="mt-3 text-sm font-bold leading-6 text-gray-700">
+                      {energyInsight.energySavingImpact}
+                    </p>
+                    {energyInsight.yearlySavingsEstimate && (
+                      <p className="mt-2 text-xs font-semibold leading-5 text-gray-500">
+                        {energyInsight.yearlySavingsEstimate.text}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="rounded-2xl border border-amber-100 bg-white p-4 shadow-sm">
+                    <p className="text-xs font-black uppercase tracking-wide text-amber-700">
+                      Mogelijke EPC-verbetering
+                    </p>
+                    <p className="mt-3 text-sm font-bold leading-6 text-gray-700">
+                      Huidige EPC: {energyScanEpc || 'onbekend'}
+                    </p>
+                    <p className="mt-2 text-sm font-bold leading-6 text-gray-700">
+                      {energyInsight.predictedEpcAfterImprovements}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-5 grid gap-4 md:grid-cols-2">
+                  <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+                    <p className="text-xs font-black uppercase tracking-wide text-gray-500">
+                      Adviesniveau
+                    </p>
+                    <p className="mt-3 text-lg font-black text-[#071B4D]">
+                      {energyInsight.recommendationPriority}
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+                    <p className="text-xs font-black uppercase tracking-wide text-gray-500">
+                      Verwarming
+                    </p>
+                    <p className="mt-3 text-sm font-bold leading-6 text-gray-700">
+                      {energyInsight.heatingAnalysis}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-5 rounded-2xl border border-purple-100 bg-purple-50/60 p-5 shadow-sm">
+                  <p className="text-xs font-black uppercase tracking-wide text-purple-700">
+                    Waardepotentieel
+                  </p>
+                  <p className="mt-3 text-lg font-black text-[#071B4D]">
+                    {energyInsight.valuePotential.level}
+                  </p>
+                  <p className="mt-2 text-sm font-bold leading-6 text-purple-900">
+                    {energyInsight.valuePotential.text}
+                  </p>
+                </div>
+
+                <div className="mt-7 rounded-2xl border border-gray-100 bg-gray-50 p-5">
+                  <h4 className="text-lg font-black text-[#071B4D]">
+                    Wat moet gecontroleerd worden?
+                  </h4>
+
+                  <div className="mt-4 space-y-3">
+                    {checkItems.length > 0 ? (
+                      checkItems.map((item, index) => (
+                        <div
+                          key={index}
+                          className="flex flex-col gap-3 rounded-xl bg-white p-4 text-sm font-bold text-gray-700 shadow-sm md:flex-row md:items-start"
+                        >
+                          <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-blue-100 text-xs font-black text-blue-700">
+                            {index + 1}
+                          </span>
+                          <span className="flex-1">{item.text}</span>
+                          <span className={`w-fit rounded-full px-2.5 py-1 text-[11px] font-black ${getPriorityBadgeClass(item.priority)}`}>
+                            {item.priority}
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="rounded-xl bg-white p-4 text-sm font-bold text-gray-500 shadow-sm">
+                        Geen extra controlepunten nodig op basis van de huidige gegevens.
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {energyInsight.subsidySuggestions.length > 0 && (
+                  <div className="mt-5 rounded-2xl border border-emerald-100 bg-emerald-50 p-5">
+                    <h4 className="text-lg font-black text-emerald-900">
+                      Mogelijke premies
+                    </h4>
+
+                    <div className="mt-3 space-y-2">
+                      {energyInsight.subsidySuggestions.map((suggestion, index) => (
+                        <p key={index} className="rounded-xl bg-white p-3 text-sm font-bold leading-6 text-emerald-800 shadow-sm">
+                          {suggestion}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {showManualEnergyInputs && (
+                  <div className="mt-5 rounded-2xl border border-blue-100 bg-gradient-to-br from-white via-blue-50 to-amber-50 p-5">
+                    <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-wide text-blue-700">
+                          Aanvullende informatie
+                        </p>
+                        <h4 className="mt-2 text-lg font-black text-[#071B4D]">
+                          Vul ontbrekende renovatiedata aan
+                        </h4>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setEnergyScanRefreshKey((current) => current + 1)}
+                        className="rounded-xl bg-[#0B1F4D] px-5 py-3 text-sm font-black text-white transition hover:bg-blue-800"
+                      >
+                        Herbereken energiescan
+                      </button>
+                    </div>
+
+                    <div className="mt-5 grid gap-3 md:grid-cols-2">
+                      {missingEnergyFields.bouwjaar && (
+                        <label className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+                          <span className="text-sm font-black text-[#071B4D]">Bouwjaar</span>
+                          <input
+                            type="number"
+                            value={String(manualData.bouwjaar || '')}
+                            onChange={(event) => setManualEnergyValue('bouwjaar', event.target.value)}
+                            className="mt-3 h-11 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 text-sm font-black text-gray-700 outline-none transition focus:border-blue-400 focus:bg-white"
+                          />
+                        </label>
+                      )}
+
+                      {missingEnergyFields.laatsteRenovatiejaar && (
+                        <label className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+                          <span className="text-sm font-black text-[#071B4D]">Laatste renovatiejaar</span>
+                          <input
+                            type="number"
+                            value={String(manualData.renovatiejaar || '')}
+                            onChange={(event) => setManualEnergyValue('renovatiejaar', event.target.value)}
+                            className="mt-3 h-11 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 text-sm font-black text-gray-700 outline-none transition focus:border-blue-400 focus:bg-white"
+                          />
+                        </label>
+                      )}
+
+                      {missingEnergyFields.hrGlas && renderYesNoToggle('ramenVervangen', 'HR-glas aanwezig?')}
+                      {missingEnergyFields.dakGeisoleerd && renderYesNoToggle('dakisolatie', 'Dak geïsoleerd?')}
+
+                      {missingEnergyFields.verwarmingstype && (
+                        <label className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+                          <span className="text-sm font-black text-[#071B4D]">Type verwarming</span>
+                          <select
+                            value={String(manualData.verwarmingstype || '')}
+                            onChange={(event) => setManualEnergyValue('verwarmingstype', event.target.value)}
+                            className="mt-3 h-11 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 text-sm font-black text-gray-700 outline-none transition focus:border-blue-400 focus:bg-white"
+                          >
+                            <option value="">Kies type</option>
+                            <option value="Gas">Gas</option>
+                            <option value="Elektrisch">Elektrisch</option>
+                            <option value="Warmtepomp">Warmtepomp</option>
+                            <option value="Mazout">Mazout</option>
+                          </select>
+                        </label>
+                      )}
+
+                      {missingEnergyFields.isolatie && renderYesNoToggle('isolatie', 'Isolatie aanwezig?')}
+                      {missingEnergyFields.ramenVervangen && renderYesNoToggle('ramenVervangen', 'Ramen vervangen?')}
+                      {missingEnergyFields.dakVernieuwd && renderYesNoToggle('dakisolatie', 'Dak vernieuwd?')}
+                    </div>
+                  </div>
+                )}
+
+                {energyInsight.warnings.length > 0 && (
+                  <div className="mt-5 rounded-2xl border border-orange-100 bg-orange-50 p-5">
+                    <h4 className="text-lg font-black text-orange-900">
+                      Waarom is dit geen definitieve offerte?
+                    </h4>
+
+                    <div className="mt-3 space-y-2">
+                      {energyInsight.warnings.map((warning, index) => (
+                        <p key={index} className="text-sm font-bold leading-6 text-orange-800">
+                          • {warning}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+
+        {options.showActions !== false && (
+          <div className="mt-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <p className="text-xs font-bold leading-5 text-gray-500">
+              Voor een echte offerte zijn exacte renovatiegegevens, plaatsbezoek en metingen nodig.
+            </p>
+
+            <div className="flex flex-col gap-3 md:flex-row md:items-center">
+              <button
+                type="button"
+                onClick={async () => {
+                  console.log('PDF CLICKED')
+
+                  await exportEnergyReport(
+                    reportId,
+                    energyScanProperty?.title || 'energie-report'
+                  )
+                }}
+                className="rounded-2xl border border-[#0B1F4D] bg-white px-5 py-3 text-base font-black text-[#0B1F4D] transition hover:bg-[#F5F7FB]"
+              >
+                Download PDF
+              </button>
+
+              {options.onClose && (
+                <button
+                  type="button"
+                  onClick={options.onClose}
+                  className="rounded-2xl bg-[#0B1F4D] px-5 py-3 text-base font-black text-white transition hover:bg-[#071736]"
+                >
+                  Sluiten
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
   return (
     <div className="min-h-screen bg-[#f6f8fb] px-5 pb-8 pt-3 text-[#111827] md:px-10 md:pt-4">
       <div className="mx-auto max-w-[1500px]">
@@ -4079,6 +4833,36 @@ function PropertiesContent() {
                       ))}
                     </div>
 
+                    <div className="mt-8 space-y-8 border-t border-gray-100 pt-8">
+                      <section>
+                        <div className="mb-4">
+                          <p className="text-sm font-black uppercase tracking-wide text-amber-600">
+                            Energie
+                          </p>
+                          <h4 className="mt-2 text-2xl font-black text-[#071B4D]">
+                            EnergieScan
+                          </h4>
+                        </div>
+                        {renderEnergyScanOverview(openInsightProperty, {
+                          embedded: true,
+                          reportId: `energy-report-content-analyse-${openInsightProperty.id}`,
+                          showActions: false,
+                        })}
+                      </section>
+
+                      <section>
+                        <div className="mb-4">
+                          <p className="text-sm font-black uppercase tracking-wide text-orange-600">
+                            Renovatie
+                          </p>
+                          <h4 className="mt-2 text-2xl font-black text-[#071B4D]">
+                            SlimWoning Renovatie Scan
+                          </h4>
+                        </div>
+                        {renderRenovatieScanOverview(openInsightProperty)}
+                      </section>
+                    </div>
+
                     <button
                       type="button"
                       onClick={() => setOpenInsightId(null)}
@@ -4094,38 +4878,7 @@ function PropertiesContent() {
         )}
 
         {openRenovatieScanProperty && (() => {
-          const renovatiePhotoCount = getPropertyPhotoCount(openRenovatieScanProperty)
-          const renovatiePropertyId = Number(openRenovatieScanProperty.id)
-          const renovatiePhotoAnalysis = renovatiePhotoAnalyses[renovatiePropertyId] || null
-          const isRenovatiePhotoLoading = Boolean(renovatiePhotoLoading[renovatiePropertyId])
-          const renovatiePhotoError = renovatiePhotoErrors[renovatiePropertyId] || ''
-          const renovatieScan = getRenovatieScan(
-            openRenovatieScanProperty,
-            renovatiePhotoCount,
-            renovatiePhotoAnalysis,
-          )
           const renovatieHeroImage = getPropertyPrimaryImage(openRenovatieScanProperty)
-          const zichtbareRenovatiezones = Object.entries(renovatieScan.renovatiezones).filter(
-            ([, status]) => status !== 'niet_zichtbaar'
-          )
-          const renovationAreaLabels: Record<string, string> = {
-            walls: 'Muren',
-            floors: 'Vloeren',
-            windows: 'Ramen',
-            kitchen: 'Keuken',
-            bathroom: 'Badkamer',
-            ceiling: 'Plafond',
-            roof: 'Dak',
-            installations: 'Installaties',
-            insulation: 'Isolatie',
-          }
-          const renovationStatusLabels: Record<string, string> = {
-            modern_zichtbaar: 'Modern zichtbaar',
-            verzorgd_zichtbaar: 'Verzorgd zichtbaar',
-            verouderd_zichtbaar: 'Verouderd zichtbaar',
-            beperkt_zichtbaar: 'Beperkt zichtbaar',
-            niet_zichtbaar: 'Niet zichtbaar',
-          }
 
           return (
             <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/45 p-3 backdrop-blur-sm sm:p-4">
@@ -4174,710 +4927,23 @@ function PropertiesContent() {
                   </div>
                 </header>
 
-                <div className="bg-[#F6F8FC] p-4 sm:p-6">
-                  <div className="rounded-[28px] border border-blue-100 bg-white p-8 shadow-sm">
-                    <section>
-                      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                        <div>
-                          <p className="text-xs font-black uppercase tracking-wide text-[#64748B]">
-                            Staat van afwerking
-                          </p>
-                          <div className="mt-3 flex flex-wrap items-center gap-3">
-                            <span className="inline-flex w-fit rounded-full border border-orange-100 bg-orange-50 px-4 py-1.5 text-sm font-black text-orange-700">
-                              {isRenovatiePhotoLoading
-                                ? 'Foto’s worden geanalyseerd...'
-                                : renovatieScan.renovatieniveau}
-                            </span>
-                            <p className="text-sm font-semibold leading-6 text-[#64748B]">
-                              Er worden geen kosten berekend in Renovatie Scan v2.
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="grid gap-4 text-sm md:min-w-[320px] md:grid-cols-1">
-                          <div>
-                            <p className="text-[11px] font-black uppercase tracking-wide text-[#64748B]">
-                              Toelichting
-                            </p>
-                            <p className="mt-1 font-semibold leading-6 text-[#64748B]">
-                              {renovatieScan.renovatiecategorie}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-[11px] font-black uppercase tracking-wide text-[#64748B]">
-                              Betrouwbaarheid
-                            </p>
-                            <p className="mt-1 font-semibold leading-6 text-[#64748B]">
-                              {renovatieScan.betrouwbaarheid}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </section>
-
-                    <section className="mt-5 border-t border-blue-50 pt-5">
-                      {isRenovatiePhotoLoading ? (
-                        <div className="rounded-2xl border border-orange-100 bg-orange-50 p-4 text-sm font-bold text-orange-700">
-                          Foto’s worden geanalyseerd...
-                        </div>
-                      ) : renovatiePhotoError ? (
-                        <div className="rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-bold text-red-700">
-                          {renovatiePhotoError} De scan toont voorlopig alleen wat niet visueel is vastgesteld.
-                        </div>
-                      ) : (
-                        <p className="text-sm font-semibold leading-6 text-[#64748B]">
-                          {renovatieScan.fotoAnalyseSamenvatting}
-                        </p>
-                      )}
-                    </section>
-
-                    <section className="mt-5 border-t border-blue-50 pt-5">
-                      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                        <div>
-                          <h4 className="text-base font-black text-[#071B4D]">Waargenomen elementen</h4>
-                          <ul className="mt-3 space-y-2 text-sm font-semibold leading-6 text-[#64748B]">
-                            {renovatieScan.visueleObservaties.map((observatie, index) => (
-                              <li key={index} className="flex gap-2">
-                                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#F97316]" />
-                                <span>{observatie}</span>
-                              </li>
-                            ))}
-                          </ul>
-                          {renovatieScan.kamersGezien.length > 0 && (
-                            <p className="mt-3 text-xs font-bold text-[#64748B]">
-                              Ruimtes gezien: {renovatieScan.kamersGezien.join(', ')} · Foto’s geanalyseerd: {renovatieScan.fotoDekking.aantalFotos}
-                            </p>
-                          )}
-                        </div>
-
-                        <div>
-                          <h4 className="text-base font-black text-[#071B4D]">Waargenomen componenten</h4>
-                          {zichtbareRenovatiezones.length > 0 ? (
-                            <div className="mt-3 grid grid-cols-2 gap-2 text-xs font-black text-[#64748B]">
-                              {zichtbareRenovatiezones.map(([zone, status]) => (
-                                <div key={zone} className="rounded-xl border border-blue-100 bg-[#F6F8FC] px-3 py-2">
-                                  <span className="block text-[#071B4D]">{renovationAreaLabels[zone] || zone}</span>
-                                  <span className="mt-1 block">{renovationStatusLabels[String(status)] || String(status).replace('_', ' ')}</span>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <p className="mt-3 text-sm font-semibold leading-6 text-[#64748B]">
-                              Geen afzonderlijke componenten zichtbaar genoeg om te beoordelen. Niet-zichtbare onderdelen staan apart bij Niet beoordeeld.
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </section>
-
-                    <section className="mt-5 border-t border-blue-50 pt-5">
-                      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                        <div>
-                          <h4 className="text-base font-black text-[#071B4D]">Zichtbare pluspunten</h4>
-                          <ul className="mt-3 space-y-2 text-sm font-semibold leading-6 text-[#64748B]">
-                            {renovatieScan.pluspunten.map((pluspunt, index) => (
-                              <li key={index} className="flex gap-2">
-                                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#071B4D]" />
-                                <span>{pluspunt}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-
-                        <div>
-                          <h4 className="text-base font-black text-[#071B4D]">Mogelijke aandachtspunten</h4>
-                          <ul className="mt-3 space-y-2 text-sm font-semibold leading-6 text-[#64748B]">
-                            {renovatieScan.aandachtspunten.map((aandachtspunt, index) => (
-                              <li key={index} className="flex gap-2">
-                                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#071B4D]" />
-                                <span>{aandachtspunt}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      </div>
-                    </section>
-
-
-                    {renovatieScan.nietBeoordeeld.length > 0 && (
-                      <section className="mt-5 border-t border-blue-50 pt-5">
-                        <h4 className="text-base font-black text-[#071B4D]">Niet beoordeeld</h4>
-                        <ul className="mt-3 grid grid-cols-1 gap-2 text-sm font-semibold leading-6 text-[#64748B] sm:grid-cols-2">
-                          {renovatieScan.nietBeoordeeld.map((onderdeel, index) => (
-                            <li key={index} className="rounded-xl border border-blue-100 bg-[#F6F8FC] px-3 py-2">
-                              {onderdeel}
-                            </li>
-                          ))}
-                        </ul>
-                      </section>
-                    )}
-
-                    <section className="mt-5 border-t border-blue-50 pt-5">
-                      <h4 className="text-base font-black text-[#071B4D]">Gebaseerd op</h4>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {renovatieScan.gebaseerdOp.map((datapunt, index) => (
-                          <span key={index} className="rounded-full border border-blue-100 bg-[#F6F8FC] px-3 py-1 text-xs font-black text-[#64748B] shadow-sm">
-                            {datapunt}
-                          </span>
-                        ))}
-                      </div>
-                    </section>
-
-                    {renovatieScan.beperkteFotoInformatie && (
-                      <p className="mt-5 border-t border-blue-50 pt-5 text-sm font-semibold leading-6 text-[#64748B]">
-                        Beperkte foto-informatie beschikbaar.
-                      </p>
-                    )}
-
-                    <footer className="mt-5 border-t border-blue-50 pt-5 text-xs font-semibold leading-5 text-[#64748B]">
-                      <p>
-                        {renovatieScan.fotoAnalyseStatus === 'geanalyseerd'
-                          ? 'Foto’s zijn visueel door AI beoordeeld op basis van zichtbare elementen.'
-                          : 'Foto’s werden niet visueel beoordeeld.'}
-                      </p>
-                      <p className="mt-2">
-                        Deze beoordeling is gebaseerd op zichtbare elementen in beschikbare foto&apos;s, met woninggegevens alleen als context. Het betreft geen bouwkundig rapport, expertiseverslag of professionele inspectie.
-                      </p>
-                    </footer>
-
-                    <button
-                      type="button"
-                      onClick={() => setOpenRenovatieScanId(null)}
-                      className="mx-auto mt-5 inline-flex items-center justify-center rounded-xl bg-[#071B4D] px-6 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-[#0B2A6B]"
-                    >
-                      Sluiten
-                    </button>
-                  </div>
-                </div>
+                {renderRenovatieScanOverview(openRenovatieScanProperty, {
+                  showCloseButton: true,
+                  onClose: () => setOpenRenovatieScanId(null),
+                })}
               </div>
             </div>
           )
         })()}
 
-        {openEnergyScanProperty && (() => {
-          void energyScanRefreshKey
-
-          const hasEnergyValue = (value: unknown) =>
-            value !== null && value !== undefined && String(value).trim() !== ''
-
-          const manualData = manualEnergyData[Number(openEnergyScanProperty.id)] || {}
-
-          const enrichedEnergyScanProperty = {
-            ...openEnergyScanProperty,
-            bouwjaar: manualData.bouwjaar || openEnergyScanProperty.bouwjaar,
-            renovatiejaar: manualData.renovatiejaar || openEnergyScanProperty.renovatiejaar,
-            dakisolatie: manualData.dakisolatie ?? openEnergyScanProperty.dakisolatie,
-            muurisolatie: manualData.isolatie ?? openEnergyScanProperty.muurisolatie,
-            vloerisolatie: manualData.isolatie ?? openEnergyScanProperty.vloerisolatie,
-            dubbel_glas: manualData.ramenVervangen ?? openEnergyScanProperty.dubbel_glas,
-            hr_glas: manualData.ramenVervangen ?? openEnergyScanProperty.hr_glas,
-            verwarmingstype: manualData.verwarmingstype || openEnergyScanProperty.verwarmingstype,
-          }
-          const energyInsight = calculateEnergyInsight(enrichedEnergyScanProperty)
-          const formatter = new Intl.NumberFormat('nl-BE', {
-            style: 'currency',
-            currency: 'EUR',
-            maximumFractionDigits: 0,
-          })
-
-          const missingEnergyFields = {
-            bouwjaar: !hasEnergyValue(openEnergyScanProperty.bouwjaar),
-            laatsteRenovatiejaar: !hasEnergyValue(openEnergyScanProperty.laatste_renovatiejaar),
-            hrGlas: !hasEnergyValue(openEnergyScanProperty.hr_glas) && !hasEnergyValue(openEnergyScanProperty.dubbel_glas),
-            isolatie: !hasEnergyValue(openEnergyScanProperty.muurisolatie) && !hasEnergyValue(openEnergyScanProperty.vloerisolatie),
-            dakGeisoleerd: !hasEnergyValue(openEnergyScanProperty.dakisolatie),
-            verwarmingstype: !hasEnergyValue(openEnergyScanProperty.verwarmingstype),
-            ramenVervangen: !hasEnergyValue(openEnergyScanProperty.ramen_vervangen),
-            dakVernieuwd: !hasEnergyValue(openEnergyScanProperty.dak_vernieuwd),
-          }
-          const showManualEnergyInputs = Object.values(missingEnergyFields).some(Boolean)
-
-          const setManualEnergyValue = (key: string, value: unknown) => {
-            const propertyId = Number(openEnergyScanProperty.id)
-
-            setManualEnergyData((current) => ({
-              ...current,
-              [propertyId]: {
-                ...(current[propertyId] || {}),
-                [key]: value,
-              },
-            }))
-          }
-
-          const renderYesNoToggle = (key: string, label: string) => (
-            <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-              <p className="text-sm font-black text-[#071B4D]">{label}</p>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                {[
-                  { label: 'Ja', value: true },
-                  { label: 'Nee', value: false },
-                ].map((option) => (
-                  <button
-                    key={option.label}
-                    type="button"
-                    onClick={() => setManualEnergyValue(key, option.value)}
-                    className={`h-10 rounded-xl border text-sm font-black transition ${
-                      manualData[key] === option.value
-                        ? 'border-[#0B1F4D] bg-[#0B1F4D] text-white'
-                        : 'border-gray-200 bg-gray-50 text-gray-600 hover:border-blue-200 hover:bg-blue-50'
-                    }`}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )
-
-          const energyScanEpc = String(
-            openEnergyScanProperty.epc ||
-            openEnergyScanProperty.epc_code ||
-            ''
-          ).toUpperCase().trim()
-
-          const hasGoodEnergyScanEpc = [
-            'A+++++',
-            'A++++',
-            'A+++',
-            'A++',
-            'A+',
-            'A',
-            'B',
-          ].includes(energyScanEpc)
-
-          const estimatedCost = energyInsight.estimatedMax > 0
-            ? `${formatter.format(energyInsight.estimatedMin)} - ${formatter.format(energyInsight.estimatedMax)}`
-            : hasGoodEnergyScanEpc
-              ? 'Geen verplichte energierenovatie gevonden'
-              : 'Nog niet genoeg data'
-
-          const realEnergyNotes = getRealEnergyNotes(openEnergyScanProperty)
-          const mainReason = energyInsight.recommendations[0] || 'Geen duidelijke energierenovatie gevonden met de beschikbare data.'
-          const checkItems = energyInsight.prioritizedRecommendations
-
-          const confidenceReason =
-            energyInsight.confidence === 'high'
-              ? 'Hoog, omdat de belangrijkste energiegegevens beschikbaar zijn.'
-              : energyInsight.confidence === 'medium'
-                ? 'Gemiddeld, omdat sommige woninggegevens ontbreken.'
-                : 'Laag, omdat belangrijke renovatie- of isolatiegegevens ontbreken.'
-
-          const yearlySavings = energyInsight.yearlySavingsEstimate
-            ? `${formatter.format(energyInsight.yearlySavingsEstimate.min)} - ${formatter.format(energyInsight.yearlySavingsEstimate.max)} / jaar`
-            : 'Niet betrouwbaar genoeg in te schatten'
-
-          const getEpcBadgeClass = (label: string) => {
-            const cleanLabel = label.toUpperCase()
-
-            if (['A+++++', 'A++++', 'A+++', 'A++', 'A+', 'A', 'B'].some((item) => cleanLabel.includes(item))) {
-              return 'border-emerald-200 bg-emerald-100 text-emerald-800'
-            }
-
-            if (cleanLabel.includes('C') || cleanLabel.includes('D')) {
-              return 'border-yellow-200 bg-yellow-100 text-yellow-800'
-            }
-
-            if (cleanLabel.includes('E') || cleanLabel.includes('F') || cleanLabel.includes('G')) {
-              return 'border-red-200 bg-red-100 text-red-800'
-            }
-
-            return 'border-gray-200 bg-gray-100 text-gray-700'
-          }
-
-          const getPriorityBadgeClass = (priority: string) => {
-            if (priority === 'Wettelijk relevant') return 'bg-red-100 text-red-700'
-            if (priority === 'Belangrijk') return 'bg-orange-100 text-orange-700'
-            if (priority === 'Aanbevolen') return 'bg-blue-100 text-blue-700'
-            return 'bg-gray-100 text-gray-600'
-          }
-
-          return (
-            <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
-              <div
-                id="energy-report-content"
-                className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-[2rem] bg-white p-6 shadow-2xl md:p-8"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-black uppercase tracking-wide text-amber-600">
-                      EnergieScan
-                    </p>
-                    <h3 className="mt-2 text-3xl font-black text-[#071B4D]">
-                      {openEnergyScanProperty.title || 'Energie-inschatting'}
-                    </h3>
-                    <p className="mt-3 max-w-xl text-sm font-bold leading-6 text-gray-500">
-                      Dit is geen offerte. Dit is een indicatieve scan op basis van de beschikbare woningdata.
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setOpenEnergyScanId(null)}
-                    className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-gray-100 text-2xl font-black text-gray-600 transition hover:bg-gray-200"
-                  >
-                    ×
-                  </button>
-                </div>
-
-                <div className="mt-6 rounded-[1.5rem] border border-gray-100 bg-[#F8FAFC] p-5 shadow-sm">
-                  <p className="text-xs font-black uppercase tracking-wide text-gray-500">
-                    AI Samenvatting
-                  </p>
-                  <p className="mt-3 max-w-3xl text-sm font-bold leading-6 text-[#071B4D]">
-                    {energyInsight.aiSummary}
-                  </p>
-                </div>
-
-                <div className="mt-5 rounded-[1.5rem] border border-slate-100 bg-white p-5 shadow-sm">
-                  <p className="text-xs font-black uppercase tracking-wide text-slate-500">
-                    Beschikbare energiedata
-                  </p>
-                  <div className="mt-3 space-y-2">
-                    {realEnergyNotes.map((note, index) => (
-                      <p key={index} className="text-sm font-bold leading-6 text-slate-700">
-                        {note}
-                      </p>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="mt-5 rounded-[1.5rem] border border-blue-100 bg-blue-50/60 p-5 shadow-sm">
-                  <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                    <div>
-                      <p className="text-xs font-black uppercase tracking-wide text-blue-700">
-                        EPC-traject
-                      </p>
-                      <p className="mt-2 text-sm font-bold leading-6 text-blue-900">
-                        {energyInsight.epcTrajectory.text}
-                      </p>
-                    </div>
-
-                    <div className="flex shrink-0 items-center gap-3">
-                      <span className={`rounded-full border px-3 py-1 text-xs font-black ${getEpcBadgeClass(energyInsight.epcTrajectory.current)}`}>
-                        {energyInsight.epcTrajectory.current}
-                      </span>
-                      <span className="text-lg font-black text-blue-400">→</span>
-                      <span className={`rounded-full border px-3 py-1 text-xs font-black ${getEpcBadgeClass(energyInsight.epcTrajectory.target)}`}>
-                        mogelijk richting {energyInsight.epcTrajectory.target}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-7 grid grid-cols-1 items-start gap-5 xl:grid-cols-3">
-                  <div className="rounded-[26px] border border-[#9FE7C4] bg-[#EEF9F4] px-6 py-6 shadow-sm">
-                    <p className="text-[13px] font-extrabold uppercase leading-[1.35] tracking-tight text-[#007A55]">
-                      Energie-inschatting
-                    </p>
-                    <div className="mt-4 h-[2px] w-11 rounded-full bg-current opacity-80" />
-                    <p
-                      className="mt-7 w-full max-w-none text-[13px] font-bold leading-[1.75] tracking-normal text-[#005B4A]"
-                      style={{ wordBreak: 'normal', overflowWrap: 'normal', hyphens: 'none' }}
-                    >
-                      {estimatedCost}
-                    </p>
-                    <p className="mt-4 text-[12px] font-semibold leading-5 text-[#005B4A]/75">
-                      {energyInsight.costConfidence}
-                    </p>
-
-                    {energyInsight.costBreakdown.length > 0 && (
-                      <div className="mt-5 space-y-3 border-t border-[#9FE7C4] pt-4">
-                        {energyInsight.costBreakdown.map((item) => (
-                          <div key={item.workType}>
-                            <p className="text-[12px] font-black text-[#005B4A]">
-                              {item.workType}
-                            </p>
-                            <p className="mt-1 text-[12px] font-semibold leading-5 text-[#005B4A]/80">
-                              {item.formula} ≈ {formatter.format(item.estimatedMin)} – {formatter.format(item.estimatedMax)}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="rounded-[26px] border border-[#F3D27A] bg-[#FFFBEF] px-6 py-6 shadow-sm">
-                    <p className="text-[13px] font-extrabold uppercase leading-[1.35] tracking-tight text-[#B45309]">
-                      Belangrijkste aandachtspunt
-                    </p>
-                    <div className="mt-4 h-[2px] w-11 rounded-full bg-current opacity-80" />
-                    <p
-                      className="mt-7 w-full max-w-none text-[13px] font-bold leading-[1.75] tracking-normal text-[#7C2D12]"
-                      style={{ wordBreak: 'normal', overflowWrap: 'normal', hyphens: 'none' }}
-                    >
-                      {mainReason}
-                    </p>
-                  </div>
-
-                  <div className="rounded-[26px] border border-[#BDD4FF] bg-[#F5F8FF] px-6 py-6 shadow-sm">
-                    <p className="text-[13px] font-extrabold uppercase leading-[1.35] tracking-tight text-[#2453FF]">
-                      Betrouwbaarheid
-                    </p>
-                    <div className="mt-4 h-[2px] w-11 rounded-full bg-current opacity-80" />
-                    <p
-                      className="mt-7 w-full max-w-none text-[13px] font-bold leading-[1.75] tracking-normal text-[#1E3A8A]"
-                      style={{ wordBreak: 'normal', overflowWrap: 'normal', hyphens: 'none' }}
-                    >
-                      {confidenceReason}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                  <div className="rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm">
-                    <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
-                      Toekomstbestendigheid
-                    </p>
-                    <p className="mt-3 text-lg font-black text-[#071B4D]">
-                      {energyInsight.futureProofScore.level}
-                    </p>
-                    <p className="mt-2 text-xs font-bold leading-5 text-gray-600">
-                      {energyInsight.futureProofScore.text}
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl border border-red-100 bg-white p-4 shadow-sm">
-                    <p className="text-xs font-black uppercase tracking-wide text-red-700">
-                      Energierisico
-                    </p>
-                    <p className="mt-3 text-lg font-black text-[#071B4D]">
-                      {energyInsight.energyRisk.level}
-                    </p>
-                    <p className="mt-2 text-xs font-bold leading-5 text-gray-600">
-                      {energyInsight.energyRisk.text}
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl border border-blue-100 bg-white p-4 shadow-sm">
-                    <p className="text-xs font-black uppercase tracking-wide text-blue-700">
-                      Verwachte energiebesparing
-                    </p>
-                    <p className="mt-3 text-lg font-black text-[#071B4D]">
-                      {yearlySavings}
-                    </p>
-                    <p className="mt-3 text-sm font-bold leading-6 text-gray-700">
-                      {energyInsight.energySavingImpact}
-                    </p>
-                    {energyInsight.yearlySavingsEstimate && (
-                      <p className="mt-2 text-xs font-semibold leading-5 text-gray-500">
-                        {energyInsight.yearlySavingsEstimate.text}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="rounded-2xl border border-amber-100 bg-white p-4 shadow-sm">
-                    <p className="text-xs font-black uppercase tracking-wide text-amber-700">
-                      Mogelijke EPC-verbetering
-                    </p>
-                    <p className="mt-3 text-sm font-bold leading-6 text-gray-700">
-                      Huidige EPC: {energyScanEpc || 'onbekend'}
-                    </p>
-                    <p className="mt-2 text-sm font-bold leading-6 text-gray-700">
-                      {energyInsight.predictedEpcAfterImprovements}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-5 grid gap-4 md:grid-cols-2">
-                  <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-                    <p className="text-xs font-black uppercase tracking-wide text-gray-500">
-                      Adviesniveau
-                    </p>
-                    <p className="mt-3 text-lg font-black text-[#071B4D]">
-                      {energyInsight.recommendationPriority}
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-                    <p className="text-xs font-black uppercase tracking-wide text-gray-500">
-                      Verwarming
-                    </p>
-                    <p className="mt-3 text-sm font-bold leading-6 text-gray-700">
-                      {energyInsight.heatingAnalysis}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-5 rounded-2xl border border-purple-100 bg-purple-50/60 p-5 shadow-sm">
-                  <p className="text-xs font-black uppercase tracking-wide text-purple-700">
-                    Waardepotentieel
-                  </p>
-                  <p className="mt-3 text-lg font-black text-[#071B4D]">
-                    {energyInsight.valuePotential.level}
-                  </p>
-                  <p className="mt-2 text-sm font-bold leading-6 text-purple-900">
-                    {energyInsight.valuePotential.text}
-                  </p>
-                </div>
-
-                <div className="mt-7 rounded-2xl border border-gray-100 bg-gray-50 p-5">
-                  <h4 className="text-lg font-black text-[#071B4D]">
-                    Wat moet gecontroleerd worden?
-                  </h4>
-
-                  <div className="mt-4 space-y-3">
-                    {checkItems.length > 0 ? (
-                      checkItems.map((item, index) => (
-                        <div
-                          key={index}
-                          className="flex flex-col gap-3 rounded-xl bg-white p-4 text-sm font-bold text-gray-700 shadow-sm md:flex-row md:items-start"
-                        >
-                          <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-blue-100 text-xs font-black text-blue-700">
-                            {index + 1}
-                          </span>
-                          <span className="flex-1">{item.text}</span>
-                          <span className={`w-fit rounded-full px-2.5 py-1 text-[11px] font-black ${getPriorityBadgeClass(item.priority)}`}>
-                            {item.priority}
-                          </span>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="rounded-xl bg-white p-4 text-sm font-bold text-gray-500 shadow-sm">
-                        Geen extra controlepunten nodig op basis van de huidige gegevens.
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {energyInsight.subsidySuggestions.length > 0 && (
-                  <div className="mt-5 rounded-2xl border border-emerald-100 bg-emerald-50 p-5">
-                    <h4 className="text-lg font-black text-emerald-900">
-                      Mogelijke premies
-                    </h4>
-
-                    <div className="mt-3 space-y-2">
-                      {energyInsight.subsidySuggestions.map((suggestion, index) => (
-                        <p key={index} className="rounded-xl bg-white p-3 text-sm font-bold leading-6 text-emerald-800 shadow-sm">
-                          {suggestion}
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {showManualEnergyInputs && (
-                  <div className="mt-5 rounded-2xl border border-blue-100 bg-gradient-to-br from-white via-blue-50 to-amber-50 p-5">
-                    <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-                      <div>
-                        <p className="text-xs font-black uppercase tracking-wide text-blue-700">
-                          Aanvullende informatie
-                        </p>
-                        <h4 className="mt-2 text-lg font-black text-[#071B4D]">
-                          Vul ontbrekende renovatiedata aan
-                        </h4>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => setEnergyScanRefreshKey((current) => current + 1)}
-                        className="rounded-xl bg-[#0B1F4D] px-5 py-3 text-sm font-black text-white transition hover:bg-blue-800"
-                      >
-                        Herbereken energiescan
-                      </button>
-                    </div>
-
-                    <div className="mt-5 grid gap-3 md:grid-cols-2">
-                      {missingEnergyFields.bouwjaar && (
-                        <label className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-                          <span className="text-sm font-black text-[#071B4D]">Bouwjaar</span>
-                          <input
-                            type="number"
-                            value={String(manualData.bouwjaar || '')}
-                            onChange={(event) => setManualEnergyValue('bouwjaar', event.target.value)}
-                            className="mt-3 h-11 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 text-sm font-black text-gray-700 outline-none transition focus:border-blue-400 focus:bg-white"
-                          />
-                        </label>
-                      )}
-
-                      {missingEnergyFields.laatsteRenovatiejaar && (
-                        <label className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-                          <span className="text-sm font-black text-[#071B4D]">Laatste renovatiejaar</span>
-                          <input
-                            type="number"
-                            value={String(manualData.renovatiejaar || '')}
-                            onChange={(event) => setManualEnergyValue('renovatiejaar', event.target.value)}
-                            className="mt-3 h-11 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 text-sm font-black text-gray-700 outline-none transition focus:border-blue-400 focus:bg-white"
-                          />
-                        </label>
-                      )}
-
-                      {missingEnergyFields.hrGlas && renderYesNoToggle('ramenVervangen', 'HR-glas aanwezig?')}
-                      {missingEnergyFields.dakGeisoleerd && renderYesNoToggle('dakisolatie', 'Dak geïsoleerd?')}
-
-                      {missingEnergyFields.verwarmingstype && (
-                        <label className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-                          <span className="text-sm font-black text-[#071B4D]">Type verwarming</span>
-                          <select
-                            value={String(manualData.verwarmingstype || '')}
-                            onChange={(event) => setManualEnergyValue('verwarmingstype', event.target.value)}
-                            className="mt-3 h-11 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 text-sm font-black text-gray-700 outline-none transition focus:border-blue-400 focus:bg-white"
-                          >
-                            <option value="">Kies type</option>
-                            <option value="Gas">Gas</option>
-                            <option value="Elektrisch">Elektrisch</option>
-                            <option value="Warmtepomp">Warmtepomp</option>
-                            <option value="Mazout">Mazout</option>
-                          </select>
-                        </label>
-                      )}
-
-                      {missingEnergyFields.isolatie && renderYesNoToggle('isolatie', 'Isolatie aanwezig?')}
-                      {missingEnergyFields.ramenVervangen && renderYesNoToggle('ramenVervangen', 'Ramen vervangen?')}
-                      {missingEnergyFields.dakVernieuwd && renderYesNoToggle('dakisolatie', 'Dak vernieuwd?')}
-                    </div>
-                  </div>
-                )}
-
-                {energyInsight.warnings.length > 0 && (
-                  <div className="mt-5 rounded-2xl border border-orange-100 bg-orange-50 p-5">
-                    <h4 className="text-lg font-black text-orange-900">
-                      Waarom is dit geen definitieve offerte?
-                    </h4>
-
-                    <div className="mt-3 space-y-2">
-                      {energyInsight.warnings.map((warning, index) => (
-                        <p key={index} className="text-sm font-bold leading-6 text-orange-800">
-                          • {warning}
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <div className="mt-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <p className="text-xs font-bold leading-5 text-gray-500">
-                    Voor een echte offerte zijn exacte renovatiegegevens, plaatsbezoek en metingen nodig.
-                  </p>
-
-                  <div className="flex flex-col gap-3 md:flex-row md:items-center">
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        console.log('PDF CLICKED')
-
-                        await exportEnergyReport(
-                          'energy-report-content',
-                          openEnergyScanProperty?.title || 'energie-report'
-                        )
-                      }}
-                      className="rounded-2xl border border-[#0B1F4D] bg-white px-5 py-3 text-base font-black text-[#0B1F4D] transition hover:bg-[#F5F7FB]"
-                    >
-                      Download PDF
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setOpenEnergyScanId(null)}
-                      className="rounded-2xl bg-[#0B1F4D] px-5 py-3 text-base font-black text-white transition hover:bg-[#071736]"
-                    >
-                      Sluiten
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )
-        })()}
+        {openEnergyScanProperty && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
+            {renderEnergyScanOverview(openEnergyScanProperty, {
+              reportId: 'energy-report-content',
+              onClose: () => setOpenEnergyScanId(null),
+            })}
+          </div>
+        )}
 
         {compareIds.length > 0 && (
           <div className="fixed bottom-5 left-1/2 z-50 w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2 rounded-3xl bg-[#0B1F4D] p-4 text-white shadow-2xl md:p-5">
