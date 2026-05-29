@@ -3997,8 +3997,8 @@ function PropertiesContent() {
           const renovatieScan = getRenovatieScan(openRenovatieScanProperty, renovatiePhotoCount)
 
           return (
-            <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
-              <div className="relative max-h-[85vh] w-full max-w-3xl overflow-y-auto rounded-[2rem] bg-white p-6 shadow-2xl">
+            <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/45 p-3 backdrop-blur-sm sm:p-4">
+              <div className="relative max-h-[90vh] w-[95vw] max-w-[1600px] overflow-y-auto rounded-[2rem] bg-white p-4 shadow-2xl sm:p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-sm font-black uppercase tracking-wide text-orange-600">
@@ -4021,8 +4021,8 @@ function PropertiesContent() {
                   </button>
                 </div>
 
-                <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <div className="rounded-2xl border border-orange-100 bg-orange-50 p-5">
+                <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3">
+                  <div className="rounded-2xl border border-orange-100 bg-orange-50 p-4">
                     <p className="text-xs font-black uppercase tracking-wide text-orange-600">
                       Renovatiebeoordeling
                     </p>
@@ -4034,7 +4034,7 @@ function PropertiesContent() {
                     </p>
                   </div>
 
-                  <div className="rounded-2xl border border-slate-100 bg-slate-50 p-5">
+                  <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
                     <p className="text-xs font-black uppercase tracking-wide text-slate-500">
                       Toelichting
                     </p>
@@ -4043,7 +4043,7 @@ function PropertiesContent() {
                     </p>
                   </div>
 
-                  <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+                  <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
                     <p className="text-xs font-black uppercase tracking-wide text-slate-500">
                       Betrouwbaarheid
                     </p>
@@ -4053,8 +4053,8 @@ function PropertiesContent() {
                   </div>
                 </div>
 
-                <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5">
+                <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
+                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
                     <h4 className="text-lg font-black text-emerald-900">Sterke punten</h4>
                     <div className="mt-3 space-y-2">
                       {renovatieScan.pluspunten.map((pluspunt, index) => (
@@ -4065,7 +4065,7 @@ function PropertiesContent() {
                     </div>
                   </div>
 
-                  <div className="rounded-2xl border border-amber-100 bg-amber-50 p-5">
+                  <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4">
                     <h4 className="text-lg font-black text-amber-900">Technische aandachtspunten</h4>
                     <div className="mt-3 space-y-2">
                       {renovatieScan.aandachtspunten.map((aandachtspunt, index) => (
@@ -4077,9 +4077,9 @@ function PropertiesContent() {
                   </div>
                 </div>
 
-                <div className="mt-5 rounded-2xl border border-slate-100 bg-slate-50 p-5">
+                <div className="mt-4 rounded-2xl border border-slate-100 bg-slate-50 p-4">
                   <h4 className="text-lg font-black text-[#071B4D]">Gebaseerd op</h4>
-                  <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
+                  <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
                     {renovatieScan.gebaseerdOp.map((datapunt, index) => (
                       <p key={index} className="text-sm font-bold leading-6 text-slate-700">
                         • {datapunt}
@@ -4094,7 +4094,7 @@ function PropertiesContent() {
                   </p>
                 )}
 
-                <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50 p-5">
+                <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 p-4">
                   <p className="text-sm font-bold leading-6 text-blue-900">
                     Foto’s zijn meegeteld als beschikbaarheid, maar nog niet visueel door AI beoordeeld.
                   </p>
