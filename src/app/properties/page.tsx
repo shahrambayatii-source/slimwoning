@@ -4112,6 +4112,15 @@ function PropertiesContent() {
             kitchen: 'Keuken',
             bathroom: 'Badkamer',
             ceiling: 'Plafond',
+            roof: 'Dak',
+            installations: 'Installaties',
+            insulation: 'Isolatie',
+          }
+          const renovationStatusLabels: Record<string, string> = {
+            modern_zichtbaar: 'Modern zichtbaar',
+            verzorgd_zichtbaar: 'Verzorgd zichtbaar',
+            beperkt_zichtbaar: 'Beperkt zichtbaar',
+            niet_zichtbaar: 'Niet zichtbaar',
           }
 
           return (
@@ -4167,7 +4176,7 @@ function PropertiesContent() {
                       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                         <div>
                           <p className="text-xs font-black uppercase tracking-wide text-[#64748B]">
-                            Renovatiebeoordeling
+                            Visuele renovatie-indicatie
                           </p>
                           <div className="mt-3 flex flex-wrap items-center gap-3">
                             <span className="inline-flex w-fit rounded-full border border-orange-100 bg-orange-50 px-4 py-1.5 text-sm font-black text-orange-700">
@@ -4221,7 +4230,7 @@ function PropertiesContent() {
                     <section className="mt-5 border-t border-blue-50 pt-5">
                       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                         <div>
-                          <h4 className="text-base font-black text-[#071B4D]">Visuele observaties</h4>
+                          <h4 className="text-base font-black text-[#071B4D]">Waargenomen elementen</h4>
                           <ul className="mt-3 space-y-2 text-sm font-semibold leading-6 text-[#64748B]">
                             {renovatieScan.visueleObservaties.map((observatie, index) => (
                               <li key={index} className="flex gap-2">
@@ -4238,12 +4247,12 @@ function PropertiesContent() {
                         </div>
 
                         <div>
-                          <h4 className="text-base font-black text-[#071B4D]">Mogelijke renovatiezones</h4>
+                          <h4 className="text-base font-black text-[#071B4D]">Waargenomen componenten</h4>
                           <div className="mt-3 grid grid-cols-2 gap-2 text-xs font-black text-[#64748B]">
                             {Object.entries(renovatieScan.renovatiezones).map(([zone, status]) => (
                               <div key={zone} className="rounded-xl border border-blue-100 bg-[#F6F8FC] px-3 py-2">
                                 <span className="block text-[#071B4D]">{renovationAreaLabels[zone] || zone}</span>
-                                <span className="mt-1 block capitalize">{String(status).replace('_', ' ')}</span>
+                                <span className="mt-1 block">{renovationStatusLabels[String(status)] || String(status).replace('_', ' ')}</span>
                               </div>
                             ))}
                           </div>
@@ -4254,7 +4263,7 @@ function PropertiesContent() {
                     <section className="mt-5 border-t border-blue-50 pt-5">
                       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                         <div>
-                          <h4 className="text-base font-black text-[#071B4D]">Sterke punten</h4>
+                          <h4 className="text-base font-black text-[#071B4D]">Ondersteunende visuele pluspunten</h4>
                           <ul className="mt-3 space-y-2 text-sm font-semibold leading-6 text-[#64748B]">
                             {renovatieScan.pluspunten.map((pluspunt, index) => (
                               <li key={index} className="flex gap-2">
@@ -4266,7 +4275,7 @@ function PropertiesContent() {
                         </div>
 
                         <div>
-                          <h4 className="text-base font-black text-[#071B4D]">Technische aandachtspunten</h4>
+                          <h4 className="text-base font-black text-[#071B4D]">Mogelijke aandachtspunten</h4>
                           <ul className="mt-3 space-y-2 text-sm font-semibold leading-6 text-[#64748B]">
                             {renovatieScan.aandachtspunten.map((aandachtspunt, index) => (
                               <li key={index} className="flex gap-2">
@@ -4278,6 +4287,20 @@ function PropertiesContent() {
                         </div>
                       </div>
                     </section>
+
+
+                    {renovatieScan.nietBeoordeeld.length > 0 && (
+                      <section className="mt-5 border-t border-blue-50 pt-5">
+                        <h4 className="text-base font-black text-[#071B4D]">Niet beoordeeld</h4>
+                        <ul className="mt-3 grid grid-cols-1 gap-2 text-sm font-semibold leading-6 text-[#64748B] sm:grid-cols-2">
+                          {renovatieScan.nietBeoordeeld.map((onderdeel, index) => (
+                            <li key={index} className="rounded-xl border border-blue-100 bg-[#F6F8FC] px-3 py-2">
+                              {onderdeel}
+                            </li>
+                          ))}
+                        </ul>
+                      </section>
+                    )}
 
                     <section className="mt-5 border-t border-blue-50 pt-5">
                       <h4 className="text-base font-black text-[#071B4D]">Gebaseerd op</h4>
@@ -4303,7 +4326,7 @@ function PropertiesContent() {
                           : 'Foto’s werden niet visueel beoordeeld.'}
                       </p>
                       <p className="mt-2">
-                        Deze beoordeling is gebaseerd op beschikbare woninggegevens, kenmerken en beschikbare foto&apos;s. Het betreft geen bouwkundig rapport, expertiseverslag of professionele inspectie.
+                        Deze beoordeling is gebaseerd op zichtbare elementen in beschikbare foto&apos;s, met woninggegevens alleen als context. Het betreft geen bouwkundig rapport, expertiseverslag of professionele inspectie.
                       </p>
                     </footer>
 
