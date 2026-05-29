@@ -55,10 +55,21 @@ export type RenovatieScan = {
   fotoAnalyseSamenvatting: string
   nietBeoordeeld: string[]
   fotoAnalyseStatus: 'geanalyseerd' | 'niet_geanalyseerd'
+  fotoDekking: {
+    aantalFotos: number
+    zichtbareRuimtes: number
+    sleutelruimtesGezien: string[]
+  }
 }
 
 const LIMITED_PHOTO_TEXT =
   'Beperkte foto-informatie beschikbaar; de beoordeling blijft beperkt tot zichtbare elementen.'
+
+const SINGLE_PHOTO_BASED_TEXT =
+  'De beoordeling is gebaseerd op de beschikbare woningfoto.'
+
+const SINGLE_PHOTO_UNSEEN_TEXT =
+  'Andere delen van de woning zijn niet vast te stellen op basis van deze foto.'
 
 const DEFAULT_RENOVATION_AREAS: RenovatiePhotoAnalysis['renovationAreas'] = {
   walls: 'niet_zichtbaar',
@@ -322,14 +333,44 @@ const REQUIRED_NOT_VISIBLE_COMPONENTS = [
   'Isolatie',
 ] as const
 
+const KEY_AREA_SIGNALS = [
+  'woonkamer',
+  'living',
+  'keuken',
+  'badkamer',
+  'gevel',
+  'buiten',
+  'exterieur',
+  'tuin',
+  'dak',
+] as const
+
+function getVisibleRooms(roomsObserved: string[]) {
+  return uniqueList(
+    roomsObserved
+      .map((room) => room.trim().toLowerCase())
+      .filter(Boolean),
+  )
+}
+
+function getKeyAreasSeen(roomsObserved: string[]) {
+  const visibleRooms = getVisibleRooms(roomsObserved)
+
+  return KEY_AREA_SIGNALS.filter((signal) =>
+    visibleRooms.some((room) => room.includes(signal)),
+  )
+}
+
 function calculateVisualConfidence(
   roomsObserved: string[],
+  photoCount = 0,
 ): RenovatiePhotoAnalysis['confidence'] {
-  const visibleAreaCount = uniqueList(
-    roomsObserved.map((room) => room.toLowerCase()),
-  ).length
+  const visibleAreaCount = getVisibleRooms(roomsObserved).length
 
-  if (visibleAreaCount >= 5) return 'hoog'
+  if (photoCount <= 1 || visibleAreaCount <= 1) return 'beperkt'
+  if (visibleAreaCount >= 5 && getKeyAreasSeen(roomsObserved).length > 0) {
+    return 'hoog'
+  }
   if (visibleAreaCount >= 2) return 'gemiddeld'
 
   return 'beperkt'
@@ -509,7 +550,7 @@ export function getRenovatieScan(
     `Beschrijving-keywords: ${getDescriptionKeywordSummary(matchedDescriptionSignals)}`,
     `Aantal beschikbare foto’s: ${availablePhotoCount}`,
     photoAnalysis
-      ? `Fotoanalyse: ${calculateVisualConfidence(photoAnalysis.roomsObserved)} vertrouwen op basis van zichtbare ruimtes`
+      ? `Fotoanalyse: ${calculateVisualConfidence(photoAnalysis.roomsObserved, availablePhotoCount)} vertrouwen op basis van zichtbare ruimtes`
       : 'Foto’s niet visueel beoordeeld',
   ])
 
@@ -543,10 +584,19 @@ export function getRenovatieScan(
         'Foto’s werden niet visueel beoordeeld; niet-zichtbare elementen worden niet geclassificeerd.',
       nietBeoordeeld,
       fotoAnalyseStatus: 'niet_geanalyseerd',
+      fotoDekking: {
+        aantalFotos: availablePhotoCount,
+        zichtbareRuimtes: 0,
+        sleutelruimtesGezien: [],
+      },
     }
   }
 
-  const confidence = calculateVisualConfidence(photoAnalysis.roomsObserved)
+  const confidence = calculateVisualConfidence(
+    photoAnalysis.roomsObserved,
+    availablePhotoCount,
+  )
+  const isSinglePhotoAnalysis = availablePhotoCount <= 1
   const visualSignals = sanitizeRenovatieList(photoAnalysis.visibleSignals)
   const positivePoints = sanitizeRenovatieList(photoAnalysis.positivePoints)
   const observedComponents = componentEvidenceSummary(photoAnalysis)
@@ -587,6 +637,9 @@ export function getRenovatieScan(
           ],
     aandachtspunten: sanitizeRenovatieList([
       ...(photoAnalysis.attentionPoints || []),
+      ...(isSinglePhotoAnalysis
+        ? [SINGLE_PHOTO_BASED_TEXT, SINGLE_PHOTO_UNSEEN_TEXT]
+        : []),
       ...(beperkteFotoInformatie ? [LIMITED_PHOTO_TEXT] : []),
       ...propertyContextNotes,
       ...(nietBeoordeeld.length > 0
@@ -601,10 +654,18 @@ export function getRenovatieScan(
         : ['Afwerking niet duidelijk zichtbaar op basis van de foto’s.'],
     kamersGezien: sanitizeRenovatieList(photoAnalysis.roomsObserved || []),
     renovatiezones: photoAnalysis.renovationAreas,
-    fotoAnalyseSamenvatting:
-      sanitizeRenovatieText(photoAnalysis.safeSummary) ||
-      'Visuele beoordeling alleen op basis van zichtbare elementen; niet-zichtbare onderdelen zijn niet vastgesteld.',
+    fotoAnalyseSamenvatting: isSinglePhotoAnalysis
+      ? sanitizeRenovatieText(
+          `${SINGLE_PHOTO_BASED_TEXT} ${photoAnalysis.safeSummary || ''} ${SINGLE_PHOTO_UNSEEN_TEXT}`,
+        )
+      : sanitizeRenovatieText(photoAnalysis.safeSummary) ||
+        'Visuele beoordeling alleen op basis van zichtbare elementen; niet-zichtbare onderdelen zijn niet vastgesteld.',
     nietBeoordeeld,
     fotoAnalyseStatus: 'geanalyseerd',
+    fotoDekking: {
+      aantalFotos: availablePhotoCount,
+      zichtbareRuimtes: getVisibleRooms(photoAnalysis.roomsObserved).length,
+      sleutelruimtesGezien: getKeyAreasSeen(photoAnalysis.roomsObserved),
+    },
   }
 }
