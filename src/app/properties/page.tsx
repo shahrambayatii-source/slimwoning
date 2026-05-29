@@ -4024,7 +4024,7 @@ function PropertiesContent() {
                 <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="rounded-2xl border border-orange-100 bg-orange-50 p-5">
                     <p className="text-xs font-black uppercase tracking-wide text-orange-600">
-                      Renovatie-indicatie
+                      Renovatiebeoordeling
                     </p>
                     <p className="mt-2 text-xl font-black text-orange-900">
                       {renovatieScan.renovatieniveau}
@@ -4055,7 +4055,7 @@ function PropertiesContent() {
 
                 <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5">
-                    <h4 className="text-lg font-black text-emerald-900">Pluspunten</h4>
+                    <h4 className="text-lg font-black text-emerald-900">Sterke punten</h4>
                     <div className="mt-3 space-y-2">
                       {renovatieScan.pluspunten.map((pluspunt, index) => (
                         <p key={index} className="text-sm font-bold leading-6 text-emerald-800">
@@ -4066,7 +4066,7 @@ function PropertiesContent() {
                   </div>
 
                   <div className="rounded-2xl border border-amber-100 bg-amber-50 p-5">
-                    <h4 className="text-lg font-black text-amber-900">Aandachtspunten</h4>
+                    <h4 className="text-lg font-black text-amber-900">Technische aandachtspunten</h4>
                     <div className="mt-3 space-y-2">
                       {renovatieScan.aandachtspunten.map((aandachtspunt, index) => (
                         <p key={index} className="text-sm font-bold leading-6 text-amber-800">
@@ -4099,7 +4099,7 @@ function PropertiesContent() {
                     Foto’s zijn meegeteld als beschikbaarheid, maar nog niet visueel door AI beoordeeld.
                   </p>
                   <p className="mt-2 text-sm font-bold leading-6 text-blue-900">
-                    Deze scan is indicatief en gebaseerd op beschikbare gegevens. Er worden geen kosten berekend en dit is geen offerte, bouwkundig advies of professionele beoordeling.
+                    Deze beoordeling is gebaseerd op beschikbare woninggegevens, kenmerken en beschikbare foto&apos;s. Het betreft geen bouwkundig rapport, expertiseverslag of professionele inspectie.
                   </p>
                 </div>
 

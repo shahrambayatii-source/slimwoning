@@ -1,5 +1,5 @@
 export type RenovatieIndicatie =
-  | 'Geen directe renovatie-indicatie'
+  | 'Geen directe renovatiebehoefte vastgesteld'
   | 'Lichte opfrissing'
   | 'Gerichte renovatie'
   | 'Grondige renovatie'
@@ -445,15 +445,15 @@ export function getRenovatieScan(
 
   if (clampedScore < 25) {
     pluspunten.push(
-      'Renovatie-indicatie laag op basis van de beschikbare woningdata.',
+      'Renovatiebeoordeling laag op basis van de beschikbare woningdata.',
     )
   } else if (clampedScore < 65) {
     aandachtspunten.push(
-      'Renovatie-indicatie gemiddeld op basis van de beschikbare woningdata.',
+      'Renovatiebeoordeling gemiddeld op basis van de beschikbare woningdata.',
     )
   } else {
     aandachtspunten.push(
-      'Renovatie-indicatie hoog op basis van de beschikbare woningdata.',
+      'Renovatiebeoordeling hoog op basis van de beschikbare woningdata.',
     )
   }
 
@@ -499,7 +499,7 @@ export function getRenovatieScan(
       LIMITED_PHOTO_TEXT,
       'Grotere bewoonbare oppervlakte kan renovatiewerken omvangrijker maken.',
       'Zeer grote bewoonbare oppervlakte kan renovatiewerken omvangrijker maken.',
-      'Renovatie-indicatie laag op basis van de beschikbare woningdata.',
+      'Renovatiebeoordeling laag op basis van de beschikbare woningdata.',
       'Beschrijving bevat duidelijke renovatiesignalen.',
     ]
     const filteredAandachtspunten = aandachtspunten.filter(
@@ -509,7 +509,7 @@ export function getRenovatieScan(
     )
 
     return {
-      renovatieniveau: 'Geen directe renovatie-indicatie',
+      renovatieniveau: 'Geen directe renovatiebehoefte vastgesteld',
       renovatiecategorie: 'Instapklaar / enkel klein onderhoud',
       betrouwbaarheid,
       pluspunten: uniqueList([
@@ -517,7 +517,7 @@ export function getRenovatieScan(
         ...pluspunten,
       ]).slice(0, 5),
       aandachtspunten: uniqueList([
-        'Geen directe renovatie-indicatie op basis van beschikbare gegevens.',
+        'Geen directe renovatiebehoefte vastgesteld op basis van beschikbare gegevens.',
         ...filteredAandachtspunten,
       ]).slice(0, 6),
       gebaseerdOp,
