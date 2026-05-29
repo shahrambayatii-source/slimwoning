@@ -793,10 +793,13 @@ function PropertiesContent() {
   }
 
   const propertyImageFields = [
-    'image',
     'images',
     'photos',
     'property_images',
+    'image_urls',
+    'gallery',
+    'media',
+    'image',
     'main_image',
     'image_url',
     'photo',
@@ -811,6 +814,12 @@ function PropertiesContent() {
     'photo',
     'photo_url',
     'main_image',
+    'images',
+    'photos',
+    'property_images',
+    'image_urls',
+    'gallery',
+    'media',
   ] as const
 
   function collectPropertyImageReferences(
@@ -4087,6 +4096,9 @@ function PropertiesContent() {
 
                 <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50 p-5">
                   <p className="text-sm font-bold leading-6 text-blue-900">
+                    Foto’s zijn meegeteld als beschikbaarheid, maar nog niet visueel door AI beoordeeld.
+                  </p>
+                  <p className="mt-2 text-sm font-bold leading-6 text-blue-900">
                     Deze scan is indicatief en gebaseerd op beschikbare gegevens. Er worden geen kosten berekend en dit is geen offerte, bouwkundig advies of professionele beoordeling.
                   </p>
                 </div>
