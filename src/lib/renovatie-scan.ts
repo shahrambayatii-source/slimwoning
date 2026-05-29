@@ -52,6 +52,14 @@ function normalizeText(...values: unknown[]) {
   return values.filter(hasKnownValue).join(' ').toLowerCase()
 }
 
+function firstKnownValue(...values: unknown[]) {
+  return values.find(hasKnownValue)
+}
+
+function textContainsAny(text: string, signals: string[]) {
+  return signals.some((signal) => hasTextSignal(text, signal))
+}
+
 function uniqueList(items: string[]) {
   return Array.from(new Set(items))
 }
@@ -192,10 +200,10 @@ function getEpcBand(epc: string) {
   return 'unknown'
 }
 
-function isTopEpcLabel(epc: string) {
+function isNoDirectRenovationEpcLabel(epc: string) {
   const label = epc.trim().toUpperCase()
 
-  return ['A+++++', 'A++++', 'A+++', 'A++', 'A+', 'A'].includes(label)
+  return ['A+', 'A'].includes(label)
 }
 
 function getAreaTier(area: number) {
@@ -233,10 +241,22 @@ function getCostRange(score: number, area: number): RenovatieKostenrange {
 
 export function getRenovatieScan(property: Record<string, unknown>, photoCount?: number): RenovatieScan {
   const area = getArea(property)
-  const buildYear = numberValue(property.bouwjaar || property.build_year)
+  const buildYear = numberValue(firstKnownValue(
+    property.bouwjaar,
+    property.build_year,
+    property.buildYear,
+    property.year_built,
+    property.yearBuilt
+  ))
   const bedrooms = numberValue(property.slaapkamers || property.bedrooms)
   const bathrooms = numberValue(property.badkamers || property.bathrooms)
-  const epc = String(property.epc || property.epc_label || property.epc_code || property.EPC || '')
+  const epc = String(firstKnownValue(
+    property.epc,
+    property.epc_label,
+    property.epcLabel,
+    property.epc_code,
+    property.EPC
+  ) || '')
   const epcBand = getEpcBand(epc)
   const availablePhotoCount = getPhotoCount(property, photoCount)
   const beperkteFotoInformatie = availablePhotoCount < 3
@@ -245,7 +265,20 @@ export function getRenovatieScan(property: Record<string, unknown>, photoCount?:
   const roofInsulation = boolValue(property.dakisolatie)
   const wallInsulation = boolValue(property.muurisolatie)
   const floorInsulation = boolValue(property.vloerisolatie)
-  const hasHeatPump = boolValue(property.warmtepomp)
+  const heatingValue = firstKnownValue(
+    property.verwarming,
+    property.heating,
+    property.heating_type,
+    property.verwarmingstype
+  )
+  const heatPumpValue = firstKnownValue(
+    property.warmtepomp,
+    property.heat_pump,
+    property.heatPump
+  )
+  const heatingText = normalizeText(heatingValue)
+  const explicitHeatPump = boolValue(heatPumpValue)
+  const hasHeatPump = explicitHeatPump === true || (explicitHeatPump !== false && textContainsAny(heatingText, ['warmtepomp', 'heat pump', 'heatpump']))
   const hasSolarPanels = boolValue(property.zonnepanelen)
   const lastRenovationYear = numberValue(
     property.renovatiejaar || property.laatste_renovatiejaar || property.last_renovation_year
@@ -264,7 +297,8 @@ export function getRenovatieScan(property: Record<string, unknown>, photoCount?:
     property.renovatieadvies,
     property.renovatieverplichting,
     property.soort_bouw,
-    property.verwarmingstype
+    heatingValue,
+    heatPumpValue
   )
 
   const readySignals = [
@@ -300,62 +334,24 @@ export function getRenovatieScan(property: Record<string, unknown>, photoCount?:
     'isolatie',
     'afbraak',
   ]
-  const negativeRenovationSignals = [
-    'op te frissen',
-    'opfrissen',
-    'lichte renovatie',
-    'renoveren',
-    'renovatie',
-    'te renoveren',
-    'totaalrenovatie',
-    'grondig te renoveren',
-    'renovatieplicht',
-    'renovatieverplichting',
-    'kluswoning',
-    'vocht',
-    'schade',
-    'oud',
-    'verouderd',
-    'enkel glas',
-    'afbraak',
-  ]
-
-  const hasReadySignal = readySignals.some((signal) => hasTextSignal(text, signal))
-  const hasLightSignal = lightSignals.some((signal) => hasTextSignal(text, signal))
-  const hasHeavySignal = heavySignals.some((signal) => hasTextSignal(text, signal))
-  const hasNegativeTextSignal = negativeRenovationSignals.some((signal) => hasTextSignal(text, signal))
-  const hasModernReadySignal = [
-    'modern',
-    'moderne',
-    'instapklaar',
-    'vernieuwd',
-    'recent',
-    'recente',
-    'gerenoveerd',
-  ].some((signal) => hasTextSignal(text, signal))
-  const positiveEnergyFeatureCount = [
-    hasHeatPump,
-    hasSolarPanels,
-    doubleGlass,
-    roofInsulation,
-    wallInsulation,
-    floorInsulation,
-  ].filter((value) => value === true).length
-  const hasStrongEnergyFeatures = hasHeatPump === true || positiveEnergyFeatureCount >= 2
-  const hasNegativeRenovationIndicator =
-    hasNegativeTextSignal ||
+  const hasReadySignal = textContainsAny(text, readySignals)
+  const hasLightSignal = textContainsAny(text, lightSignals)
+  const hasHeavySignal = textContainsAny(text, heavySignals)
+  const hasStrongNegativeNoDirectSignal =
     renovationRequirement === true ||
-    doubleGlass === false ||
-    roofInsulation === false ||
-    wallInsulation === false ||
-    floorInsulation === false ||
-    (lastRenovationYear > 0 && lastRenovationYear < 2005)
+    textContainsAny(text, [
+      'vocht',
+      'schade',
+      'renovatieplicht',
+      'renovatieverplichting',
+      'totaalrenovatie',
+      'dak vernieuwen',
+      'elektriciteit vernieuwen',
+    ])
   const isNoDirectRenovationCase =
-    isTopEpcLabel(epc) &&
+    isNoDirectRenovationEpcLabel(epc) &&
     buildYear >= 2018 &&
-    hasModernReadySignal &&
-    hasStrongEnergyFeatures &&
-    !hasNegativeRenovationIndicator
+    !hasStrongNegativeNoDirectSignal
 
   let score = 20
   const pluspunten: string[] = []
