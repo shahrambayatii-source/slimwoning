@@ -4015,16 +4015,19 @@ function PropertiesContent() {
                 <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="rounded-2xl border border-orange-100 bg-orange-50 p-5">
                     <p className="text-xs font-black uppercase tracking-wide text-orange-600">
-                      Renovatieniveau
+                      Renovatie-indicatie
                     </p>
                     <p className="mt-2 text-xl font-black text-orange-900">
                       {renovatieScan.renovatieniveau}
+                    </p>
+                    <p className="mt-2 text-sm font-bold leading-6 text-orange-800">
+                      Er worden geen kosten berekend in Renovatie Scan v1.
                     </p>
                   </div>
 
                   <div className="rounded-2xl border border-slate-100 bg-slate-50 p-5">
                     <p className="text-xs font-black uppercase tracking-wide text-slate-500">
-                      Geschatte renovatiecategorie
+                      Toelichting
                     </p>
                     <p className="mt-2 text-base font-black leading-6 text-[#071B4D]">
                       {renovatieScan.renovatiecategorie}
@@ -4037,15 +4040,6 @@ function PropertiesContent() {
                     </p>
                     <p className="mt-2 text-lg font-black text-[#071B4D]">
                       {renovatieScan.betrouwbaarheid}
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-                    <p className="text-xs font-black uppercase tracking-wide text-slate-500">
-                      Indicatieve kostenrange
-                    </p>
-                    <p className="mt-2 text-lg font-black text-[#071B4D]">
-                      {renovatieScan.kostenrange}
                     </p>
                   </div>
                 </div>
@@ -4074,6 +4068,17 @@ function PropertiesContent() {
                   </div>
                 </div>
 
+                <div className="mt-5 rounded-2xl border border-slate-100 bg-slate-50 p-5">
+                  <h4 className="text-lg font-black text-[#071B4D]">Gebaseerd op</h4>
+                  <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
+                    {renovatieScan.gebaseerdOp.map((datapunt, index) => (
+                      <p key={index} className="text-sm font-bold leading-6 text-slate-700">
+                        • {datapunt}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+
                 {renovatieScan.beperkteFotoInformatie && (
                   <p className="mt-5 rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm font-black text-slate-700">
                     Beperkte foto-informatie beschikbaar.
@@ -4082,7 +4087,7 @@ function PropertiesContent() {
 
                 <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50 p-5">
                   <p className="text-sm font-bold leading-6 text-blue-900">
-                    Deze scan is indicatief op basis van beschikbare gegevens en foto’s. Het is geen offerte, bouwkundig advies of professionele beoordeling.
+                    Deze scan is indicatief en gebaseerd op beschikbare gegevens. Er worden geen kosten berekend en dit is geen offerte, bouwkundig advies of professionele beoordeling.
                   </p>
                 </div>
 
