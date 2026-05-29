@@ -1,4 +1,5 @@
 export type RenovatieKostenrange =
+  | '€0 - €2.000'
   | '€2.000 - €7.500'
   | '€7.500 - €20.000'
   | '€20.000 - €50.000'
@@ -6,7 +7,7 @@ export type RenovatieKostenrange =
   | '€100.000+'
 
 export type RenovatieScan = {
-  renovatieniveau: 'Lichte opfrissing' | 'Gerichte renovatie' | 'Grondige renovatie' | 'Totaalrenovatie'
+  renovatieniveau: 'Geen directe renovatie nodig' | 'Lichte opfrissing' | 'Gerichte renovatie' | 'Grondige renovatie' | 'Totaalrenovatie'
   renovatiecategorie: string
   betrouwbaarheid: 'Laag' | 'Gemiddeld' | 'Hoog'
   pluspunten: string[]
@@ -191,6 +192,12 @@ function getEpcBand(epc: string) {
   return 'unknown'
 }
 
+function isTopEpcLabel(epc: string) {
+  const label = epc.trim().toUpperCase()
+
+  return ['A+++++', 'A++++', 'A+++', 'A++', 'A+', 'A'].includes(label)
+}
+
 function getAreaTier(area: number) {
   if (area <= 0) return 1
   if (area < 80) return 0
@@ -293,10 +300,62 @@ export function getRenovatieScan(property: Record<string, unknown>, photoCount?:
     'isolatie',
     'afbraak',
   ]
+  const negativeRenovationSignals = [
+    'op te frissen',
+    'opfrissen',
+    'lichte renovatie',
+    'renoveren',
+    'renovatie',
+    'te renoveren',
+    'totaalrenovatie',
+    'grondig te renoveren',
+    'renovatieplicht',
+    'renovatieverplichting',
+    'kluswoning',
+    'vocht',
+    'schade',
+    'oud',
+    'verouderd',
+    'enkel glas',
+    'afbraak',
+  ]
 
   const hasReadySignal = readySignals.some((signal) => hasTextSignal(text, signal))
   const hasLightSignal = lightSignals.some((signal) => hasTextSignal(text, signal))
   const hasHeavySignal = heavySignals.some((signal) => hasTextSignal(text, signal))
+  const hasNegativeTextSignal = negativeRenovationSignals.some((signal) => hasTextSignal(text, signal))
+  const hasModernReadySignal = [
+    'modern',
+    'moderne',
+    'instapklaar',
+    'vernieuwd',
+    'recent',
+    'recente',
+    'gerenoveerd',
+  ].some((signal) => hasTextSignal(text, signal))
+  const positiveEnergyFeatureCount = [
+    hasHeatPump,
+    hasSolarPanels,
+    doubleGlass,
+    roofInsulation,
+    wallInsulation,
+    floorInsulation,
+  ].filter((value) => value === true).length
+  const hasStrongEnergyFeatures = hasHeatPump === true || positiveEnergyFeatureCount >= 2
+  const hasNegativeRenovationIndicator =
+    hasNegativeTextSignal ||
+    renovationRequirement === true ||
+    doubleGlass === false ||
+    roofInsulation === false ||
+    wallInsulation === false ||
+    floorInsulation === false ||
+    (lastRenovationYear > 0 && lastRenovationYear < 2005)
+  const isNoDirectRenovationCase =
+    isTopEpcLabel(epc) &&
+    buildYear >= 2018 &&
+    hasModernReadySignal &&
+    hasStrongEnergyFeatures &&
+    !hasNegativeRenovationIndicator
 
   let score = 20
   const pluspunten: string[] = []
@@ -459,6 +518,38 @@ export function getRenovatieScan(property: Record<string, unknown>, photoCount?:
         : knownDataPoints >= 5
           ? 'Gemiddeld'
           : 'Laag'
+
+  if (isNoDirectRenovationCase) {
+    const hasVisiblePhotos = availablePhotoCount > 0
+    const noDirectAttentionExclusions = [
+      LIMITED_PHOTO_TEXT,
+      'Grotere bewoonbare oppervlakte kan renovatiewerken omvangrijker maken.',
+      'Zeer grote bewoonbare oppervlakte kan de indicatieve renovatiekost sterk verhogen.',
+      'Renovatieniveau laag op basis van de beschikbare woningdata.',
+      'Beschrijving bevat duidelijke renovatiesignalen.',
+    ]
+    const filteredAandachtspunten = aandachtspunten.filter(
+      (item) =>
+        !noDirectAttentionExclusions.includes(item) ||
+        (!hasVisiblePhotos && item === LIMITED_PHOTO_TEXT)
+    )
+
+    return {
+      renovatieniveau: 'Geen directe renovatie nodig',
+      renovatiecategorie: 'Instapklaar / enkel klein onderhoud',
+      betrouwbaarheid,
+      pluspunten: uniqueList([
+        'Geen duidelijke renovatiesignalen gevonden op basis van de beschikbare gegevens.',
+        ...pluspunten,
+      ]).slice(0, 5),
+      aandachtspunten: uniqueList([
+        'Geen directe renovatie-indicatie op basis van beschikbare gegevens.',
+        ...filteredAandachtspunten,
+      ]).slice(0, 6),
+      kostenrange: '€0 - €2.000',
+      beperkteFotoInformatie: !hasVisiblePhotos && beperkteFotoInformatie,
+    }
+  }
 
   const fallbackPluspunten = ['Beschikbare woningdata is gebruikt voor een indicatieve renovatie-inschatting.']
   const fallbackAandachtspunten = ['Controleer de technische staat altijd tijdens een plaatsbezoek.']
