@@ -2384,7 +2384,9 @@ function PropertiesContent() {
             ...energyScanProperty,
             bouwjaar: manualData.bouwjaar || energyScanProperty.bouwjaar,
             renovatiejaar: manualData.renovatiejaar || energyScanProperty.renovatiejaar,
+            laatste_renovatiejaar: manualData.renovatiejaar || energyScanProperty.laatste_renovatiejaar,
             dakisolatie: manualData.dakisolatie ?? energyScanProperty.dakisolatie,
+            dak_vernieuwd: manualData.dakVernieuwd ?? energyScanProperty.dak_vernieuwd,
             muurisolatie: manualData.isolatie ?? energyScanProperty.muurisolatie,
             vloerisolatie: manualData.isolatie ?? energyScanProperty.vloerisolatie,
             dubbel_glas: manualData.ramenVervangen ?? energyScanProperty.dubbel_glas,
@@ -2399,14 +2401,11 @@ function PropertiesContent() {
           })
 
           const missingEnergyFields = {
-            bouwjaar: !hasEnergyValue(energyScanProperty.bouwjaar),
             laatsteRenovatiejaar: !hasEnergyValue(energyScanProperty.laatste_renovatiejaar),
-            hrGlas: !hasEnergyValue(energyScanProperty.hr_glas) && !hasEnergyValue(energyScanProperty.dubbel_glas),
-            isolatie: !hasEnergyValue(energyScanProperty.muurisolatie) && !hasEnergyValue(energyScanProperty.vloerisolatie),
             dakGeisoleerd: !hasEnergyValue(energyScanProperty.dakisolatie),
-            verwarmingstype: !hasEnergyValue(energyScanProperty.verwarmingstype),
-            ramenVervangen: !hasEnergyValue(energyScanProperty.ramen_vervangen),
             dakVernieuwd: !hasEnergyValue(energyScanProperty.dak_vernieuwd),
+            isolatie: !hasEnergyValue(energyScanProperty.muurisolatie) && !hasEnergyValue(energyScanProperty.vloerisolatie),
+            ramenVervangen: !hasEnergyValue(energyScanProperty.ramen_vervangen),
           }
           const showManualEnergyInputs = Object.values(missingEnergyFields).some(Boolean)
 
@@ -2422,30 +2421,34 @@ function PropertiesContent() {
             }))
           }
 
-          const renderYesNoToggle = (key: string, label: string) => (
-            <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-              <p className="text-sm font-black text-[#071B4D]">{label}</p>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                {[
-                  { label: 'Ja', value: true },
-                  { label: 'Nee', value: false },
-                ].map((option) => (
-                  <button
-                    key={option.label}
-                    type="button"
-                    onClick={() => setManualEnergyValue(key, option.value)}
-                    className={`h-10 rounded-xl border text-sm font-black transition ${
-                      manualData[key] === option.value
-                        ? 'border-[#0B1F4D] bg-[#0B1F4D] text-white'
-                        : 'border-gray-200 bg-gray-50 text-gray-600 hover:border-blue-200 hover:bg-blue-50'
-                    }`}
-                  >
-                    {option.label}
-                  </button>
-                ))}
+          const renderYesNoToggle = (key: string, label: string, currentValue: unknown = manualData[key]) => {
+            const selectedValue = manualData[key] ?? parseBooleanData(currentValue)
+
+            return (
+              <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+                <p className="text-sm font-black text-[#071B4D]">{label}</p>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  {[
+                    { label: 'Ja', value: true },
+                    { label: 'Nee', value: false },
+                  ].map((option) => (
+                    <button
+                      key={option.label}
+                      type="button"
+                      onClick={() => setManualEnergyValue(key, option.value)}
+                      className={`h-10 rounded-xl border text-sm font-black transition ${
+                        selectedValue === option.value
+                          ? 'border-[#0B1F4D] bg-[#0B1F4D] text-white'
+                          : 'border-gray-200 bg-gray-50 text-gray-600 hover:border-blue-200 hover:bg-blue-50'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-          )
+            )
+          }
 
           const energyScanEpc = String(
             energyScanProperty.epc ||
@@ -2469,46 +2472,7 @@ function PropertiesContent() {
               ? 'Geen verplichte energierenovatie gevonden'
               : 'Nog niet genoeg data'
 
-          const realEnergyNotes = getRealEnergyNotes(energyScanProperty)
           const mainReason = energyInsight.recommendations[0] || 'Geen duidelijke energierenovatie gevonden met de beschikbare data.'
-          const checkItems = energyInsight.prioritizedRecommendations
-
-          const confidenceReason =
-            energyInsight.confidence === 'high'
-              ? 'Hoog, omdat de belangrijkste energiegegevens beschikbaar zijn.'
-              : energyInsight.confidence === 'medium'
-                ? 'Gemiddeld, omdat sommige woninggegevens ontbreken.'
-                : 'Laag, omdat belangrijke renovatie- of isolatiegegevens ontbreken.'
-
-          const yearlySavings = energyInsight.yearlySavingsEstimate
-            ? `${formatter.format(energyInsight.yearlySavingsEstimate.min)} - ${formatter.format(energyInsight.yearlySavingsEstimate.max)} / jaar`
-            : 'Niet betrouwbaar genoeg in te schatten'
-
-          const getEpcBadgeClass = (label: string) => {
-            const cleanLabel = label.toUpperCase()
-
-            if (['A+++++', 'A++++', 'A+++', 'A++', 'A+', 'A', 'B'].some((item) => cleanLabel.includes(item))) {
-              return 'border-emerald-200 bg-emerald-100 text-emerald-800'
-            }
-
-            if (cleanLabel.includes('C') || cleanLabel.includes('D')) {
-              return 'border-yellow-200 bg-yellow-100 text-yellow-800'
-            }
-
-            if (cleanLabel.includes('E') || cleanLabel.includes('F') || cleanLabel.includes('G')) {
-              return 'border-red-200 bg-red-100 text-red-800'
-            }
-
-            return 'border-gray-200 bg-gray-100 text-gray-700'
-          }
-
-          const getPriorityBadgeClass = (priority: string) => {
-            if (priority === 'Wettelijk relevant') return 'bg-red-100 text-red-700'
-            if (priority === 'Belangrijk') return 'bg-orange-100 text-orange-700'
-            if (priority === 'Aanbevolen') return 'bg-blue-100 text-blue-700'
-            return 'bg-gray-100 text-gray-600'
-          }
-
           const propertyAnalysis = getSlimCheck(enrichedEnergyScanProperty)
           const propertyAiScore = getAiRankScore({
             ...enrichedEnergyScanProperty,
@@ -2534,13 +2498,6 @@ function PropertiesContent() {
               ? 'Gemiddeld'
               : 'Laag'
           const knownAmenities = getKnownAmenities(enrichedEnergyScanProperty)
-          const knownSignals = [
-            energyScanEpc ? `EPC ${energyScanEpc}` : '',
-            getPropertyPricePerM2(enrichedEnergyScanProperty) ? `Prijs/m² ${formatPricePerM2Value(getPropertyPricePerM2(enrichedEnergyScanProperty))}` : '',
-            marketComparableCount > 0 ? `${marketComparableCount} vergelijkbare panden` : '',
-            knownAmenities.length > 0 ? `Comfortsignalen: ${knownAmenities.join(', ')}` : '',
-            getWoningkenmerken(enrichedEnergyScanProperty).length > 0 ? `Kenmerken: ${getWoningkenmerken(enrichedEnergyScanProperty).join(', ')}` : '',
-          ].filter(Boolean)
           const propertyStrengths = [
             propertyAiScore >= 70 ? `AI-score ${propertyAiScore}/100 (${propertyAiLabel})` : '',
             hasGoodEnergyScanEpc ? `Sterk energielabel: ${energyScanEpc}` : '',
@@ -2555,19 +2512,93 @@ function PropertiesContent() {
             showManualEnergyInputs ? 'Een deel van de energie- of renovatiedata ontbreekt en kan hieronder aangevuld worden.' : '',
             parseBooleanData(enrichedEnergyScanProperty.renovatieverplichting) === true ? 'Renovatieverplichting staat als aanwezig in de data.' : '',
           ].filter(Boolean)
-          const comfortIndicators = getDataDrivenAnalysisNotes(enrichedEnergyScanProperty).filter((note) =>
-            ['Comfortniveau', 'Gezinsvriendelijkheid', 'Mobiliteit', 'Investeringspotentieel'].some((prefix) => note.startsWith(prefix))
-          )
-          const sustainabilityIndicators = [
-            ...realEnergyNotes,
-            getDataDrivenAnalysisNotes(enrichedEnergyScanProperty).find((note) => note.startsWith('Duurzaamheidsindicatie')) || '',
-            getFloodInsight(enrichedEnergyScanProperty),
-          ].filter(Boolean)
-          const analysisNotes = propertyAnalysis.points.filter((point) =>
-            !realEnergyNotes.some((note) => point.includes(note))
-          )
-
     const reportId = options.reportId || 'energy-report-content'
+    const compactCostText = energyInsight.estimatedMax > 0
+      ? `${estimatedCost}`
+      : estimatedCost
+    const energyStrengths = [
+      hasGoodEnergyScanEpc ? `EPC ${energyScanEpc}` : '',
+      parseBooleanData(enrichedEnergyScanProperty.warmtepomp) === true ? 'Warmtepomp' : '',
+      parseBooleanData(enrichedEnergyScanProperty.dubbel_glas) === true || parseBooleanData(enrichedEnergyScanProperty.hr_glas) === true ? 'Dubbel glas' : '',
+      knownAmenities.length > 0 ? `Comfortelementen: ${knownAmenities.join(', ')}` : '',
+      parseBooleanData(enrichedEnergyScanProperty.zonnepanelen) === true ? 'Zonnepanelen' : '',
+      ...propertyStrengths,
+    ]
+      .filter(Boolean)
+      .filter((item, index, list) => list.indexOf(item) === index)
+      .slice(0, 5)
+    const attentionPoints = [
+      ...propertyLimitations,
+      marketComparableCount < 3 ? 'Beperkte vergelijkingsbasis voor marktconclusies.' : '',
+      showManualEnergyInputs ? 'Ontbrekende gegevens kunnen hieronder aangevuld worden.' : '',
+      energyInsight.warnings[0] || '',
+    ]
+      .filter(Boolean)
+      .filter((item, index, list) => list.indexOf(item) === index)
+      .slice(0, 5)
+    const additionalInfoFields = [
+      {
+        key: 'renovatiejaar',
+        label: 'Laatste renovatiejaar',
+        kind: 'number',
+        value: firstKnownPropertyValue(
+          manualData.renovatiejaar,
+          energyScanProperty.laatste_renovatiejaar,
+          energyScanProperty.renovatiejaar,
+        ),
+      },
+      {
+        key: 'dakisolatie',
+        label: 'Dak geïsoleerd',
+        kind: 'boolean',
+        value: firstKnownPropertyValue(manualData.dakisolatie, energyScanProperty.dakisolatie),
+      },
+      {
+        key: 'dakVernieuwd',
+        label: 'Dak vernieuwd',
+        kind: 'boolean',
+        value: firstKnownPropertyValue(manualData.dakVernieuwd, energyScanProperty.dak_vernieuwd),
+      },
+      {
+        key: 'isolatie',
+        label: 'Isolatie aanwezig',
+        kind: 'boolean',
+        value: firstKnownPropertyValue(
+          manualData.isolatie,
+          energyScanProperty.muurisolatie,
+          energyScanProperty.vloerisolatie,
+        ),
+      },
+      {
+        key: 'ramenVervangen',
+        label: 'Ramen vervangen',
+        kind: 'boolean',
+        value: firstKnownPropertyValue(
+          manualData.ramenVervangen,
+          energyScanProperty.ramen_vervangen,
+          energyScanProperty.dubbel_glas,
+          energyScanProperty.hr_glas,
+        ),
+      },
+    ]
+    const renderAdditionalField = (field: typeof additionalInfoFields[number]) => {
+      if (field.kind === 'number') {
+        return (
+          <label key={field.key} className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+            <span className="text-sm font-black text-[#071B4D]">{field.label}</span>
+            <input
+              type="number"
+              value={String(field.value || '')}
+              onChange={(event) => setManualEnergyValue(field.key, event.target.value)}
+              placeholder="Onbekend"
+              className="mt-3 h-11 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 text-sm font-black text-gray-700 outline-none transition focus:border-blue-400 focus:bg-white"
+            />
+          </label>
+        )
+      }
+
+      return renderYesNoToggle(field.key, field.label, field.value)
+    }
 
     return (
       <div
@@ -2585,7 +2616,7 @@ function PropertiesContent() {
               {energyScanProperty.title || 'Energie-inschatting'}
             </h3>
             <p className="mt-3 max-w-xl text-sm font-bold leading-6 text-gray-500">
-              Dit is geen offerte. Dit is een indicatieve scan op basis van de beschikbare woningdata.
+              Compact dashboard op basis van beschikbare woningdata. Geen offerte of definitief technisch rapport.
             </p>
           </div>
 
@@ -2600,429 +2631,116 @@ function PropertiesContent() {
           )}
         </div>
 
-                <section className="mt-6 rounded-[1.5rem] border border-blue-100 bg-blue-50/50 p-5 shadow-sm">
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div>
-                      <p className="text-xs font-black uppercase tracking-wide text-blue-700">
-                        Woningoverzicht
-                      </p>
-                      <h4 className="mt-2 text-xl font-black text-[#071B4D]">
-                        {propertyAnalysis.status}
-                      </h4>
-                      <p className="mt-3 max-w-3xl text-sm font-bold leading-6 text-blue-900">
-                        {propertyAnalysis.highlight}
-                      </p>
-                    </div>
+        <section className="mt-6 rounded-[1.5rem] border border-blue-100 bg-blue-50/50 p-5 shadow-sm">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <p className="text-xs font-black uppercase tracking-wide text-blue-700">
+                Woningoverzicht
+              </p>
+              <h4 className="mt-2 text-xl font-black text-[#071B4D]">
+                {propertyAnalysis.status}
+              </h4>
+              <p className="mt-3 max-w-3xl text-sm font-bold leading-6 text-blue-900">
+                {propertyAnalysis.highlight}
+              </p>
+            </div>
 
-                    <div className="grid min-w-[260px] gap-3 sm:grid-cols-3 lg:grid-cols-1">
-                      <div className="rounded-2xl bg-white p-4 shadow-sm">
-                        <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">AI-score</p>
-                        <p className="mt-1 text-xl font-black text-[#071B4D]">{propertyAiScore}/100</p>
-                        <p className="mt-1 text-xs font-bold text-slate-600">{propertyAiLabel}</p>
-                      </div>
-                      <div className="rounded-2xl bg-white p-4 shadow-sm">
-                        <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">Betrouwbaarheid</p>
-                        <p className="mt-1 text-lg font-black text-[#071B4D]">{overallConfidence}</p>
-                        <p className="mt-1 text-xs font-bold text-slate-600">{confidenceReason}</p>
-                      </div>
-                      <div className="rounded-2xl bg-white p-4 shadow-sm">
-                        <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">Marktvertrouwen</p>
-                        <p className="mt-1 text-lg font-black text-[#071B4D]">{marketConfidence}</p>
-                      </div>
-                    </div>
-                  </div>
-                </section>
+            <div className="grid min-w-[260px] gap-3 sm:grid-cols-3 lg:grid-cols-1">
+              <div className="rounded-2xl bg-white p-4 shadow-sm">
+                <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">AI-score</p>
+                <p className="mt-1 text-xl font-black text-[#071B4D]">{propertyAiScore}/100</p>
+                <p className="mt-1 text-xs font-bold text-slate-600">{propertyAiLabel}</p>
+              </div>
+              <div className="rounded-2xl bg-white p-4 shadow-sm">
+                <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">Betrouwbaarheid</p>
+                <p className="mt-1 text-lg font-black text-[#071B4D]">{overallConfidence}</p>
+              </div>
+              <div className="rounded-2xl bg-white p-4 shadow-sm">
+                <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">Marktvertrouwen</p>
+                <p className="mt-1 text-lg font-black text-[#071B4D]">{marketConfidence}</p>
+              </div>
+            </div>
+          </div>
+        </section>
 
-                <section className="mt-5 rounded-[1.5rem] border border-gray-100 bg-white p-5 shadow-sm">
-                  <p className="text-xs font-black uppercase tracking-wide text-gray-500">
-                    Woninginzichten
-                  </p>
-                  <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                    <div className="rounded-2xl bg-emerald-50 p-4">
-                      <h4 className="text-sm font-black text-emerald-900">Sterktes</h4>
-                      <ul className="mt-3 space-y-2 text-sm font-bold leading-6 text-emerald-800">
-                        {(propertyStrengths.length > 0 ? propertyStrengths : ['Geen duidelijke sterktes gevonden in de beschikbare data.']).map((item, index) => (
-                          <li key={index}>• {item}</li>
-                        ))}
-                      </ul>
-                    </div>
+        <section className="mt-5 grid gap-5 lg:grid-cols-2">
+          <div className="rounded-[1.5rem] border border-emerald-100 bg-emerald-50 p-5 shadow-sm">
+            <h4 className="text-base font-black text-emerald-900">Sterke punten</h4>
+            <ul className="mt-3 space-y-2 text-sm font-bold leading-6 text-emerald-800">
+              {(energyStrengths.length > 0 ? energyStrengths : ['Geen duidelijke sterke energiepunten gevonden in de beschikbare data.']).map((item, index) => (
+                <li key={`${item}-${index}`} className="flex gap-2">
+                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
 
-                    <div className="rounded-2xl bg-orange-50 p-4">
-                      <h4 className="text-sm font-black text-orange-900">Beperkingen</h4>
-                      <ul className="mt-3 space-y-2 text-sm font-bold leading-6 text-orange-800">
-                        {(propertyLimitations.length > 0 ? propertyLimitations : ['Geen extra beperkingen gevonden buiten de algemene databetrouwbaarheid.']).map((item, index) => (
-                          <li key={index}>• {item}</li>
-                        ))}
-                      </ul>
-                    </div>
+          <div className="rounded-[1.5rem] border border-orange-100 bg-orange-50 p-5 shadow-sm">
+            <h4 className="text-base font-black text-orange-900">Aandachtspunten</h4>
+            <ul className="mt-3 space-y-2 text-sm font-bold leading-6 text-orange-800">
+              {(attentionPoints.length > 0 ? attentionPoints : ['Geen extra aandachtspunten gevonden buiten de algemene databetrouwbaarheid.']).map((item, index) => (
+                <li key={`${item}-${index}`} className="flex gap-2">
+                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
 
-                    <div className="rounded-2xl bg-slate-50 p-4">
-                      <h4 className="text-sm font-black text-slate-900">Beschikbare signalen</h4>
-                      <ul className="mt-3 space-y-2 text-sm font-bold leading-6 text-slate-700">
-                        {(knownSignals.length > 0 ? knownSignals : ['Er zijn weinig expliciete signalen beschikbaar.']).map((item, index) => (
-                          <li key={index}>• {item}</li>
-                        ))}
-                      </ul>
-                    </div>
+        <section className="mt-5 rounded-[1.5rem] border border-gray-100 bg-white p-5 shadow-sm">
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div>
+              <p className="text-xs font-black uppercase tracking-wide text-gray-500">
+                Energie-inschatting
+              </p>
+              <h4 className="mt-2 text-xl font-black text-[#071B4D]">
+                {compactCostText}
+              </h4>
+              <p className="mt-2 max-w-2xl text-sm font-bold leading-6 text-gray-600">
+                {mainReason}
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 md:min-w-[360px]">
+              <div className="rounded-2xl border border-red-100 bg-red-50 p-4">
+                <p className="text-[11px] font-black uppercase tracking-wide text-red-700">Energierisico</p>
+                <p className="mt-2 text-lg font-black text-[#071B4D]">{energyInsight.energyRisk.level}</p>
+                <p className="mt-1 text-xs font-bold leading-5 text-red-800">{energyInsight.energyRisk.text}</p>
+              </div>
+              <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+                <p className="text-[11px] font-black uppercase tracking-wide text-emerald-700">Toekomstbestendigheid</p>
+                <p className="mt-2 text-lg font-black text-[#071B4D]">{energyInsight.futureProofScore.level}</p>
+                <p className="mt-1 text-xs font-bold leading-5 text-emerald-800">{energyInsight.futureProofScore.text}</p>
+              </div>
+            </div>
+          </div>
+        </section>
 
-                    <div className="rounded-2xl bg-blue-50 p-4">
-                      <h4 className="text-sm font-black text-blue-900">Comfortindicatoren</h4>
-                      <ul className="mt-3 space-y-2 text-sm font-bold leading-6 text-blue-800">
-                        {(comfortIndicators.length > 0 ? comfortIndicators : ['Onvoldoende comfortdata beschikbaar voor een betrouwbare inschatting.']).map((item, index) => (
-                          <li key={index}>• {item}</li>
-                        ))}
-                      </ul>
-                    </div>
+        <section className="mt-5 rounded-[1.5rem] border border-blue-100 bg-gradient-to-br from-white via-blue-50 to-amber-50 p-5 shadow-sm">
+          <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="text-xs font-black uppercase tracking-wide text-blue-700">
+                Aanvullende informatie
+              </p>
+              <h4 className="mt-2 text-lg font-black text-[#071B4D]">
+                Vul ontbrekende renovatiedata aan
+              </h4>
+            </div>
 
-                    <div className="rounded-2xl bg-green-50 p-4 lg:col-span-2">
-                      <h4 className="text-sm font-black text-green-900">Duurzaamheidsindicatoren</h4>
-                      <ul className="mt-3 grid gap-2 text-sm font-bold leading-6 text-green-800 md:grid-cols-2">
-                        {sustainabilityIndicators.map((item, index) => (
-                          <li key={index}>• {item}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
+            <button
+              type="button"
+              onClick={() => setEnergyScanRefreshKey((current) => current + 1)}
+              className="rounded-xl bg-[#0B1F4D] px-5 py-3 text-sm font-black text-white transition hover:bg-blue-800"
+            >
+              Herbereken energiescan
+            </button>
+          </div>
 
-                  {analysisNotes.length > 0 && (
-                    <div className="mt-4 rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                      <h4 className="text-sm font-black text-slate-900">Aanvullende analysepunten</h4>
-                      <div className="mt-3 grid gap-3 md:grid-cols-2">
-                        {analysisNotes.map((point, index) => (
-                          <p key={index} className="rounded-xl bg-white p-3 text-sm font-bold leading-6 text-slate-700 shadow-sm">
-                            {point}
-                          </p>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </section>
-
-                <div className="mt-6 rounded-[1.5rem] border border-gray-100 bg-[#F8FAFC] p-5 shadow-sm">
-                  <p className="text-xs font-black uppercase tracking-wide text-gray-500">
-                    AI Samenvatting
-                  </p>
-                  <p className="mt-3 max-w-3xl text-sm font-bold leading-6 text-[#071B4D]">
-                    {energyInsight.aiSummary}
-                  </p>
-                </div>
-
-                <div className="mt-5 rounded-[1.5rem] border border-slate-100 bg-white p-5 shadow-sm">
-                  <p className="text-xs font-black uppercase tracking-wide text-slate-500">
-                    Beschikbare energiedata
-                  </p>
-                  <div className="mt-3 space-y-2">
-                    {realEnergyNotes.map((note, index) => (
-                      <p key={index} className="text-sm font-bold leading-6 text-slate-700">
-                        {note}
-                      </p>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="mt-5 rounded-[1.5rem] border border-blue-100 bg-blue-50/60 p-5 shadow-sm">
-                  <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                    <div>
-                      <p className="text-xs font-black uppercase tracking-wide text-blue-700">
-                        EPC-traject
-                      </p>
-                      <p className="mt-2 text-sm font-bold leading-6 text-blue-900">
-                        {energyInsight.epcTrajectory.text}
-                      </p>
-                    </div>
-
-                    <div className="flex shrink-0 items-center gap-3">
-                      <span className={`rounded-full border px-3 py-1 text-xs font-black ${getEpcBadgeClass(energyInsight.epcTrajectory.current)}`}>
-                        {energyInsight.epcTrajectory.current}
-                      </span>
-                      <span className="text-lg font-black text-blue-400">→</span>
-                      <span className={`rounded-full border px-3 py-1 text-xs font-black ${getEpcBadgeClass(energyInsight.epcTrajectory.target)}`}>
-                        mogelijk richting {energyInsight.epcTrajectory.target}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-7 grid grid-cols-1 items-start gap-5 xl:grid-cols-3">
-                  <div className="rounded-[26px] border border-[#9FE7C4] bg-[#EEF9F4] px-6 py-6 shadow-sm">
-                    <p className="text-[13px] font-extrabold uppercase leading-[1.35] tracking-tight text-[#007A55]">
-                      Energie-inschatting
-                    </p>
-                    <div className="mt-4 h-[2px] w-11 rounded-full bg-current opacity-80" />
-                    <p
-                      className="mt-7 w-full max-w-none text-[13px] font-bold leading-[1.75] tracking-normal text-[#005B4A]"
-                      style={{ wordBreak: 'normal', overflowWrap: 'normal', hyphens: 'none' }}
-                    >
-                      {estimatedCost}
-                    </p>
-                    <p className="mt-4 text-[12px] font-semibold leading-5 text-[#005B4A]/75">
-                      {energyInsight.costConfidence}
-                    </p>
-
-                    {energyInsight.costBreakdown.length > 0 && (
-                      <div className="mt-5 space-y-3 border-t border-[#9FE7C4] pt-4">
-                        {energyInsight.costBreakdown.map((item) => (
-                          <div key={item.workType}>
-                            <p className="text-[12px] font-black text-[#005B4A]">
-                              {item.workType}
-                            </p>
-                            <p className="mt-1 text-[12px] font-semibold leading-5 text-[#005B4A]/80">
-                              {item.formula} ≈ {formatter.format(item.estimatedMin)} – {formatter.format(item.estimatedMax)}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="rounded-[26px] border border-[#F3D27A] bg-[#FFFBEF] px-6 py-6 shadow-sm">
-                    <p className="text-[13px] font-extrabold uppercase leading-[1.35] tracking-tight text-[#B45309]">
-                      Belangrijkste aandachtspunt
-                    </p>
-                    <div className="mt-4 h-[2px] w-11 rounded-full bg-current opacity-80" />
-                    <p
-                      className="mt-7 w-full max-w-none text-[13px] font-bold leading-[1.75] tracking-normal text-[#7C2D12]"
-                      style={{ wordBreak: 'normal', overflowWrap: 'normal', hyphens: 'none' }}
-                    >
-                      {mainReason}
-                    </p>
-                  </div>
-
-                  <div className="rounded-[26px] border border-[#BDD4FF] bg-[#F5F8FF] px-6 py-6 shadow-sm">
-                    <p className="text-[13px] font-extrabold uppercase leading-[1.35] tracking-tight text-[#2453FF]">
-                      Betrouwbaarheid
-                    </p>
-                    <div className="mt-4 h-[2px] w-11 rounded-full bg-current opacity-80" />
-                    <p
-                      className="mt-7 w-full max-w-none text-[13px] font-bold leading-[1.75] tracking-normal text-[#1E3A8A]"
-                      style={{ wordBreak: 'normal', overflowWrap: 'normal', hyphens: 'none' }}
-                    >
-                      {confidenceReason}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                  <div className="rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm">
-                    <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
-                      Toekomstbestendigheid
-                    </p>
-                    <p className="mt-3 text-lg font-black text-[#071B4D]">
-                      {energyInsight.futureProofScore.level}
-                    </p>
-                    <p className="mt-2 text-xs font-bold leading-5 text-gray-600">
-                      {energyInsight.futureProofScore.text}
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl border border-red-100 bg-white p-4 shadow-sm">
-                    <p className="text-xs font-black uppercase tracking-wide text-red-700">
-                      Energierisico
-                    </p>
-                    <p className="mt-3 text-lg font-black text-[#071B4D]">
-                      {energyInsight.energyRisk.level}
-                    </p>
-                    <p className="mt-2 text-xs font-bold leading-5 text-gray-600">
-                      {energyInsight.energyRisk.text}
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl border border-blue-100 bg-white p-4 shadow-sm">
-                    <p className="text-xs font-black uppercase tracking-wide text-blue-700">
-                      Verwachte energiebesparing
-                    </p>
-                    <p className="mt-3 text-lg font-black text-[#071B4D]">
-                      {yearlySavings}
-                    </p>
-                    <p className="mt-3 text-sm font-bold leading-6 text-gray-700">
-                      {energyInsight.energySavingImpact}
-                    </p>
-                    {energyInsight.yearlySavingsEstimate && (
-                      <p className="mt-2 text-xs font-semibold leading-5 text-gray-500">
-                        {energyInsight.yearlySavingsEstimate.text}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="rounded-2xl border border-amber-100 bg-white p-4 shadow-sm">
-                    <p className="text-xs font-black uppercase tracking-wide text-amber-700">
-                      Mogelijke EPC-verbetering
-                    </p>
-                    <p className="mt-3 text-sm font-bold leading-6 text-gray-700">
-                      Huidige EPC: {energyScanEpc || 'onbekend'}
-                    </p>
-                    <p className="mt-2 text-sm font-bold leading-6 text-gray-700">
-                      {energyInsight.predictedEpcAfterImprovements}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-5 grid gap-4 md:grid-cols-2">
-                  <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-                    <p className="text-xs font-black uppercase tracking-wide text-gray-500">
-                      Adviesniveau
-                    </p>
-                    <p className="mt-3 text-lg font-black text-[#071B4D]">
-                      {energyInsight.recommendationPriority}
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-                    <p className="text-xs font-black uppercase tracking-wide text-gray-500">
-                      Verwarming
-                    </p>
-                    <p className="mt-3 text-sm font-bold leading-6 text-gray-700">
-                      {energyInsight.heatingAnalysis}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-5 rounded-2xl border border-purple-100 bg-purple-50/60 p-5 shadow-sm">
-                  <p className="text-xs font-black uppercase tracking-wide text-purple-700">
-                    Waardepotentieel
-                  </p>
-                  <p className="mt-3 text-lg font-black text-[#071B4D]">
-                    {energyInsight.valuePotential.level}
-                  </p>
-                  <p className="mt-2 text-sm font-bold leading-6 text-purple-900">
-                    {energyInsight.valuePotential.text}
-                  </p>
-                </div>
-
-                <div className="mt-7 rounded-2xl border border-gray-100 bg-gray-50 p-5">
-                  <h4 className="text-lg font-black text-[#071B4D]">
-                    Wat moet gecontroleerd worden?
-                  </h4>
-
-                  <div className="mt-4 space-y-3">
-                    {checkItems.length > 0 ? (
-                      checkItems.map((item, index) => (
-                        <div
-                          key={index}
-                          className="flex flex-col gap-3 rounded-xl bg-white p-4 text-sm font-bold text-gray-700 shadow-sm md:flex-row md:items-start"
-                        >
-                          <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-blue-100 text-xs font-black text-blue-700">
-                            {index + 1}
-                          </span>
-                          <span className="flex-1">{item.text}</span>
-                          <span className={`w-fit rounded-full px-2.5 py-1 text-[11px] font-black ${getPriorityBadgeClass(item.priority)}`}>
-                            {item.priority}
-                          </span>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="rounded-xl bg-white p-4 text-sm font-bold text-gray-500 shadow-sm">
-                        Geen extra controlepunten nodig op basis van de huidige gegevens.
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {energyInsight.subsidySuggestions.length > 0 && (
-                  <div className="mt-5 rounded-2xl border border-emerald-100 bg-emerald-50 p-5">
-                    <h4 className="text-lg font-black text-emerald-900">
-                      Mogelijke premies
-                    </h4>
-
-                    <div className="mt-3 space-y-2">
-                      {energyInsight.subsidySuggestions.map((suggestion, index) => (
-                        <p key={index} className="rounded-xl bg-white p-3 text-sm font-bold leading-6 text-emerald-800 shadow-sm">
-                          {suggestion}
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {showManualEnergyInputs && (
-                  <div className="mt-5 rounded-2xl border border-blue-100 bg-gradient-to-br from-white via-blue-50 to-amber-50 p-5">
-                    <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-                      <div>
-                        <p className="text-xs font-black uppercase tracking-wide text-blue-700">
-                          Aanvullende informatie
-                        </p>
-                        <h4 className="mt-2 text-lg font-black text-[#071B4D]">
-                          Vul ontbrekende renovatiedata aan
-                        </h4>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => setEnergyScanRefreshKey((current) => current + 1)}
-                        className="rounded-xl bg-[#0B1F4D] px-5 py-3 text-sm font-black text-white transition hover:bg-blue-800"
-                      >
-                        Herbereken energiescan
-                      </button>
-                    </div>
-
-                    <div className="mt-5 grid gap-3 md:grid-cols-2">
-                      {missingEnergyFields.bouwjaar && (
-                        <label className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-                          <span className="text-sm font-black text-[#071B4D]">Bouwjaar</span>
-                          <input
-                            type="number"
-                            value={String(manualData.bouwjaar || '')}
-                            onChange={(event) => setManualEnergyValue('bouwjaar', event.target.value)}
-                            className="mt-3 h-11 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 text-sm font-black text-gray-700 outline-none transition focus:border-blue-400 focus:bg-white"
-                          />
-                        </label>
-                      )}
-
-                      {missingEnergyFields.laatsteRenovatiejaar && (
-                        <label className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-                          <span className="text-sm font-black text-[#071B4D]">Laatste renovatiejaar</span>
-                          <input
-                            type="number"
-                            value={String(manualData.renovatiejaar || '')}
-                            onChange={(event) => setManualEnergyValue('renovatiejaar', event.target.value)}
-                            className="mt-3 h-11 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 text-sm font-black text-gray-700 outline-none transition focus:border-blue-400 focus:bg-white"
-                          />
-                        </label>
-                      )}
-
-                      {missingEnergyFields.hrGlas && renderYesNoToggle('ramenVervangen', 'HR-glas aanwezig?')}
-                      {missingEnergyFields.dakGeisoleerd && renderYesNoToggle('dakisolatie', 'Dak geïsoleerd?')}
-
-                      {missingEnergyFields.verwarmingstype && (
-                        <label className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-                          <span className="text-sm font-black text-[#071B4D]">Type verwarming</span>
-                          <select
-                            value={String(manualData.verwarmingstype || '')}
-                            onChange={(event) => setManualEnergyValue('verwarmingstype', event.target.value)}
-                            className="mt-3 h-11 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 text-sm font-black text-gray-700 outline-none transition focus:border-blue-400 focus:bg-white"
-                          >
-                            <option value="">Kies type</option>
-                            <option value="Gas">Gas</option>
-                            <option value="Elektrisch">Elektrisch</option>
-                            <option value="Warmtepomp">Warmtepomp</option>
-                            <option value="Mazout">Mazout</option>
-                          </select>
-                        </label>
-                      )}
-
-                      {missingEnergyFields.isolatie && renderYesNoToggle('isolatie', 'Isolatie aanwezig?')}
-                      {missingEnergyFields.ramenVervangen && renderYesNoToggle('ramenVervangen', 'Ramen vervangen?')}
-                      {missingEnergyFields.dakVernieuwd && renderYesNoToggle('dakisolatie', 'Dak vernieuwd?')}
-                    </div>
-                  </div>
-                )}
-
-                {energyInsight.warnings.length > 0 && (
-                  <div className="mt-5 rounded-2xl border border-orange-100 bg-orange-50 p-5">
-                    <h4 className="text-lg font-black text-orange-900">
-                      Waarom is dit geen definitieve offerte?
-                    </h4>
-
-                    <div className="mt-3 space-y-2">
-                      {energyInsight.warnings.map((warning, index) => (
-                        <p key={index} className="text-sm font-bold leading-6 text-orange-800">
-                          • {warning}
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
+          <div className="mt-5 grid gap-3 md:grid-cols-2">
+            {additionalInfoFields.map(renderAdditionalField)}
+          </div>
+        </section>
 
         {options.showActions !== false && (
           <div className="mt-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
