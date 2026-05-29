@@ -227,7 +227,6 @@ function PropertiesContent() {
   const [submittedSearchKey, setSubmittedSearchKey] = useState(0)
   const [selectedMapProperty, setSelectedMapProperty] = useState<any>(null)
   const [mapInstance, setMapInstance] = useState<google.maps.Map | null>(null)
-  const [openInsightId, setOpenInsightId] = useState<number | null>(null)
   const [openEnergyScanId, setOpenEnergyScanId] = useState<number | null>(null)
   const [manualEnergyData, setManualEnergyData] = useState<Record<number, Record<string, unknown>>>({})
   const [energyScanRefreshKey, setEnergyScanRefreshKey] = useState(0)
@@ -1511,9 +1510,9 @@ function PropertiesContent() {
       )
     )
 
-    let status = `${investmentScore}/100 Analyse score`
+    let status = `${investmentScore}/100 AI-score`
 
-    if (!pricePerM2 || comparisonCount < 3) status = `${investmentScore}/100 Analyse score - beperkte vergelijkingsbasis`
+    if (!pricePerM2 || comparisonCount < 3) status = `${investmentScore}/100 AI-score - beperkte vergelijkingsbasis`
 
     return {
       status,
@@ -1969,12 +1968,6 @@ function PropertiesContent() {
       return aiB - aiA
     })
   }, [filteredProperties, sortOption])
-
-  const openInsightProperty = useMemo(() => {
-    if (!openInsightId) return null
-
-    return properties.find((property) => Number(property.id) === openInsightId) || null
-  }, [openInsightId, properties])
 
   const openEnergyScanProperty = useMemo(() => {
     if (!openEnergyScanId) return null
@@ -2516,6 +2509,64 @@ function PropertiesContent() {
             return 'bg-gray-100 text-gray-600'
           }
 
+          const propertyAnalysis = getSlimCheck(enrichedEnergyScanProperty)
+          const propertyAiScore = getAiRankScore({
+            ...enrichedEnergyScanProperty,
+            ai_rank_score:
+              enrichedEnergyScanProperty.ai_rank_score ??
+              enrichedEnergyScanProperty.ai_score ??
+              enrichedEnergyScanProperty.aiScore ??
+              enrichedEnergyScanProperty.match_score ??
+              enrichedEnergyScanProperty.matchScore ??
+              enrichedEnergyScanProperty.rank_score ??
+              enrichedEnergyScanProperty.rankScore,
+          })
+          const propertyAiLabel = getAiScoreLabel(propertyAiScore)
+          const marketComparableCount = getComparableProperties(enrichedEnergyScanProperty).length
+          const marketConfidence = marketComparableCount >= 6
+            ? `Hoog (${marketComparableCount} vergelijkbare panden)`
+            : marketComparableCount >= 3
+              ? `Gemiddeld (${marketComparableCount} vergelijkbare panden)`
+              : `Laag (${marketComparableCount} vergelijkbare panden)`
+          const overallConfidence = energyInsight.confidence === 'high'
+            ? 'Hoog'
+            : energyInsight.confidence === 'medium'
+              ? 'Gemiddeld'
+              : 'Laag'
+          const knownAmenities = getKnownAmenities(enrichedEnergyScanProperty)
+          const knownSignals = [
+            energyScanEpc ? `EPC ${energyScanEpc}` : '',
+            getPropertyPricePerM2(enrichedEnergyScanProperty) ? `Prijs/m² ${formatPricePerM2Value(getPropertyPricePerM2(enrichedEnergyScanProperty))}` : '',
+            marketComparableCount > 0 ? `${marketComparableCount} vergelijkbare panden` : '',
+            knownAmenities.length > 0 ? `Comfortsignalen: ${knownAmenities.join(', ')}` : '',
+            getWoningkenmerken(enrichedEnergyScanProperty).length > 0 ? `Kenmerken: ${getWoningkenmerken(enrichedEnergyScanProperty).join(', ')}` : '',
+          ].filter(Boolean)
+          const propertyStrengths = [
+            propertyAiScore >= 70 ? `AI-score ${propertyAiScore}/100 (${propertyAiLabel})` : '',
+            hasGoodEnergyScanEpc ? `Sterk energielabel: ${energyScanEpc}` : '',
+            parseBooleanData(enrichedEnergyScanProperty.zonnepanelen) === true ? 'Zonnepanelen aanwezig volgens de woningdata.' : '',
+            parseBooleanData(enrichedEnergyScanProperty.warmtepomp) === true ? 'Warmtepomp aanwezig volgens de woningdata.' : '',
+            knownAmenities.length > 0 ? `Aanwezige comfortelementen: ${knownAmenities.join(', ')}.` : '',
+          ].filter(Boolean)
+          const propertyLimitations = [
+            marketComparableCount < 3 ? 'Beperkte vergelijkingsbasis voor marktconclusies.' : '',
+            !energyScanEpc ? 'EPC-label ontbreekt in de beschikbare data.' : '',
+            ['E', 'F', 'G'].includes(energyScanEpc) ? `EPC ${energyScanEpc} vraagt extra controle van renovatieplicht en maatregelen.` : '',
+            showManualEnergyInputs ? 'Een deel van de energie- of renovatiedata ontbreekt en kan hieronder aangevuld worden.' : '',
+            parseBooleanData(enrichedEnergyScanProperty.renovatieverplichting) === true ? 'Renovatieverplichting staat als aanwezig in de data.' : '',
+          ].filter(Boolean)
+          const comfortIndicators = getDataDrivenAnalysisNotes(enrichedEnergyScanProperty).filter((note) =>
+            ['Comfortniveau', 'Gezinsvriendelijkheid', 'Mobiliteit', 'Investeringspotentieel'].some((prefix) => note.startsWith(prefix))
+          )
+          const sustainabilityIndicators = [
+            ...realEnergyNotes,
+            getDataDrivenAnalysisNotes(enrichedEnergyScanProperty).find((note) => note.startsWith('Duurzaamheidsindicatie')) || '',
+            getFloodInsight(enrichedEnergyScanProperty),
+          ].filter(Boolean)
+          const analysisNotes = propertyAnalysis.points.filter((point) =>
+            !realEnergyNotes.some((note) => point.includes(note))
+          )
+
     const reportId = options.reportId || 'energy-report-content'
 
     return (
@@ -2548,6 +2599,104 @@ function PropertiesContent() {
             </button>
           )}
         </div>
+
+                <section className="mt-6 rounded-[1.5rem] border border-blue-100 bg-blue-50/50 p-5 shadow-sm">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-wide text-blue-700">
+                        Woningoverzicht
+                      </p>
+                      <h4 className="mt-2 text-xl font-black text-[#071B4D]">
+                        {propertyAnalysis.status}
+                      </h4>
+                      <p className="mt-3 max-w-3xl text-sm font-bold leading-6 text-blue-900">
+                        {propertyAnalysis.highlight}
+                      </p>
+                    </div>
+
+                    <div className="grid min-w-[260px] gap-3 sm:grid-cols-3 lg:grid-cols-1">
+                      <div className="rounded-2xl bg-white p-4 shadow-sm">
+                        <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">AI-score</p>
+                        <p className="mt-1 text-xl font-black text-[#071B4D]">{propertyAiScore}/100</p>
+                        <p className="mt-1 text-xs font-bold text-slate-600">{propertyAiLabel}</p>
+                      </div>
+                      <div className="rounded-2xl bg-white p-4 shadow-sm">
+                        <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">Betrouwbaarheid</p>
+                        <p className="mt-1 text-lg font-black text-[#071B4D]">{overallConfidence}</p>
+                        <p className="mt-1 text-xs font-bold text-slate-600">{confidenceReason}</p>
+                      </div>
+                      <div className="rounded-2xl bg-white p-4 shadow-sm">
+                        <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">Marktvertrouwen</p>
+                        <p className="mt-1 text-lg font-black text-[#071B4D]">{marketConfidence}</p>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="mt-5 rounded-[1.5rem] border border-gray-100 bg-white p-5 shadow-sm">
+                  <p className="text-xs font-black uppercase tracking-wide text-gray-500">
+                    Woninginzichten
+                  </p>
+                  <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                    <div className="rounded-2xl bg-emerald-50 p-4">
+                      <h4 className="text-sm font-black text-emerald-900">Sterktes</h4>
+                      <ul className="mt-3 space-y-2 text-sm font-bold leading-6 text-emerald-800">
+                        {(propertyStrengths.length > 0 ? propertyStrengths : ['Geen duidelijke sterktes gevonden in de beschikbare data.']).map((item, index) => (
+                          <li key={index}>• {item}</li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div className="rounded-2xl bg-orange-50 p-4">
+                      <h4 className="text-sm font-black text-orange-900">Beperkingen</h4>
+                      <ul className="mt-3 space-y-2 text-sm font-bold leading-6 text-orange-800">
+                        {(propertyLimitations.length > 0 ? propertyLimitations : ['Geen extra beperkingen gevonden buiten de algemene databetrouwbaarheid.']).map((item, index) => (
+                          <li key={index}>• {item}</li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div className="rounded-2xl bg-slate-50 p-4">
+                      <h4 className="text-sm font-black text-slate-900">Beschikbare signalen</h4>
+                      <ul className="mt-3 space-y-2 text-sm font-bold leading-6 text-slate-700">
+                        {(knownSignals.length > 0 ? knownSignals : ['Er zijn weinig expliciete signalen beschikbaar.']).map((item, index) => (
+                          <li key={index}>• {item}</li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div className="rounded-2xl bg-blue-50 p-4">
+                      <h4 className="text-sm font-black text-blue-900">Comfortindicatoren</h4>
+                      <ul className="mt-3 space-y-2 text-sm font-bold leading-6 text-blue-800">
+                        {(comfortIndicators.length > 0 ? comfortIndicators : ['Onvoldoende comfortdata beschikbaar voor een betrouwbare inschatting.']).map((item, index) => (
+                          <li key={index}>• {item}</li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div className="rounded-2xl bg-green-50 p-4 lg:col-span-2">
+                      <h4 className="text-sm font-black text-green-900">Duurzaamheidsindicatoren</h4>
+                      <ul className="mt-3 grid gap-2 text-sm font-bold leading-6 text-green-800 md:grid-cols-2">
+                        {sustainabilityIndicators.map((item, index) => (
+                          <li key={index}>• {item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+
+                  {analysisNotes.length > 0 && (
+                    <div className="mt-4 rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                      <h4 className="text-sm font-black text-slate-900">Aanvullende analysepunten</h4>
+                      <div className="mt-3 grid gap-3 md:grid-cols-2">
+                        {analysisNotes.map((point, index) => (
+                          <p key={index} className="rounded-xl bg-white p-3 text-sm font-bold leading-6 text-slate-700 shadow-sm">
+                            {point}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </section>
 
                 <div className="mt-6 rounded-[1.5rem] border border-gray-100 bg-[#F8FAFC] p-5 shadow-sm">
                   <p className="text-xs font-black uppercase tracking-wide text-gray-500">
@@ -4697,18 +4846,6 @@ function PropertiesContent() {
                       onClick={(event) => {
                         event.preventDefault()
                         event.stopPropagation()
-                        setOpenInsightId(Number(property.id))
-                      }}
-                      className="rounded-full border border-blue-200 bg-blue-50 px-4 py-1.5 text-sm font-semibold leading-none whitespace-nowrap text-blue-700 transition hover:bg-blue-100"
-                    >
-                      Analyse
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.preventDefault()
-                        event.stopPropagation()
                         setManualEnergyData({})
                         setOpenEnergyScanId(Number(property.id))
                       }}
@@ -4749,10 +4886,11 @@ function PropertiesContent() {
                     onClick={(event) => {
                       event.preventDefault()
                       event.stopPropagation()
-                      setOpenInsightId(Number(property.id))
+                      setManualEnergyData({})
+                      setOpenEnergyScanId(Number(property.id))
                     }}
                     className="group flex w-[76px] flex-col items-center rounded-2xl border border-blue-100 bg-white px-2 py-2 text-center shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md"
-                    title="Bekijk AI-score uitleg"
+                    title="Bekijk Energie-overzicht"
                   >
                     <div className={`grid h-11 w-11 place-items-center rounded-full border-2 text-lg font-black ${aiScoreColor.ring}`}>
                       {aiScore > 0 ? aiScore : '-'}
@@ -4784,98 +4922,6 @@ function PropertiesContent() {
         </section>
         </div>
 
-        {openInsightProperty && (
-          <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
-            <div className="relative max-h-[85vh] w-full max-w-5xl overflow-y-auto rounded-[2rem] bg-white p-6 shadow-2xl">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-sm font-black uppercase tracking-wide text-emerald-600">
-                    Analyse
-                  </p>
-                  <h3 className="mt-2 text-2xl font-black text-[#071B4D]">
-                    {openInsightProperty.title || 'Woning analyse'}
-                  </h3>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setOpenInsightId(null)}
-                  className="grid h-10 w-10 place-items-center rounded-full bg-gray-100 text-xl font-black text-gray-600"
-                >
-                  ×
-                </button>
-              </div>
-
-              {(() => {
-                const insight = getSlimCheck(openInsightProperty)
-
-                return (
-                  <div className="mt-6 space-y-4">
-                    <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5">
-                      <p className="text-xl font-black text-emerald-800">
-                        {insight.status}
-                      </p>
-                      <p className="mt-2 text-sm font-bold leading-6 text-emerald-700">
-                        {insight.highlight}
-                      </p>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                      {insight.points.map((point, index) => (
-                        <div
-                          key={index}
-                          className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm"
-                        >
-                          <p className="text-sm font-semibold leading-6 text-gray-700">
-                            {point}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="mt-8 space-y-8 border-t border-gray-100 pt-8">
-                      <section>
-                        <div className="mb-4">
-                          <p className="text-sm font-black uppercase tracking-wide text-amber-600">
-                            Energie
-                          </p>
-                          <h4 className="mt-2 text-2xl font-black text-[#071B4D]">
-                            EnergieScan
-                          </h4>
-                        </div>
-                        {renderEnergyScanOverview(openInsightProperty, {
-                          embedded: true,
-                          reportId: `energy-report-content-analyse-${openInsightProperty.id}`,
-                          showActions: false,
-                        })}
-                      </section>
-
-                      <section>
-                        <div className="mb-4">
-                          <p className="text-sm font-black uppercase tracking-wide text-orange-600">
-                            Renovatie
-                          </p>
-                          <h4 className="mt-2 text-2xl font-black text-[#071B4D]">
-                            SlimWoning Renovatie Scan
-                          </h4>
-                        </div>
-                        {renderRenovatieScanOverview(openInsightProperty)}
-                      </section>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => setOpenInsightId(null)}
-                      className="mx-auto mt-6 inline-flex items-center justify-center rounded-xl bg-[#071B4D] px-6 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-[#0B2A6B]"
-                    >
-                      Sluiten
-                    </button>
-                  </div>
-                )
-              })()}
-            </div>
-          </div>
-        )}
 
         {openRenovatieScanProperty && (() => {
           const renovatieHeroImage = getPropertyPrimaryImage(openRenovatieScanProperty)
