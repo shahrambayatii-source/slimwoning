@@ -4724,7 +4724,7 @@ function PropertiesContent() {
               <Link
                 href={`/properties/${property.id}`}
                 key={property.id}
-                className="flex h-[175px] w-full max-w-[760px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+                className="flex h-[175px] w-full max-w-[820px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
               >
                 <div className="relative h-[175px] w-[250px] shrink-0 overflow-hidden">
                   {property.image ? (
@@ -4798,7 +4798,7 @@ function PropertiesContent() {
 
                 </div>
 
-                <div className="min-w-0 flex-1 px-4 py-3.5 pr-5">
+                <div className="min-w-[330px] flex-1 px-4 py-3.5 pr-4">
                   <div className="min-w-0">
                     <h2 className="truncate text-base font-black text-[#071B4D]">
                       {displayTitle}
@@ -4840,7 +4840,7 @@ function PropertiesContent() {
                     </div>
                   </div>
 
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <div className="mt-3 flex w-full flex-nowrap items-center gap-1.5">
                     <button
                       type="button"
                       onClick={(event) => {
@@ -4849,7 +4849,7 @@ function PropertiesContent() {
                         setManualEnergyData({})
                         setOpenEnergyScanId(Number(property.id))
                       }}
-                      className="rounded-full border border-green-200 bg-green-50 px-4 py-1.5 text-sm font-semibold leading-none whitespace-nowrap text-green-700 transition hover:bg-green-100"
+                      className="shrink-0 rounded-full border border-green-200 bg-green-50 px-3.5 py-1.5 text-sm font-semibold leading-none whitespace-nowrap text-green-700 transition hover:bg-green-100"
                     >
                       Energie
                     </button>
@@ -4861,7 +4861,7 @@ function PropertiesContent() {
                         event.stopPropagation()
                         startRenovatiePhotoAnalysis(property)
                       }}
-                      className="rounded-full border border-orange-200 bg-orange-50 px-4 py-1.5 text-sm font-semibold leading-none whitespace-nowrap text-orange-700 transition hover:bg-orange-100"
+                      className="shrink-0 rounded-full border border-orange-200 bg-orange-50 px-3.5 py-1.5 text-sm font-semibold leading-none whitespace-nowrap text-orange-700 transition hover:bg-orange-100"
                     >
                       Renovatie
                     </button>
@@ -4873,7 +4873,7 @@ function PropertiesContent() {
                         event.stopPropagation()
                         toggleCompare(Number(property.id))
                       }}
-                      className="rounded-full border border-amber-200 bg-amber-50 px-4 py-1.5 text-sm font-semibold leading-none whitespace-nowrap text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="shrink-0 rounded-full border border-amber-200 bg-amber-50 px-3.5 py-1.5 text-sm font-semibold leading-none whitespace-nowrap text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {compareIds.includes(Number(property.id)) ? 'Geselecteerd' : 'Vergelijk'}
                     </button>
