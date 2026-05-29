@@ -3,21 +3,17 @@ import { NextResponse } from 'next/server'
 const MAX_PHOTOS = 6
 
 const VISUAL_CONDITIONS = [
-  'instapklaar',
-  'lichte_opfrissing',
-  'gerichte_renovatie',
-  'grondige_renovatie',
-  'totaalrenovatie',
+  'moderne_afwerking_zichtbaar',
+  'gemengde_renovatie_indruk',
+  'beperkte_visuele_beoordeling',
 ] as const
 
-const CONFIDENCE_VALUES = ['laag', 'gemiddeld', 'hoog'] as const
-const AREA_VALUES = ['goed', 'opfrissen', 'renoveren', 'onduidelijk'] as const
-const ROOM_AREA_VALUES = [
-  'goed',
-  'opfrissen',
-  'renoveren',
-  'ontbreekt',
-  'onduidelijk',
+const CONFIDENCE_VALUES = ['beperkt', 'gemiddeld', 'hoog'] as const
+const AREA_VALUES = [
+  'modern_zichtbaar',
+  'verzorgd_zichtbaar',
+  'beperkt_zichtbaar',
+  'niet_zichtbaar',
 ] as const
 
 type RenovationAreaKey =
@@ -27,6 +23,9 @@ type RenovationAreaKey =
   | 'kitchen'
   | 'bathroom'
   | 'ceiling'
+  | 'roof'
+  | 'installations'
+  | 'insulation'
 
 type RenovatiePhotoAnalysis = {
   visualCondition: (typeof VISUAL_CONDITIONS)[number]
@@ -34,24 +33,35 @@ type RenovatiePhotoAnalysis = {
   visibleSignals: string[]
   roomsObserved: string[]
   renovationAreas: Record<RenovationAreaKey, string>
+  notAssessed: string[]
   attentionPoints: string[]
   positivePoints: string[]
   safeSummary: string
 }
 
 const defaultAnalysis: RenovatiePhotoAnalysis = {
-  visualCondition: 'lichte_opfrissing',
-  confidence: 'laag',
+  visualCondition: 'beperkte_visuele_beoordeling',
+  confidence: 'beperkt',
   visibleSignals: [],
   roomsObserved: [],
   renovationAreas: {
-    walls: 'onduidelijk',
-    floors: 'onduidelijk',
-    windows: 'onduidelijk',
-    kitchen: 'onduidelijk',
-    bathroom: 'onduidelijk',
-    ceiling: 'onduidelijk',
+    walls: 'niet_zichtbaar',
+    floors: 'niet_zichtbaar',
+    windows: 'niet_zichtbaar',
+    kitchen: 'niet_zichtbaar',
+    bathroom: 'niet_zichtbaar',
+    ceiling: 'niet_zichtbaar',
+    roof: 'niet_zichtbaar',
+    installations: 'niet_zichtbaar',
+    insulation: 'niet_zichtbaar',
   },
+  notAssessed: [
+    "Keuken — Niet zichtbaar op basis van foto's",
+    "Badkamer — Niet zichtbaar op basis van foto's",
+    "Dak — Niet zichtbaar op basis van foto's",
+    "Installaties — Niet zichtbaar op basis van foto's",
+    "Isolatie — Niet zichtbaar op basis van foto's",
+  ],
   attentionPoints: [],
   positivePoints: [],
   safeSummary:
@@ -85,24 +95,66 @@ function enumValue<T extends readonly string[]>(
   return allowed.includes(raw) ? (raw as T[number]) : fallback
 }
 
-function areaValue(value: unknown, allowsMissingRoom = false) {
-  return enumValue(
-    value,
-    allowsMissingRoom ? ROOM_AREA_VALUES : AREA_VALUES,
-    'onduidelijk',
-  )
+function areaValue(value: unknown) {
+  return enumValue(value, AREA_VALUES, 'niet_zichtbaar')
 }
 
 function sanitizeText(value: string) {
   return value
-    .replace(/moet vervangen worden/gi, 'vraagt controle')
+    .replace(/moet vervangen worden/gi, 'controle aanbevolen')
+    .replace(/moeten vervangen worden/gi, 'controle aanbevolen')
+    .replace(/moet worden vervangen/gi, 'controle aanbevolen')
     .replace(/is kapot/gi, 'lijkt niet in recente staat')
     .replace(/is technisch afgekeurd/gi, 'is niet vast te stellen op basis van foto’s')
-    .replace(/elektriciteit is slecht/gi, 'technieken vragen controle')
+    .replace(/elektriciteit is slecht/gi, 'technieken niet vast te stellen op basis van foto’s')
+    .replace(/asbest aanwezig/gi, 'niet vast te stellen op basis van foto’s')
+    .replace(/dak defect/gi, 'dak niet vast te stellen op basis van foto’s')
+    .replace(/is slecht/gi, 'lijkt verouderd')
     .replace(/vocht aanwezig/gi, 'zichtbare sporen vragen controle')
     .replace(/\bvocht\b/gi, 'zichtbare sporen')
     .replace(/\bkapot\b/gi, 'niet in recente staat')
+    .replace(/\bdefect\b/gi, 'niet vast te stellen op basis van foto’s')
     .trim()
+}
+
+function uniqueList(items: string[]) {
+  return Array.from(new Set(items))
+}
+
+function calculateEvidenceConfidence(
+  rooms: string[],
+): RenovatiePhotoAnalysis['confidence'] {
+  const visibleAreaCount = uniqueList(
+    rooms.map((room) => room.toLowerCase()),
+  ).length
+
+  if (visibleAreaCount >= 5) return 'hoog'
+  if (visibleAreaCount >= 2) return 'gemiddeld'
+
+  return 'beperkt'
+}
+
+const AREA_LABELS: Record<RenovationAreaKey, string> = {
+  walls: 'Muren',
+  floors: 'Vloeren',
+  windows: 'Ramen',
+  kitchen: 'Keuken',
+  bathroom: 'Badkamer',
+  ceiling: 'Plafond',
+  roof: 'Dak',
+  installations: 'Installaties',
+  insulation: 'Isolatie',
+}
+
+function buildNotAssessedList(
+  renovationAreas: Record<string, unknown>,
+  providedItems: string[],
+) {
+  const generatedItems = (Object.keys(AREA_LABELS) as RenovationAreaKey[])
+    .filter((key) => areaValue(renovationAreas[key]) === 'niet_zichtbaar')
+    .map((key) => `${AREA_LABELS[key]} — Niet zichtbaar op basis van foto's`)
+
+  return uniqueList([...providedItems, ...generatedItems]).slice(0, 12)
 }
 
 function normalizeAnalysis(value: unknown): RenovatiePhotoAnalysis {
@@ -112,23 +164,35 @@ function normalizeAnalysis(value: unknown): RenovatiePhotoAnalysis {
     ? value.renovationAreas
     : {}
 
+  const roomsObserved = safeArray(
+    value.roomsObserved,
+    safeArray(value.visibleRooms),
+  )
+
   return {
     visualCondition: enumValue(
       value.visualCondition,
       VISUAL_CONDITIONS,
       defaultAnalysis.visualCondition,
     ),
-    confidence: enumValue(value.confidence, CONFIDENCE_VALUES, 'laag'),
+    confidence: calculateEvidenceConfidence(roomsObserved),
     visibleSignals: safeArray(value.visibleSignals),
-    roomsObserved: safeArray(value.roomsObserved),
+    roomsObserved,
     renovationAreas: {
       walls: areaValue(renovationAreas.walls),
       floors: areaValue(renovationAreas.floors),
       windows: areaValue(renovationAreas.windows),
-      kitchen: areaValue(renovationAreas.kitchen, true),
-      bathroom: areaValue(renovationAreas.bathroom, true),
+      kitchen: areaValue(renovationAreas.kitchen),
+      bathroom: areaValue(renovationAreas.bathroom),
       ceiling: areaValue(renovationAreas.ceiling),
+      roof: areaValue(renovationAreas.roof),
+      installations: areaValue(renovationAreas.installations),
+      insulation: areaValue(renovationAreas.insulation),
     },
+    notAssessed: buildNotAssessedList(
+      renovationAreas,
+      safeArray(value.notAssessed),
+    ),
     attentionPoints: safeArray(value.attentionPoints),
     positivePoints: safeArray(value.positivePoints),
     safeSummary:
@@ -158,6 +222,7 @@ function buildJsonSchema() {
         'visibleSignals',
         'roomsObserved',
         'renovationAreas',
+        'notAssessed',
         'attentionPoints',
         'positivePoints',
         'safeSummary',
@@ -185,15 +250,26 @@ function buildJsonSchema() {
             'kitchen',
             'bathroom',
             'ceiling',
+            'roof',
+            'installations',
+            'insulation',
           ],
           properties: {
             walls: { type: 'string', enum: AREA_VALUES },
             floors: { type: 'string', enum: AREA_VALUES },
             windows: { type: 'string', enum: AREA_VALUES },
-            kitchen: { type: 'string', enum: ROOM_AREA_VALUES },
-            bathroom: { type: 'string', enum: ROOM_AREA_VALUES },
+            kitchen: { type: 'string', enum: AREA_VALUES },
+            bathroom: { type: 'string', enum: AREA_VALUES },
             ceiling: { type: 'string', enum: AREA_VALUES },
+            roof: { type: 'string', enum: AREA_VALUES },
+            installations: { type: 'string', enum: AREA_VALUES },
+            insulation: { type: 'string', enum: AREA_VALUES },
           },
+        },
+        notAssessed: {
+          type: 'array',
+          items: { type: 'string' },
+          maxItems: 12,
         },
         attentionPoints: {
           type: 'array',
@@ -262,7 +338,7 @@ export async function POST(request: Request) {
           {
             role: 'system',
             content:
-              'Je analyseert Belgische woningfoto’s voor een indicatieve Renovatie Scan. Baseer de visuele score primair op zichtbare afwerking en zichtbare staat van ruimtes. Gebruik uitsluitend voorzichtige professionele taal. Verboden formuleringen: moet vervangen worden, is kapot, is technisch afgekeurd, elektriciteit is slecht, vocht aanwezig. Gebruik veilige formuleringen zoals zichtbaar verouderd, lijkt verouderd, controle aanbevolen, op basis van zichtbare elementen, niet vast te stellen op basis van foto’s. Doe geen bouwkundige, juridische of technische afkeuringen.',
+              'Je analyseert Belgische woningfoto’s voor Renovatie Scan v2: een evidence-based visuele beoordeling. Beoordeel uitsluitend wat zichtbaar is op de foto’s. Niet zichtbare ruimtes of componenten krijgen geen conditieoordeel en moeten als Niet zichtbaar op basis van foto’s worden vermeld. Gebruik woningdata alleen als ondersteunende context; EPC, bouwjaar of beschrijving mogen nooit een zichtbaar oordeel vervangen. Gebruik voorzichtige taal: zichtbaar, lijkt, mogelijk, op basis van zichtbare elementen, niet vast te stellen op basis van foto’s. Verboden formuleringen: vocht aanwezig, elektriciteit slecht, asbest aanwezig, dak defect, moet vervangen worden, is slecht, is kapot. Doe geen bouwkundige, juridische of technische afkeuringen.',
           },
           {
             role: 'user',
@@ -270,7 +346,7 @@ export async function POST(request: Request) {
               {
                 type: 'text',
                 text:
-                  'Analyseer maximaal deze woningfoto’s en combineer ze met de woningdata. Classificatie: oud behang/oude vloeren/gedateerde haard/gedateerd interieur = gerichte_renovatie; volledig houten of duidelijk gedateerde afwerking = grondige_renovatie; zichtbare onafgewerkte wanden/plafonds/balken of ontbrekende keuken = totaalrenovatie; moderne vloeren, nette muren, recente keuken/badkamer = instapklaar of lichte_opfrissing. Geef alleen JSON volgens schema. Woningdata: ' +
+                  'Voer Renovatie Scan v2 uit. Stap 1: detecteer alleen zichtbare ruimtes uit woonkamer, keuken, badkamer, slaapkamer, hal, toilet, gevel, tuin, dak, ramen, technische ruimte en zet die in roomsObserved. Stap 2: noteer alleen observeerbare visuele bevindingen in visibleSignals en positivePoints, altijd met woorden zoals zichtbaar, lijkt of op basis van zichtbare elementen. Stap 3: gebruik EPC, bouwjaar, oppervlakte en beschrijving alleen als context in safeSummary, nooit om een niet-zichtbare ruimte te beoordelen. Stap 4: confidence is beperkt bij 0-1 zichtbare ruimtes, gemiddeld bij 2-4 en hoog bij 5 of meer; geef nooit hoog bij één ruimte. Componentstatussen mogen alleen modern_zichtbaar, verzorgd_zichtbaar, beperkt_zichtbaar of niet_zichtbaar zijn. Markeer elk niet zichtbaar component als niet_zichtbaar en voeg aan notAssessed toe met exact: Niet zichtbaar op basis van foto\'s. Beoordeel kamers nooit op basis van andere kamers. Verboden: vocht aanwezig, elektriciteit slecht, asbest aanwezig, dak defect, moet vervangen worden. Geef alleen JSON volgens schema. Woningdata: ' +
                   JSON.stringify(propertyContext),
               },
               ...photos.map((photo) => ({
