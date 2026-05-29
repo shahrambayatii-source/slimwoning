@@ -3,15 +3,18 @@ import { NextResponse } from 'next/server'
 const MAX_PHOTOS = 6
 
 const VISUAL_CONDITIONS = [
-  'moderne_afwerking_zichtbaar',
-  'gemengde_renovatie_indruk',
-  'beperkte_visuele_beoordeling',
+  'modern_afgewerkt',
+  'verzorgde_afwerking',
+  'gemengde_afwerking',
+  'zichtbaar_verouderd',
+  'onvoldoende_zichtbaar',
 ] as const
 
 const CONFIDENCE_VALUES = ['beperkt', 'gemiddeld', 'hoog'] as const
 const AREA_VALUES = [
   'modern_zichtbaar',
   'verzorgd_zichtbaar',
+  'verouderd_zichtbaar',
   'beperkt_zichtbaar',
   'niet_zichtbaar',
 ] as const
@@ -40,7 +43,7 @@ type RenovatiePhotoAnalysis = {
 }
 
 const defaultAnalysis: RenovatiePhotoAnalysis = {
-  visualCondition: 'beperkte_visuele_beoordeling',
+  visualCondition: 'onvoldoende_zichtbaar',
   confidence: 'beperkt',
   visibleSignals: [],
   roomsObserved: [],
@@ -65,7 +68,7 @@ const defaultAnalysis: RenovatiePhotoAnalysis = {
   attentionPoints: [],
   positivePoints: [],
   safeSummary:
-    'Niet vast te stellen op basis van foto’s; gebruik de beschikbare woninggegevens als indicatieve basis.',
+    'Niet vast te stellen op basis van foto’s; de staat van afwerking kan niet worden bepaald uit bruikbare zichtbare details.',
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -338,7 +341,7 @@ export async function POST(request: Request) {
           {
             role: 'system',
             content:
-              'Je analyseert Belgische woningfoto’s voor Renovatie Scan v2: een evidence-based visuele beoordeling. Beoordeel uitsluitend wat zichtbaar is op de foto’s. Niet zichtbare ruimtes of componenten krijgen geen conditieoordeel en moeten als Niet zichtbaar op basis van foto’s worden vermeld. Gebruik woningdata alleen als ondersteunende context; EPC, bouwjaar of beschrijving mogen nooit een zichtbaar oordeel vervangen. Gebruik voorzichtige taal: zichtbaar, lijkt, mogelijk, op basis van zichtbare elementen, niet vast te stellen op basis van foto’s. Verboden formuleringen: vocht aanwezig, elektriciteit slecht, asbest aanwezig, dak defect, moet vervangen worden, is slecht, is kapot. Doe geen bouwkundige, juridische of technische afkeuringen.',
+              'Je analyseert Belgische woningfoto’s voor Renovatie Scan v2: een evidence-based beoordeling van de staat van afwerking. Beoordeel uitsluitend wat zichtbaar is op de foto’s. Niet zichtbare ruimtes of componenten krijgen geen conditieoordeel en moeten als Niet zichtbaar op basis van foto’s worden vermeld. Gebruik woningdata alleen als ondersteunende context; EPC, bouwjaar of beschrijving mogen nooit een zichtbaar oordeel vervangen. Gebruik voorzichtige taal: zichtbaar, lijkt, mogelijk, op basis van zichtbare elementen, niet vast te stellen op basis van foto’s. Verboden formuleringen: vocht aanwezig, elektriciteit slecht, asbest aanwezig, dak defect, moet vervangen worden, is slecht, is kapot. Doe geen bouwkundige, juridische of technische afkeuringen.',
           },
           {
             role: 'user',
@@ -346,7 +349,7 @@ export async function POST(request: Request) {
               {
                 type: 'text',
                 text:
-                  'Voer Renovatie Scan v2 uit. Stap 1: detecteer alleen zichtbare ruimtes uit woonkamer, keuken, badkamer, slaapkamer, hal, toilet, gevel, tuin, dak, ramen, technische ruimte en zet die in roomsObserved. Stap 2: noteer alleen observeerbare visuele bevindingen in visibleSignals en positivePoints, altijd met woorden zoals zichtbaar, lijkt of op basis van zichtbare elementen. Stap 3: gebruik EPC, bouwjaar, oppervlakte en beschrijving alleen als context in safeSummary, nooit om een niet-zichtbare ruimte te beoordelen. Stap 4: confidence is beperkt bij 0-1 zichtbare ruimtes, gemiddeld bij 2-4 en hoog bij 5 of meer; geef nooit hoog bij één ruimte. Componentstatussen mogen alleen modern_zichtbaar, verzorgd_zichtbaar, beperkt_zichtbaar of niet_zichtbaar zijn. Markeer elk niet zichtbaar component als niet_zichtbaar en voeg aan notAssessed toe met exact: Niet zichtbaar op basis van foto\'s. Beoordeel kamers nooit op basis van andere kamers. Verboden: vocht aanwezig, elektriciteit slecht, asbest aanwezig, dak defect, moet vervangen worden. Geef alleen JSON volgens schema. Woningdata: ' +
+                  'Voer Renovatie Scan v2 uit voor de staat van afwerking. Stap 1: detecteer alleen zichtbare ruimtes uit woonkamer, keuken, badkamer, slaapkamer, hal, toilet, gevel, tuin, dak, ramen, technische ruimte en zet die in roomsObserved. Stap 2: noteer alleen observeerbare visuele bevindingen in visibleSignals en positivePoints, altijd met woorden zoals zichtbaar, lijkt of op basis van zichtbare elementen. Stap 3: kies visualCondition uitsluitend uit: modern_afgewerkt als een zichtbare ruimte duidelijk modern oogt; verzorgde_afwerking als de zichtbare ruimte netjes is maar niet duidelijk nieuw; gemengde_afwerking als moderne en gedateerde elementen samen zichtbaar zijn; zichtbaar_verouderd als zichtbare elementen duidelijk ouder/gedateerd zijn; onvoldoende_zichtbaar alleen als foto’s ontbreken, onduidelijk zijn, te weinig usable detail tonen of geen bruikbare interieur/exterieurdetails tonen. Belangrijk: één duidelijke verouderde kamer of keuken is zichtbaar_verouderd, niet onvoldoende_zichtbaar; confidence mag dan beperkt blijven. Stap 4: gebruik EPC, bouwjaar, oppervlakte en beschrijving alleen als context in safeSummary, nooit om een niet-zichtbare ruimte te beoordelen. Stap 5: confidence is beperkt bij 0-1 zichtbare ruimtes, gemiddeld bij 2-4 en hoog bij 5 of meer; geef nooit hoog bij één ruimte. Componentstatussen mogen alleen modern_zichtbaar, verzorgd_zichtbaar, verouderd_zichtbaar, beperkt_zichtbaar of niet_zichtbaar zijn. Markeer elk niet zichtbaar component als niet_zichtbaar en voeg aan notAssessed toe met exact: Niet zichtbaar op basis van foto\'s. Beoordeel kamers nooit op basis van andere kamers. Verboden: vocht aanwezig, elektriciteit slecht, asbest aanwezig, dak defect, moet vervangen worden, is slecht, is kapot. Geef alleen JSON volgens schema. Woningdata: ' +
                   JSON.stringify(propertyContext),
               },
               ...photos.map((photo) => ({

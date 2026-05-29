@@ -4119,6 +4119,7 @@ function PropertiesContent() {
           const renovationStatusLabels: Record<string, string> = {
             modern_zichtbaar: 'Modern zichtbaar',
             verzorgd_zichtbaar: 'Verzorgd zichtbaar',
+            verouderd_zichtbaar: 'Verouderd zichtbaar',
             beperkt_zichtbaar: 'Beperkt zichtbaar',
             niet_zichtbaar: 'Niet zichtbaar',
           }
@@ -4155,7 +4156,7 @@ function PropertiesContent() {
                         SlimWoning Renovatie Scan
                       </h3>
                       <p className="mt-2 max-w-2xl truncate text-sm font-semibold leading-6 text-white/85 sm:text-base">
-                        {openRenovatieScanProperty.title || 'Indicatieve renovatiescan'}
+                        {openRenovatieScanProperty.title || 'Staat van afwerking'}
                       </p>
                     </div>
 
@@ -4176,7 +4177,7 @@ function PropertiesContent() {
                       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                         <div>
                           <p className="text-xs font-black uppercase tracking-wide text-[#64748B]">
-                            Visuele renovatie-indicatie
+                            Staat van afwerking
                           </p>
                           <div className="mt-3 flex flex-wrap items-center gap-3">
                             <span className="inline-flex w-fit rounded-full border border-orange-100 bg-orange-50 px-4 py-1.5 text-sm font-black text-orange-700">
@@ -4218,7 +4219,7 @@ function PropertiesContent() {
                         </div>
                       ) : renovatiePhotoError ? (
                         <div className="rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-bold text-red-700">
-                          {renovatiePhotoError} De scan gebruikt voorlopig de beschikbare woninggegevens.
+                          {renovatiePhotoError} De scan toont voorlopig alleen wat niet visueel is vastgesteld.
                         </div>
                       ) : (
                         <p className="text-sm font-semibold leading-6 text-[#64748B]">
@@ -4263,7 +4264,7 @@ function PropertiesContent() {
                     <section className="mt-5 border-t border-blue-50 pt-5">
                       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                         <div>
-                          <h4 className="text-base font-black text-[#071B4D]">Ondersteunende visuele pluspunten</h4>
+                          <h4 className="text-base font-black text-[#071B4D]">Zichtbare pluspunten</h4>
                           <ul className="mt-3 space-y-2 text-sm font-semibold leading-6 text-[#64748B]">
                             {renovatieScan.pluspunten.map((pluspunt, index) => (
                               <li key={index} className="flex gap-2">
