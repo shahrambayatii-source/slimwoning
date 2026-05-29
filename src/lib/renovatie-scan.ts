@@ -45,24 +45,98 @@ function uniqueList(items: string[]) {
   return Array.from(new Set(items))
 }
 
-function getPhotoCount(property: Record<string, unknown>) {
-  const images = property.images || property.photos || property.fotos
+const PROPERTY_IMAGE_FIELDS = [
+  'image',
+  'images',
+  'photos',
+  'property_images',
+  'main_image',
+  'image_url',
+  'photo',
+  'fotos',
+] as const
 
-  if (Array.isArray(images)) return images.filter(Boolean).length
+const IMAGE_VALUE_FIELDS = [
+  'url',
+  'src',
+  'image',
+  'image_url',
+  'photo',
+  'photo_url',
+  'main_image',
+] as const
 
-  if (typeof images === 'string') {
-    const trimmed = images.trim()
-    if (!trimmed) return property.image || property.photo ? 1 : 0
+function addPhotoReferences(
+  value: unknown,
+  references: string[],
+  fallbackKey: string
+) {
+  if (value === null || value === undefined) return
 
-    try {
-      const parsed = JSON.parse(trimmed)
-      if (Array.isArray(parsed)) return parsed.filter(Boolean).length
-    } catch {
-      return trimmed.split(',').filter((item) => item.trim()).length
-    }
+  if (Array.isArray(value)) {
+    value.forEach((item, index) =>
+      addPhotoReferences(item, references, `${fallbackKey}.${index}`)
+    )
+    return
   }
 
-  return property.image || property.photo ? 1 : 0
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if (!trimmed) return
+
+    if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+      try {
+        addPhotoReferences(JSON.parse(trimmed), references, fallbackKey)
+        return
+      } catch {
+        // Fall back to treating the string as one or more image references.
+      }
+    }
+
+    trimmed
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .forEach((item) => references.push(item))
+    return
+  }
+
+  if (typeof value === 'object') {
+    const record = value as Record<string, unknown>
+    let foundNestedReference = false
+
+    IMAGE_VALUE_FIELDS.forEach((field) => {
+      if (hasKnownValue(record[field])) {
+        foundNestedReference = true
+        addPhotoReferences(record[field], references, `${fallbackKey}.${field}`)
+      }
+    })
+
+    if (!foundNestedReference && Object.keys(record).length > 0) {
+      references.push(fallbackKey)
+    }
+
+    return
+  }
+
+  references.push(`${fallbackKey}:${String(value)}`)
+}
+
+function getPhotoCount(
+  property: Record<string, unknown>,
+  providedPhotoCount?: number
+) {
+  if (Number.isFinite(providedPhotoCount)) {
+    return Math.max(0, Math.floor(providedPhotoCount || 0))
+  }
+
+  const references: string[] = []
+
+  PROPERTY_IMAGE_FIELDS.forEach((field) => {
+    addPhotoReferences(property[field], references, field)
+  })
+
+  return new Set(references).size
 }
 
 function getArea(property: Record<string, unknown>) {
@@ -92,15 +166,15 @@ function getCostRange(score: number): RenovatieKostenrange {
   return '€60.000+'
 }
 
-export function getRenovatieScan(property: Record<string, unknown>): RenovatieScan {
+export function getRenovatieScan(property: Record<string, unknown>, photoCount?: number): RenovatieScan {
   const area = getArea(property)
   const buildYear = numberValue(property.bouwjaar || property.build_year)
   const bedrooms = numberValue(property.slaapkamers || property.bedrooms)
   const bathrooms = numberValue(property.badkamers || property.bathrooms)
   const epc = String(property.epc || property.epc_code || '')
   const epcBand = getEpcBand(epc)
-  const photoCount = getPhotoCount(property)
-  const beperkteFotoInformatie = photoCount < 3
+  const availablePhotoCount = getPhotoCount(property, photoCount)
+  const beperkteFotoInformatie = availablePhotoCount < 3
   const renovationRequirement = boolValue(property.renovatieverplichting)
   const doubleGlass = boolValue(property.dubbel_glas || property.hr_glas)
   const roofInsulation = boolValue(property.dakisolatie)
@@ -154,7 +228,7 @@ export function getRenovatieScan(property: Record<string, unknown>): RenovatieSc
   const pluspunten: string[] = []
   const aandachtspunten: string[] = []
 
-  if (photoCount >= 5) pluspunten.push('Meerdere foto’s beschikbaar voor een betere eerste inschatting.')
+  if (availablePhotoCount >= 5) pluspunten.push('Meerdere foto’s beschikbaar voor een betere eerste inschatting.')
   if (beperkteFotoInformatie) aandachtspunten.push(LIMITED_PHOTO_TEXT)
 
   if (area >= 140) {
@@ -273,18 +347,22 @@ export function getRenovatieScan(property: Record<string, unknown>): RenovatieSc
     bedrooms,
     bathrooms,
     property.description,
-    property.images || property.image || property.photos,
+    availablePhotoCount > 0 ? availablePhotoCount : null,
     property.renovatieverplichting,
     property.renovatiejaar || property.laatste_renovatiejaar,
     property.dubbel_glas || property.hr_glas,
     property.dakisolatie || property.muurisolatie || property.vloerisolatie,
   ].filter(hasKnownValue).length
 
-  const betrouwbaarheid: RenovatieScan['betrouwbaarheid'] = knownDataPoints >= 8 && photoCount >= 3
+  const betrouwbaarheid: RenovatieScan['betrouwbaarheid'] = availablePhotoCount >= 5 && knownDataPoints >= 7
     ? 'Hoog'
-    : knownDataPoints >= 5
-      ? 'Gemiddeld'
-      : 'Laag'
+    : knownDataPoints >= 8 && availablePhotoCount >= 3
+      ? 'Hoog'
+      : availablePhotoCount >= 5 && knownDataPoints >= 4
+        ? 'Gemiddeld'
+        : knownDataPoints >= 5
+          ? 'Gemiddeld'
+          : 'Laag'
 
   const fallbackPluspunten = ['Beschikbare woningdata is gebruikt voor een indicatieve renovatie-inschatting.']
   const fallbackAandachtspunten = ['Controleer de technische staat altijd tijdens een plaatsbezoek.']

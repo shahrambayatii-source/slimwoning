@@ -792,6 +792,101 @@ function PropertiesContent() {
     return values.filter(Boolean).join(' ').toLowerCase()
   }
 
+  const propertyImageFields = [
+    'image',
+    'images',
+    'photos',
+    'property_images',
+    'main_image',
+    'image_url',
+    'photo',
+    'fotos',
+  ] as const
+
+  const propertyImageValueFields = [
+    'url',
+    'src',
+    'image',
+    'image_url',
+    'photo',
+    'photo_url',
+    'main_image',
+  ] as const
+
+  function collectPropertyImageReferences(
+    value: unknown,
+    references: string[],
+    fallbackKey: string
+  ) {
+    if (value === null || value === undefined) return
+
+    if (Array.isArray(value)) {
+      value.forEach((item, index) =>
+        collectPropertyImageReferences(
+          item,
+          references,
+          `${fallbackKey}.${index}`
+        )
+      )
+      return
+    }
+
+    if (typeof value === 'string') {
+      const trimmed = value.trim()
+      if (!trimmed) return
+
+      if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+        try {
+          collectPropertyImageReferences(JSON.parse(trimmed), references, fallbackKey)
+          return
+        } catch {
+          // Fall back to treating the string as one or more image references.
+        }
+      }
+
+      trimmed
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .forEach((item) => references.push(item))
+      return
+    }
+
+    if (typeof value === 'object') {
+      const record = value as Record<string, unknown>
+      let foundNestedReference = false
+
+      propertyImageValueFields.forEach((field) => {
+        if (record[field]) {
+          foundNestedReference = true
+          collectPropertyImageReferences(
+            record[field],
+            references,
+            `${fallbackKey}.${field}`
+          )
+        }
+      })
+
+      if (!foundNestedReference && Object.keys(record).length > 0) {
+        references.push(fallbackKey)
+      }
+
+      return
+    }
+
+    references.push(`${fallbackKey}:${String(value)}`)
+  }
+
+  function getPropertyPhotoCount(property: Record<string, unknown>) {
+    const references: string[] = []
+
+    propertyImageFields.forEach((field) => {
+      collectPropertyImageReferences(property[field], references, field)
+    })
+
+    return new Set(references).size
+  }
+
   function boolValue(value: any) {
     return value === true || String(value).toLowerCase() === 'true'
   }
@@ -3889,7 +3984,8 @@ function PropertiesContent() {
         )}
 
         {openRenovatieScanProperty && (() => {
-          const renovatieScan = getRenovatieScan(openRenovatieScanProperty)
+          const renovatiePhotoCount = getPropertyPhotoCount(openRenovatieScanProperty)
+          const renovatieScan = getRenovatieScan(openRenovatieScanProperty, renovatiePhotoCount)
 
           return (
             <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
