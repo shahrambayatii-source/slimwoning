@@ -3627,7 +3627,7 @@ function PropertiesContent() {
 
                 </div>
 
-                <div className="w-[330px] shrink-0 px-4 py-3.5 lg:w-[380px]">
+                <div className="w-[330px] shrink-0 px-4 py-3.5 lg:w-[320px]">
                   <div className="min-w-0">
                     <h2 className="truncate text-base font-black text-[#071B4D]">
                       {displayTitle}
