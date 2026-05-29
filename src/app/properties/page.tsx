@@ -3700,6 +3700,18 @@ function PropertiesContent() {
                       onClick={(event) => {
                         event.preventDefault()
                         event.stopPropagation()
+                        setOpenRenovatieScanId(Number(property.id))
+                      }}
+                      className="inline-flex rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-bold text-orange-700 transition hover:bg-orange-100"
+                    >
+                      Renovatie
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.preventDefault()
+                        event.stopPropagation()
                         toggleCompare(Number(property.id))
                       }}
                       className="inline-flex rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-bold text-orange-700 transition hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-50"
