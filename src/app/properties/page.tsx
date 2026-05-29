@@ -30,6 +30,7 @@ function PropertiesContent() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const searchInputRef = useRef<HTMLInputElement | null>(null)
+  const sortDropdownRef = useRef<HTMLDivElement | null>(null)
   const isRentPage = pathname.startsWith('/huren')
   const routeBase = isRentPage ? '/huren' : '/properties'
 
@@ -252,6 +253,16 @@ function PropertiesContent() {
   const [showCustomRadiusInput, setShowCustomRadiusInput] = useState(false)
   const [customRadiusKm, setCustomRadiusKm] = useState('')
   const [sortOption, setSortOption] = useState('Slimste match')
+  const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false)
+  const sortOptions = [
+    'Slimste match',
+    'Hoogste AI-score',
+    'Beste prijs/kwaliteit',
+    'Dichtstbij',
+    'Nieuwste',
+    'Prijs laag-hoog',
+    'Prijs hoog-laag',
+  ]
   function handleSlimmoSearch() {
     const prompt = slimmoPrompt.trim()
 
@@ -276,6 +287,24 @@ function PropertiesContent() {
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
     libraries: ['places'],
   })
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        sortDropdownRef.current &&
+        event.target instanceof Node &&
+        !sortDropdownRef.current.contains(event.target)
+      ) {
+        setIsSortDropdownOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
 
   useEffect(() => {
     if (!isLoaded || !searchInputRef.current || !window.google?.maps?.places) return
@@ -3409,30 +3438,67 @@ function PropertiesContent() {
               </p>
             </div>
 
-            <label className="flex items-center gap-2 sm:min-w-[230px]">
+            <div className="flex items-center gap-2 sm:min-w-[230px]">
               <span className="shrink-0 text-xs font-black uppercase tracking-wide text-slate-400">
                 Sorteer op
               </span>
-              <select
-                value={sortOption}
-                onChange={(event) => setSortOption(event.target.value)}
-                className="h-10 min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 text-sm font-black text-[#071B4D] outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
-              >
-                {[
-                  'Slimste match',
-                  'Hoogste AI-score',
-                  'Beste prijs/kwaliteit',
-                  'Dichtstbij',
-                  'Nieuwste',
-                  'Prijs laag-hoog',
-                  'Prijs hoog-laag',
-                ].map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </label>
+              <div ref={sortDropdownRef} className="relative min-w-0 flex-1">
+                <button
+                  type="button"
+                  onClick={() => setIsSortDropdownOpen((isOpen) => !isOpen)}
+                  className="flex w-full items-center justify-between gap-3 rounded-2xl border border-blue-100 bg-white px-5 py-3 text-left text-sm font-black text-[#071B4D] shadow-sm transition hover:border-blue-200 hover:bg-[#F6F8FC] focus:outline-none focus:ring-4 focus:ring-blue-50"
+                  aria-haspopup="listbox"
+                  aria-expanded={isSortDropdownOpen}
+                >
+                  <span className="truncate">{sortOption}</span>
+                  <span
+                    aria-hidden="true"
+                    className={`text-xs text-blue-500 transition ${
+                      isSortDropdownOpen ? 'rotate-180' : ''
+                    }`}
+                  >
+                    ▾
+                  </span>
+                </button>
+
+                {isSortDropdownOpen && (
+                  <div
+                    className="absolute right-0 z-50 mt-2 w-full min-w-[230px] overflow-hidden rounded-2xl border border-blue-100 bg-white shadow-xl"
+                    role="listbox"
+                    aria-label="Sorteer woningen"
+                  >
+                    {sortOptions.map((option) => {
+                      const isSelected = sortOption === option
+
+                      return (
+                        <button
+                          key={option}
+                          type="button"
+                          onClick={() => {
+                            setSortOption(option)
+                            setIsSortDropdownOpen(false)
+                          }}
+                          className={`flex w-full items-center justify-between gap-3 px-5 py-3 text-left text-sm font-black transition ${
+                            isSelected
+                              ? 'bg-blue-50 text-blue-700'
+                              : 'text-[#071B4D] hover:bg-[#F6F8FC]'
+                          }`}
+                          role="option"
+                          aria-selected={isSelected}
+                        >
+                          <span>{option}</span>
+                          {isSelected && (
+                            <span aria-hidden="true" className="text-blue-700">
+                              ✓
+                            </span>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
         </div>
 
         <div className="mb-6 hidden flex-col gap-4 md:flex-row md:items-center md:justify-between">
