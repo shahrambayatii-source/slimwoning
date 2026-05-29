@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { calculateEnergyInsight } from '@/lib/energy-calculator'
 import { exportEnergyReport } from '@/lib/export-energy-report'
-import { getRenovatieScan } from '@/lib/renovatie-scan'
+import { getRenovatieScan, type RenovatiePhotoAnalysis } from '@/lib/renovatie-scan'
 import { getWoningkenmerken } from '@/lib/woningkenmerken'
 import { GoogleMap, InfoWindow, Marker, useJsApiLoader } from '@react-google-maps/api'
 
@@ -38,6 +38,9 @@ function PropertiesContent() {
 
   const [properties, setProperties] = useState<any[]>([])
   const [openRenovatieScanId, setOpenRenovatieScanId] = useState<number | null>(null)
+  const [renovatiePhotoAnalyses, setRenovatiePhotoAnalyses] = useState<Record<number, RenovatiePhotoAnalysis>>({})
+  const [renovatiePhotoLoading, setRenovatiePhotoLoading] = useState<Record<number, boolean>>({})
+  const [renovatiePhotoErrors, setRenovatiePhotoErrors] = useState<Record<number, string>>({})
   const openRenovatieScanProperty = useMemo(() => {
     if (openRenovatieScanId === null) return null
 
@@ -910,6 +913,88 @@ function PropertiesContent() {
         /\.(jpe?g|png|webp|gif|avif)(\?|#|$)/i.test(reference)
       )
     }) || ''
+  }
+
+
+  function getPropertyImages(property: Record<string, unknown>) {
+    const references: string[] = []
+
+    propertyImageFields.forEach((field) => {
+      collectPropertyImageReferences(property[field], references, field)
+    })
+
+    return Array.from(new Set(references)).filter((reference) => {
+      return /^(https?:|data:image\/)/i.test(reference)
+    })
+  }
+  async function startRenovatiePhotoAnalysis(property: Record<string, unknown>) {
+    const propertyId = Number(property.id)
+
+    setOpenRenovatieScanId(propertyId)
+    setRenovatiePhotoLoading((current) => ({ ...current, [propertyId]: true }))
+    setRenovatiePhotoErrors((current) => ({ ...current, [propertyId]: '' }))
+
+    try {
+      const response = await fetch('/api/renovatie-photo-analysis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          propertyId,
+          title: property.title || property.titel || '',
+          epc: property.epc || property.epc_label || property.epcLabel || property.EPC || '',
+          bouwjaar:
+            property.bouwjaar ||
+            property.build_year ||
+            property.buildYear ||
+            property.year_built ||
+            property.yearBuilt ||
+            '',
+          oppervlakte:
+            property.bewoonbare_oppervlakte ||
+            property.woonoppervlakte ||
+            property.livingArea ||
+            property.living_area ||
+            property.oppervlakte ||
+            property.area ||
+            '',
+          bedrooms:
+            property.slaapkamers || property.bedrooms || property.bedroom_count || '',
+          bathrooms: property.badkamers || property.bathrooms || '',
+          heating:
+            property.heating ||
+            property.verwarming ||
+            property.heating_type ||
+            property.verwarmingstype ||
+            '',
+          description:
+            property.description ||
+            property.beschrijving ||
+            property.location_description ||
+            '',
+          photos: getPropertyImages(property).slice(0, 6),
+        }),
+      })
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Fotoanalyse kon niet worden uitgevoerd.')
+      }
+
+      setRenovatiePhotoAnalyses((current) => ({
+        ...current,
+        [propertyId]: data as RenovatiePhotoAnalysis,
+      }))
+    } catch (error) {
+      setRenovatiePhotoErrors((current) => ({
+        ...current,
+        [propertyId]:
+          error instanceof Error
+            ? error.message
+            : 'Fotoanalyse kon niet worden uitgevoerd.',
+      }))
+    } finally {
+      setRenovatiePhotoLoading((current) => ({ ...current, [propertyId]: false }))
+    }
   }
 
   function boolValue(value: any) {
@@ -3883,7 +3968,7 @@ function PropertiesContent() {
                       onClick={(event) => {
                         event.preventDefault()
                         event.stopPropagation()
-                        setOpenRenovatieScanId(Number(property.id))
+                        startRenovatiePhotoAnalysis(property)
                       }}
                       className="rounded-full border border-orange-200 bg-orange-50 px-2 py-1 text-[11px] font-black leading-none whitespace-nowrap text-orange-700 transition hover:bg-orange-100"
                     >
@@ -4010,8 +4095,24 @@ function PropertiesContent() {
 
         {openRenovatieScanProperty && (() => {
           const renovatiePhotoCount = getPropertyPhotoCount(openRenovatieScanProperty)
-          const renovatieScan = getRenovatieScan(openRenovatieScanProperty, renovatiePhotoCount)
+          const renovatiePropertyId = Number(openRenovatieScanProperty.id)
+          const renovatiePhotoAnalysis = renovatiePhotoAnalyses[renovatiePropertyId] || null
+          const isRenovatiePhotoLoading = Boolean(renovatiePhotoLoading[renovatiePropertyId])
+          const renovatiePhotoError = renovatiePhotoErrors[renovatiePropertyId] || ''
+          const renovatieScan = getRenovatieScan(
+            openRenovatieScanProperty,
+            renovatiePhotoCount,
+            renovatiePhotoAnalysis,
+          )
           const renovatieHeroImage = getPropertyPrimaryImage(openRenovatieScanProperty)
+          const renovationAreaLabels: Record<string, string> = {
+            walls: 'Muren',
+            floors: 'Vloeren',
+            windows: 'Ramen',
+            kitchen: 'Keuken',
+            bathroom: 'Badkamer',
+            ceiling: 'Plafond',
+          }
 
           return (
             <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/45 p-3 backdrop-blur-sm sm:p-4">
@@ -4070,10 +4171,12 @@ function PropertiesContent() {
                           </p>
                           <div className="mt-3 flex flex-wrap items-center gap-3">
                             <span className="inline-flex w-fit rounded-full border border-orange-100 bg-orange-50 px-4 py-1.5 text-sm font-black text-orange-700">
-                              {renovatieScan.renovatieniveau}
+                              {isRenovatiePhotoLoading
+                                ? 'Foto’s worden geanalyseerd...'
+                                : renovatieScan.renovatieniveau}
                             </span>
                             <p className="text-sm font-semibold leading-6 text-[#64748B]">
-                              Er worden geen kosten berekend in Renovatie Scan v1.
+                              Er worden geen kosten berekend in Renovatie Scan v2.
                             </p>
                           </div>
                         </div>
@@ -4094,6 +4197,55 @@ function PropertiesContent() {
                             <p className="mt-1 font-semibold leading-6 text-[#64748B]">
                               {renovatieScan.betrouwbaarheid}
                             </p>
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+
+                    <section className="mt-5 border-t border-blue-50 pt-5">
+                      {isRenovatiePhotoLoading ? (
+                        <div className="rounded-2xl border border-orange-100 bg-orange-50 p-4 text-sm font-bold text-orange-700">
+                          Foto’s worden geanalyseerd...
+                        </div>
+                      ) : renovatiePhotoError ? (
+                        <div className="rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-bold text-red-700">
+                          {renovatiePhotoError} De scan gebruikt voorlopig de beschikbare woninggegevens.
+                        </div>
+                      ) : (
+                        <p className="text-sm font-semibold leading-6 text-[#64748B]">
+                          {renovatieScan.fotoAnalyseSamenvatting}
+                        </p>
+                      )}
+                    </section>
+
+                    <section className="mt-5 border-t border-blue-50 pt-5">
+                      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                        <div>
+                          <h4 className="text-base font-black text-[#071B4D]">Visuele observaties</h4>
+                          <ul className="mt-3 space-y-2 text-sm font-semibold leading-6 text-[#64748B]">
+                            {renovatieScan.visueleObservaties.map((observatie, index) => (
+                              <li key={index} className="flex gap-2">
+                                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#F97316]" />
+                                <span>{observatie}</span>
+                              </li>
+                            ))}
+                          </ul>
+                          {renovatieScan.kamersGezien.length > 0 && (
+                            <p className="mt-3 text-xs font-bold text-[#64748B]">
+                              Ruimtes gezien: {renovatieScan.kamersGezien.join(', ')}
+                            </p>
+                          )}
+                        </div>
+
+                        <div>
+                          <h4 className="text-base font-black text-[#071B4D]">Mogelijke renovatiezones</h4>
+                          <div className="mt-3 grid grid-cols-2 gap-2 text-xs font-black text-[#64748B]">
+                            {Object.entries(renovatieScan.renovatiezones).map(([zone, status]) => (
+                              <div key={zone} className="rounded-xl border border-blue-100 bg-[#F6F8FC] px-3 py-2">
+                                <span className="block text-[#071B4D]">{renovationAreaLabels[zone] || zone}</span>
+                                <span className="mt-1 block capitalize">{String(status).replace('_', ' ')}</span>
+                              </div>
+                            ))}
                           </div>
                         </div>
                       </div>
@@ -4146,7 +4298,9 @@ function PropertiesContent() {
 
                     <footer className="mt-5 border-t border-blue-50 pt-5 text-xs font-semibold leading-5 text-[#64748B]">
                       <p>
-                        Foto’s zijn meegeteld als beschikbaarheid, maar nog niet visueel door AI beoordeeld.
+                        {renovatieScan.fotoAnalyseStatus === 'geanalyseerd'
+                          ? 'Foto’s zijn visueel door AI beoordeeld op basis van zichtbare elementen.'
+                          : 'Foto’s werden niet visueel beoordeeld.'}
                       </p>
                       <p className="mt-2">
                         Deze beoordeling is gebaseerd op beschikbare woninggegevens, kenmerken en beschikbare foto&apos;s. Het betreft geen bouwkundig rapport, expertiseverslag of professionele inspectie.

@@ -5,6 +5,38 @@ export type RenovatieIndicatie =
   | 'Grondige renovatie'
   | 'Totaalrenovatie mogelijk'
 
+export type RenovatieVisualCondition =
+  | 'instapklaar'
+  | 'lichte_opfrissing'
+  | 'gerichte_renovatie'
+  | 'grondige_renovatie'
+  | 'totaalrenovatie'
+
+export type RenovatieAreaStatus =
+  | 'goed'
+  | 'opfrissen'
+  | 'renoveren'
+  | 'ontbreekt'
+  | 'onduidelijk'
+
+export type RenovatiePhotoAnalysis = {
+  visualCondition: RenovatieVisualCondition
+  confidence: 'laag' | 'gemiddeld' | 'hoog'
+  visibleSignals: string[]
+  roomsObserved: string[]
+  renovationAreas: {
+    walls: RenovatieAreaStatus
+    floors: RenovatieAreaStatus
+    windows: RenovatieAreaStatus
+    kitchen: RenovatieAreaStatus
+    bathroom: RenovatieAreaStatus
+    ceiling: RenovatieAreaStatus
+  }
+  attentionPoints: string[]
+  positivePoints: string[]
+  safeSummary: string
+}
+
 export type RenovatieScan = {
   renovatieniveau: RenovatieIndicatie
   renovatiecategorie: string
@@ -13,9 +45,81 @@ export type RenovatieScan = {
   aandachtspunten: string[]
   gebaseerdOp: string[]
   beperkteFotoInformatie: boolean
+  visueleObservaties: string[]
+  kamersGezien: string[]
+  renovatiezones: RenovatiePhotoAnalysis['renovationAreas']
+  fotoAnalyseSamenvatting: string
+  fotoAnalyseStatus: 'geanalyseerd' | 'niet_geanalyseerd'
 }
 
 const LIMITED_PHOTO_TEXT = 'Beperkte foto-informatie beschikbaar.'
+
+const VISUAL_CONDITION_ORDER: RenovatieVisualCondition[] = [
+  'instapklaar',
+  'lichte_opfrissing',
+  'gerichte_renovatie',
+  'grondige_renovatie',
+  'totaalrenovatie',
+]
+
+const DEFAULT_RENOVATION_AREAS: RenovatiePhotoAnalysis['renovationAreas'] = {
+  walls: 'onduidelijk',
+  floors: 'onduidelijk',
+  windows: 'onduidelijk',
+  kitchen: 'onduidelijk',
+  bathroom: 'onduidelijk',
+  ceiling: 'onduidelijk',
+}
+
+function sanitizeRenovatieText(value: string) {
+  return value
+    .replace(/moet vervangen worden/gi, 'vraagt controle')
+    .replace(/is kapot/gi, 'lijkt niet in recente staat')
+    .replace(/is technisch afgekeurd/gi, 'is niet vast te stellen op basis van foto’s')
+    .replace(/elektriciteit is slecht/gi, 'technieken vragen controle')
+    .replace(/vocht aanwezig/gi, 'zichtbare sporen vragen controle')
+    .replace(/\bvocht\b/gi, 'zichtbare sporen')
+    .replace(/\bkapot\b/gi, 'niet in recente staat')
+    .trim()
+}
+
+function sanitizeRenovatieList(items: string[]) {
+  return uniqueList(items.map(sanitizeRenovatieText).filter(Boolean))
+}
+
+function visualConditionToRenovatieniveau(
+  condition: RenovatieVisualCondition,
+): RenovatieIndicatie {
+  if (condition === 'instapklaar') return 'Geen directe renovatiebehoefte vastgesteld'
+  if (condition === 'lichte_opfrissing') return 'Lichte opfrissing'
+  if (condition === 'gerichte_renovatie') return 'Gerichte renovatie'
+  if (condition === 'grondige_renovatie') return 'Grondige renovatie'
+
+  return 'Totaalrenovatie mogelijk'
+}
+
+function visualConditionToCategorie(condition: RenovatieVisualCondition) {
+  if (condition === 'instapklaar') return 'Instapklaar op basis van zichtbare elementen'
+  if (condition === 'lichte_opfrissing') return 'Lichte opfrissing op basis van zichtbare afwerking'
+  if (condition === 'gerichte_renovatie') return 'Gerichte renovatiezones zichtbaar in de foto’s'
+  if (condition === 'grondige_renovatie') return 'Meerdere zichtbare elementen lijken verouderd'
+
+  return 'Zichtbaar onafgewerkte of zeer ingrijpende renovatiezones'
+}
+
+function confidenceToBetrouwbaarheid(
+  confidence: RenovatiePhotoAnalysis['confidence'],
+): RenovatieScan['betrouwbaarheid'] {
+  if (confidence === 'hoog') return 'Hoog'
+  if (confidence === 'gemiddeld') return 'Gemiddeld'
+
+  return 'Laag'
+}
+
+function getVisualSeverity(condition: RenovatieVisualCondition) {
+  return VISUAL_CONDITION_ORDER.indexOf(condition)
+}
+
 
 function numberValue(value: unknown) {
   const number = Number(value)
@@ -217,6 +321,7 @@ function getDescriptionKeywordSummary(matchedSignals: string[]) {
 export function getRenovatieScan(
   property: Record<string, unknown>,
   photoCount?: number,
+  photoAnalysis?: RenovatiePhotoAnalysis | null,
 ): RenovatieScan {
   const areaValue = getAreaValue(property)
   const area = numberValue(areaValue)
@@ -434,7 +539,7 @@ export function getRenovatieScan(
   }
 
   const clampedScore = Math.max(0, Math.min(100, score))
-  const renovatieniveau: RenovatieScan['renovatieniveau'] =
+  let renovatieniveau: RenovatieScan['renovatieniveau'] =
     clampedScore < 25
       ? 'Lichte opfrissing'
       : clampedScore < 50
@@ -457,7 +562,7 @@ export function getRenovatieScan(
     )
   }
 
-  const renovatiecategorie =
+  let renovatiecategorie =
     clampedScore < 25
       ? 'Cosmetische opfrissing en beperkte afwerking'
       : clampedScore < 50
@@ -486,14 +591,58 @@ export function getRenovatieScan(
     availablePhotoCount > 0 ? availablePhotoCount : null,
   ].filter(hasKnownValue).length
 
-  const betrouwbaarheid: RenovatieScan['betrouwbaarheid'] =
+  let betrouwbaarheid: RenovatieScan['betrouwbaarheid'] =
     availablePhotoCount >= 5 && knownDataPoints >= 5
       ? 'Hoog'
       : knownDataPoints >= 4 || availablePhotoCount >= 5
         ? 'Gemiddeld'
         : 'Laag'
 
-  if (isNoDirectRenovationCase) {
+  const hasPhotoAnalysis = Boolean(photoAnalysis)
+  const visualCondition = photoAnalysis?.visualCondition
+
+  if (photoAnalysis && visualCondition) {
+    const visualSeverity = getVisualSeverity(visualCondition)
+    const dataVisualCondition =
+      clampedScore < 25
+        ? 'lichte_opfrissing'
+        : clampedScore < 50
+          ? 'gerichte_renovatie'
+          : clampedScore < 75
+            ? 'grondige_renovatie'
+            : 'totaalrenovatie'
+    const dataSeverity = getVisualSeverity(dataVisualCondition)
+    const dataStronglyContradicts =
+      visualCondition === 'grondige_renovatie' &&
+      clampedScore < 25 &&
+      epcBand === 'good' &&
+      buildYear >= 2015 &&
+      hasReadySignal &&
+      !hasHeavySignal
+    const finalVisualCondition: RenovatieVisualCondition =
+      visualCondition === 'totaalrenovatie'
+        ? 'totaalrenovatie'
+        : visualCondition === 'grondige_renovatie' && !dataStronglyContradicts
+          ? 'grondige_renovatie'
+          : visualSeverity >= dataSeverity
+            ? visualCondition
+            : dataVisualCondition
+
+    renovatieniveau = visualConditionToRenovatieniveau(finalVisualCondition)
+    renovatiecategorie = visualConditionToCategorie(finalVisualCondition)
+    betrouwbaarheid = confidenceToBetrouwbaarheid(photoAnalysis.confidence)
+
+    gebaseerdOp.push(
+      `Fotoanalyse: ${photoAnalysis.confidence} vertrouwen`,
+      `Visuele beoordeling: ${visualCondition}`,
+    )
+
+    if (photoAnalysis.safeSummary) {
+      aandachtspunten.push(photoAnalysis.safeSummary)
+    }
+  }
+
+  if (isNoDirectRenovationCase && !hasPhotoAnalysis) {
     const hasVisiblePhotos = availablePhotoCount > 0
     const noDirectAttentionExclusions = [
       LIMITED_PHOTO_TEXT,
@@ -522,6 +671,12 @@ export function getRenovatieScan(
       ]).slice(0, 6),
       gebaseerdOp,
       beperkteFotoInformatie: !hasVisiblePhotos && beperkteFotoInformatie,
+      visueleObservaties: ['Foto’s werden niet visueel beoordeeld.'],
+      kamersGezien: [],
+      renovatiezones: DEFAULT_RENOVATION_AREAS,
+      fotoAnalyseSamenvatting:
+        'Foto’s werden niet visueel beoordeeld; deze inschatting gebruikt beschikbare woninggegevens.',
+      fotoAnalyseStatus: 'niet_geanalyseerd',
     }
   }
 
@@ -537,14 +692,42 @@ export function getRenovatieScan(
     renovatiecategorie,
     betrouwbaarheid,
     pluspunten:
-      uniqueList(pluspunten).slice(0, 5).length > 0
-        ? uniqueList(pluspunten).slice(0, 5)
+      sanitizeRenovatieList([
+        ...(photoAnalysis?.positivePoints || []),
+        ...pluspunten,
+      ]).slice(0, 6).length > 0
+        ? sanitizeRenovatieList([
+            ...(photoAnalysis?.positivePoints || []),
+            ...pluspunten,
+          ]).slice(0, 6)
         : fallbackPluspunten,
     aandachtspunten:
-      uniqueList(aandachtspunten).slice(0, 6).length > 0
-        ? uniqueList(aandachtspunten).slice(0, 6)
+      sanitizeRenovatieList([
+        ...(photoAnalysis?.attentionPoints || []),
+        ...aandachtspunten,
+      ]).slice(0, 8).length > 0
+        ? sanitizeRenovatieList([
+            ...(photoAnalysis?.attentionPoints || []),
+            ...aandachtspunten,
+          ]).slice(0, 8)
         : fallbackAandachtspunten,
-    gebaseerdOp,
+    gebaseerdOp: hasPhotoAnalysis
+      ? sanitizeRenovatieList(gebaseerdOp)
+      : sanitizeRenovatieList([
+          ...gebaseerdOp,
+          'Foto’s niet visueel beoordeeld',
+        ]),
     beperkteFotoInformatie,
+    visueleObservaties: hasPhotoAnalysis
+      ? sanitizeRenovatieList(photoAnalysis?.visibleSignals || [])
+      : ['Foto’s werden niet visueel beoordeeld.'],
+    kamersGezien: hasPhotoAnalysis
+      ? sanitizeRenovatieList(photoAnalysis?.roomsObserved || [])
+      : [],
+    renovatiezones: photoAnalysis?.renovationAreas || DEFAULT_RENOVATION_AREAS,
+    fotoAnalyseSamenvatting: hasPhotoAnalysis
+      ? sanitizeRenovatieText(photoAnalysis?.safeSummary || '')
+      : 'Foto’s werden niet visueel beoordeeld; deze inschatting gebruikt beschikbare woninggegevens.',
+    fotoAnalyseStatus: hasPhotoAnalysis ? 'geanalyseerd' : 'niet_geanalyseerd',
   }
 }
