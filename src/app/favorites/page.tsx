@@ -16,7 +16,6 @@ export default function FavoritesPage() {
   const [loading, setLoading] = useState(true)
   const [compareNotice, setCompareNotice] = useState('')
   const [compareSelection, setCompareSelection] = useState<any[]>([])
-  const [openInsightId, setOpenInsightId] = useState<number | null>(null)
   const [openEnergyScanId, setOpenEnergyScanId] = useState<number | null>(null)
   const [manualEnergyData, setManualEnergyData] = useState<Record<number, Record<string, unknown>>>({})
   const [energyScanRefreshKey, setEnergyScanRefreshKey] = useState(0)
@@ -159,9 +158,6 @@ export default function FavoritesPage() {
 
     setProperties((current) => current.filter((property) => property.id !== propertyId))
   }
-
-  const openInsightProperty =
-    properties.find((property) => Number(property.id) === openInsightId) || null
 
   const openEnergyScanProperty =
     properties.find((property) => String(property.id) === String(openEnergyScanId)) || null
@@ -342,19 +338,7 @@ export default function FavoritesPage() {
                     )}
                   </div>
 
-                  <div className="mt-4 grid grid-cols-3 gap-2">
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.preventDefault()
-                        event.stopPropagation()
-                        setOpenInsightId(Number(property.id))
-                      }}
-                      className="flex h-11 min-w-0 items-center justify-center rounded-2xl border border-blue-200 bg-white px-2 text-center text-[13px] font-black text-blue-700 transition hover:bg-blue-50 whitespace-nowrap"
-                    >
-                      Analyse
-                    </button>
-
+                  <div className="mt-4 grid grid-cols-2 gap-2">
                     <button
                       type="button"
                       onClick={(event) => {
@@ -386,68 +370,6 @@ export default function FavoritesPage() {
         </div>
       )}
 
-      {openInsightProperty && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
-          <div className="relative max-h-[85vh] w-full max-w-5xl overflow-y-auto rounded-[2rem] bg-white p-6 shadow-2xl">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-sm font-black uppercase tracking-wide text-emerald-600">
-                  Analyse
-                </p>
-                <h3 className="mt-2 text-2xl font-black text-[#071B4D]">
-                  {openInsightProperty.title || 'Woning analyse'}
-                </h3>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setOpenInsightId(null)}
-                className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gray-100 text-xl font-black text-gray-600 transition hover:bg-gray-200"
-              >
-                ×
-              </button>
-            </div>
-
-            {(() => {
-              const insight = getSlimCheck(openInsightProperty, properties, marketComparables)
-
-              return (
-                <div className="mt-6 space-y-4">
-                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5">
-                    <p className="text-xl font-black text-emerald-800">
-                      {insight.status}
-                    </p>
-                    <p className="mt-2 text-sm font-bold leading-6 text-emerald-700">
-                      {insight.highlight}
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    {insight.points.map((point, index) => (
-                      <div
-                        key={index}
-                        className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm"
-                      >
-                        <p className="text-sm font-semibold leading-6 text-gray-700">
-                          {point}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setOpenInsightId(null)}
-                    className="mx-auto mt-6 inline-flex items-center justify-center rounded-xl bg-[#071B4D] px-6 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-[#0B2A6B]"
-                  >
-                    Sluiten
-                  </button>
-                </div>
-              )
-            })()}
-          </div>
-        </div>
-      )}
 
       {openEnergyScanProperty && (() => {
         const propertyId = Number(openEnergyScanProperty.id)
@@ -533,6 +455,29 @@ export default function FavoritesPage() {
         const compactCostText = energyInsight.estimatedMax > 0
           ? `Indicatieve kostenrange: ${estimatedCost}.`
           : estimatedCost
+        const propertyAnalysis = getSlimCheck(enrichedEnergyScanProperty, properties, marketComparables)
+        const comparisonCount = getComparableProperties(enrichedEnergyScanProperty, properties, marketComparables).length
+        const marketConfidence = comparisonCount >= 6
+          ? `Hoog (${comparisonCount} vergelijkbare panden)`
+          : comparisonCount >= 3
+            ? `Gemiddeld (${comparisonCount} vergelijkbare panden)`
+            : `Laag (${comparisonCount} vergelijkbare panden)`
+        const propertySignals = [
+          ...basedOnPills,
+          getKnownAmenities(enrichedEnergyScanProperty).length > 0
+            ? `Comfort: ${getKnownAmenities(enrichedEnergyScanProperty).join(', ')}`
+            : '',
+          getWoningkenmerken(enrichedEnergyScanProperty).length > 0
+            ? `Kenmerken: ${getWoningkenmerken(enrichedEnergyScanProperty).join(', ')}`
+            : '',
+        ].filter(Boolean)
+        const comfortIndicators = getDataDrivenAnalysisNotes(enrichedEnergyScanProperty).filter((note) =>
+          ['Comfortniveau', 'Gezinsvriendelijkheid', 'Mobiliteit', 'Investeringspotentieel'].some((prefix) => note.startsWith(prefix))
+        )
+        const sustainabilityIndicators = [
+          ...realEnergyNotes,
+          getDataDrivenAnalysisNotes(enrichedEnergyScanProperty).find((note) => note.startsWith('Duurzaamheidsindicatie')) || '',
+        ].filter(Boolean)
 
         return (
           <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
@@ -574,8 +519,17 @@ export default function FavoritesPage() {
                     </p>
                   </div>
                   <span className="inline-flex w-fit shrink-0 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-black text-[#0B1F4D] shadow-sm">
-                    Geen directe renovatiebehoefte vastgesteld
+                    {propertyAnalysis.status}
                   </span>
+                </div>
+
+                <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 p-4">
+                  <p className="text-xs font-black uppercase tracking-wide text-blue-700">Woningoverzicht</p>
+                  <p className="mt-2 text-sm font-bold leading-6 text-blue-900">{propertyAnalysis.highlight}</p>
+                  <div className="mt-3 grid gap-3 text-sm md:grid-cols-2">
+                    <p className="rounded-xl bg-white p-3 font-bold text-gray-700">Betrouwbaarheid: {confidenceText}</p>
+                    <p className="rounded-xl bg-white p-3 font-bold text-gray-700">Marktvertrouwen: {marketConfidence}</p>
+                  </div>
                 </div>
 
                 <div className="mt-4 grid gap-3 border-t border-gray-200 pt-4 text-sm md:grid-cols-3">
@@ -636,6 +590,36 @@ export default function FavoritesPage() {
                       ) : (
                         <li>Geen extra controlepunten nodig op basis van de huidige gegevens.</li>
                       )}
+                    </ul>
+                  </div>
+                </div>
+              </section>
+
+              <section className="mt-5 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                <h4 className="text-base font-black text-[#071B4D]">Woninginzichten</h4>
+                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                  <div className="rounded-2xl bg-slate-50 p-4">
+                    <p className="text-xs font-black uppercase tracking-wide text-gray-500">Beschikbare signalen</p>
+                    <ul className="mt-3 space-y-2 text-sm font-semibold leading-6 text-gray-700">
+                      {(propertySignals.length > 0 ? propertySignals : ['Er zijn weinig expliciete signalen beschikbaar.']).map((point, index) => (
+                        <li key={`${point}-${index}`}>• {point}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="rounded-2xl bg-blue-50 p-4">
+                    <p className="text-xs font-black uppercase tracking-wide text-blue-700">Comfortindicatoren</p>
+                    <ul className="mt-3 space-y-2 text-sm font-semibold leading-6 text-blue-900">
+                      {(comfortIndicators.length > 0 ? comfortIndicators : ['Onvoldoende comfortdata beschikbaar voor een betrouwbare inschatting.']).map((point, index) => (
+                        <li key={`${point}-${index}`}>• {point}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="rounded-2xl bg-green-50 p-4 md:col-span-2">
+                    <p className="text-xs font-black uppercase tracking-wide text-green-700">Duurzaamheidsindicatoren</p>
+                    <ul className="mt-3 grid gap-2 text-sm font-semibold leading-6 text-green-900 md:grid-cols-2">
+                      {sustainabilityIndicators.map((point, index) => (
+                        <li key={`${point}-${index}`}>• {point}</li>
+                      ))}
                     </ul>
                   </div>
                 </div>
@@ -1236,8 +1220,8 @@ function getSlimCheck(property: any, properties: any[], marketComparables: any[]
 
   return {
     status: comparisonCount >= 3
-      ? `${totalScore}/100 Analyse score`
-      : `${totalScore}/100 Analyse score - beperkte vergelijkingsbasis`,
+      ? `${totalScore}/100 AI-score`
+      : `${totalScore}/100 AI-score - beperkte vergelijkingsbasis`,
     highlight: `${highlight} Deze analyse gebruikt alleen beschikbare woningdata en marktinformatie.`,
     points: [marketLine, conditionLine, energyLine, ...dataDrivenNotes],
   }
