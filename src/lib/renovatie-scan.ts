@@ -1,8 +1,9 @@
 export type RenovatieKostenrange =
   | '€2.000 - €7.500'
-  | '€7.500 - €25.000'
-  | '€25.000 - €60.000'
-  | '€60.000+'
+  | '€7.500 - €20.000'
+  | '€20.000 - €50.000'
+  | '€50.000 - €100.000'
+  | '€100.000+'
 
 export type RenovatieScan = {
   renovatieniveau: 'Lichte opfrissing' | 'Gerichte renovatie' | 'Grondige renovatie' | 'Totaalrenovatie'
@@ -18,7 +19,16 @@ const LIMITED_PHOTO_TEXT = 'Beperkte foto-informatie beschikbaar.'
 
 function numberValue(value: unknown) {
   const number = Number(value)
-  return Number.isFinite(number) ? number : 0
+  if (Number.isFinite(number)) return number
+
+  if (typeof value === 'string') {
+    const match = value.replace(',', '.').match(/\d+(?:\.\d+)?/)
+    const parsed = match ? Number(match[0]) : 0
+
+    return Number.isFinite(parsed) ? parsed : 0
+  }
+
+  return 0
 }
 
 function boolValue(value: unknown) {
@@ -43,6 +53,16 @@ function normalizeText(...values: unknown[]) {
 
 function uniqueList(items: string[]) {
   return Array.from(new Set(items))
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function hasTextSignal(text: string, signal: string) {
+  if (signal.includes(' ')) return text.includes(signal)
+
+  return new RegExp(`\\b${escapeRegExp(signal)}\\b`, 'u').test(text)
 }
 
 const PROPERTY_IMAGE_FIELDS = [
@@ -130,6 +150,16 @@ function getPhotoCount(
     return Math.max(0, Math.floor(providedPhotoCount || 0))
   }
 
+  const propertyPhotoCount = numberValue(
+    property.photo_count ||
+      property.photoCount ||
+      property.foto_count ||
+      property.fotoCount ||
+      property.aantal_fotos
+  )
+
+  if (propertyPhotoCount > 0) return Math.floor(propertyPhotoCount)
+
   const references: string[] = []
 
   PROPERTY_IMAGE_FIELDS.forEach((field) => {
@@ -142,6 +172,8 @@ function getPhotoCount(
 function getArea(property: Record<string, unknown>) {
   return numberValue(
     property.bewoonbare_oppervlakte ||
+      property.woonoppervlakte ||
+      property.livingArea ||
       property.living_area ||
       property.oppervlakte ||
       property.area
@@ -151,19 +183,45 @@ function getArea(property: Record<string, unknown>) {
 function getEpcBand(epc: string) {
   const label = epc.trim().toUpperCase()
 
-  if (['A+++++', 'A++++', 'A+++', 'A++', 'A+', 'A', 'B'].includes(label)) return 'good'
-  if (label === 'C') return 'average'
-  if (label === 'D') return 'attention'
-  if (['E', 'F', 'G'].includes(label)) return 'poor'
+  if (['A+++++', 'A++++', 'A+++', 'A++', 'A+', 'A'].includes(label)) return 'good'
+  if (['B', 'C'].includes(label)) return 'average'
+  if (['D', 'E', 'F'].includes(label)) return 'attention'
+  if (label === 'G') return 'poor'
 
   return 'unknown'
 }
 
-function getCostRange(score: number): RenovatieKostenrange {
-  if (score < 25) return '€2.000 - €7.500'
-  if (score < 50) return '€7.500 - €25.000'
-  if (score < 75) return '€25.000 - €60.000'
-  return '€60.000+'
+function getAreaTier(area: number) {
+  if (area <= 0) return 1
+  if (area < 80) return 0
+  if (area <= 150) return 1
+  if (area <= 250) return 2
+  return 3
+}
+
+function getCostRange(score: number, area: number): RenovatieKostenrange {
+  const areaTier = getAreaTier(area)
+  let costTier = score < 18
+    ? 0
+    : score < 38
+      ? 1
+      : score < 62
+        ? 2
+        : score < 82
+          ? 3
+          : 4
+
+  if (areaTier === 0 && score < 62) costTier -= 1
+  if (areaTier === 2 && score >= 28) costTier += 1
+  if (areaTier === 3 && score >= 18) costTier += 2
+
+  const clampedTier = Math.max(0, Math.min(4, costTier))
+
+  if (clampedTier === 0) return '€2.000 - €7.500'
+  if (clampedTier === 1) return '€7.500 - €20.000'
+  if (clampedTier === 2) return '€20.000 - €50.000'
+  if (clampedTier === 3) return '€50.000 - €100.000'
+  return '€100.000+'
 }
 
 export function getRenovatieScan(property: Record<string, unknown>, photoCount?: number): RenovatieScan {
@@ -171,7 +229,7 @@ export function getRenovatieScan(property: Record<string, unknown>, photoCount?:
   const buildYear = numberValue(property.bouwjaar || property.build_year)
   const bedrooms = numberValue(property.slaapkamers || property.bedrooms)
   const bathrooms = numberValue(property.badkamers || property.bathrooms)
-  const epc = String(property.epc || property.epc_code || '')
+  const epc = String(property.epc || property.epc_label || property.epc_code || property.EPC || '')
   const epcBand = getEpcBand(epc)
   const availablePhotoCount = getPhotoCount(property, photoCount)
   const beperkteFotoInformatie = availablePhotoCount < 3
@@ -189,6 +247,7 @@ export function getRenovatieScan(property: Record<string, unknown>, photoCount?:
   const text = normalizeText(
     property.title,
     property.description,
+    property.beschrijving,
     property.location_description,
     property.keywords,
     property.pluspunten,
@@ -205,24 +264,39 @@ export function getRenovatieScan(property: Record<string, unknown>, photoCount?:
     'instapklaar',
     'gerenoveerd',
     'vernieuwd',
+    'recent',
+    'recente',
     'modern',
+    'moderne',
+    'moderne keuken',
+    'nieuwe badkamer',
     'energiezuinig',
     'nieuwbouw',
   ]
   const lightSignals = ['op te frissen', 'opfrissen', 'lichte renovatie', 'cosmetisch']
   const heavySignals = [
+    'renoveren',
+    'renovatie',
     'te renoveren',
     'totaalrenovatie',
     'grondig te renoveren',
     'renovatieplicht',
     'renovatieverplichting',
     'kluswoning',
+    'vocht',
+    'schade',
+    'oud',
+    'verouderd',
+    'enkel glas',
+    'elektriciteit',
+    'dak',
+    'isolatie',
     'afbraak',
   ]
 
-  const hasReadySignal = readySignals.some((signal) => text.includes(signal))
-  const hasLightSignal = lightSignals.some((signal) => text.includes(signal))
-  const hasHeavySignal = heavySignals.some((signal) => text.includes(signal))
+  const hasReadySignal = readySignals.some((signal) => hasTextSignal(text, signal))
+  const hasLightSignal = lightSignals.some((signal) => hasTextSignal(text, signal))
+  const hasHeavySignal = heavySignals.some((signal) => hasTextSignal(text, signal))
 
   let score = 20
   const pluspunten: string[] = []
@@ -231,12 +305,19 @@ export function getRenovatieScan(property: Record<string, unknown>, photoCount?:
   if (availablePhotoCount >= 5) pluspunten.push('Meerdere foto’s beschikbaar voor een betere eerste inschatting.')
   if (beperkteFotoInformatie) aandachtspunten.push(LIMITED_PHOTO_TEXT)
 
-  if (area >= 140) {
-    score += 8
+  if (area > 250) {
+    score += 20
+    aandachtspunten.push('Zeer grote bewoonbare oppervlakte kan de indicatieve renovatiekost sterk verhogen.')
+  } else if (area > 150) {
+    score += 12
     aandachtspunten.push('Grotere bewoonbare oppervlakte kan renovatiewerken omvangrijker maken.')
-  } else if (area > 0 && area < 85) {
-    score -= 4
+  } else if (area >= 80) {
+    score += 4
+  } else if (area > 0) {
+    score -= 6
     pluspunten.push('Compactere oppervlakte kan werken overzichtelijker houden.')
+  } else {
+    aandachtspunten.push('Bewoonbare oppervlakte ontbreekt in de beschikbare gegevens.')
   }
 
   if (buildYear) {
@@ -255,14 +336,13 @@ export function getRenovatieScan(property: Record<string, unknown>, photoCount?:
   }
 
   if (epcBand === 'good') {
-    score -= 16
+    score -= 18
     pluspunten.push(`EPC ${epc.toUpperCase()} wijst op een sterke energetische uitgangspositie.`)
   } else if (epcBand === 'average') {
-    score -= 6
-    pluspunten.push('EPC C geeft een redelijke energetische basis aan.')
+    pluspunten.push(`EPC ${epc.toUpperCase()} geeft een neutrale tot redelijke energetische basis aan.`)
   } else if (epcBand === 'attention') {
-    score += 10
-    aandachtspunten.push('EPC D vraagt aandacht voor energieprestaties en toekomstbestendigheid.')
+    score += 18
+    aandachtspunten.push(`EPC ${epc.toUpperCase()} verhoogt de indicatieve kans op energetische renovatiewerken.`)
   } else if (epcBand === 'poor') {
     score += 28
     aandachtspunten.push(`EPC ${epc.toUpperCase()} wijst op verhoogde kans op energiewerken.`)
@@ -304,7 +384,15 @@ export function getRenovatieScan(property: Record<string, unknown>, photoCount?:
     pluspunten.push('Duurzame technieken zoals warmtepomp of zonnepanelen zijn opgegeven.')
   }
 
-  if (bathrooms >= 2) pluspunten.push('Meerdere badkamers kunnen functionele renovatienood beperken.')
+  if (bathrooms >= 3 && !hasReadySignal) {
+    score += 8
+    aandachtspunten.push('Meerdere badkamers kunnen de kost voor cosmetische vernieuwing verhogen.')
+  } else if (bathrooms >= 2 && !hasReadySignal) {
+    score += 4
+    aandachtspunten.push('Meerdere badkamers kunnen extra afwerkingsbudget vragen.')
+  } else if (bathrooms >= 2) {
+    pluspunten.push('Meerdere badkamers zijn opgegeven; beschrijving wijst ook op recente of vernieuwde afwerking.')
+  }
   if (bedrooms >= 4 && bathrooms <= 1 && bathrooms > 0) {
     score += 5
     aandachtspunten.push('Aantal slaapkamers tegenover badkamers kan functionele updates wenselijk maken.')
@@ -332,6 +420,14 @@ export function getRenovatieScan(property: Record<string, unknown>, photoCount?:
         ? 'Grondige renovatie'
         : 'Totaalrenovatie'
 
+  if (clampedScore < 25) {
+    pluspunten.push('Renovatieniveau laag op basis van de beschikbare woningdata.')
+  } else if (clampedScore < 65) {
+    aandachtspunten.push('Renovatieniveau gemiddeld op basis van de beschikbare woningdata.')
+  } else {
+    aandachtspunten.push('Renovatieniveau hoog op basis van de beschikbare woningdata.')
+  }
+
   const renovatiecategorie = clampedScore < 25
     ? 'Cosmetische opfrissing en beperkte afwerking'
     : clampedScore < 50
@@ -346,7 +442,7 @@ export function getRenovatieScan(property: Record<string, unknown>, photoCount?:
     buildYear,
     bedrooms,
     bathrooms,
-    property.description,
+    property.description || property.beschrijving,
     availablePhotoCount > 0 ? availablePhotoCount : null,
     property.renovatieverplichting,
     property.renovatiejaar || property.laatste_renovatiejaar,
@@ -373,7 +469,7 @@ export function getRenovatieScan(property: Record<string, unknown>, photoCount?:
     betrouwbaarheid,
     pluspunten: uniqueList(pluspunten).slice(0, 5).length > 0 ? uniqueList(pluspunten).slice(0, 5) : fallbackPluspunten,
     aandachtspunten: uniqueList(aandachtspunten).slice(0, 6).length > 0 ? uniqueList(aandachtspunten).slice(0, 6) : fallbackAandachtspunten,
-    kostenrange: getCostRange(clampedScore),
+    kostenrange: getCostRange(clampedScore, area),
     beperkteFotoInformatie,
   }
 }
