@@ -1,16 +1,21 @@
-export type RenovatieIndicatie =
-  | 'Moderne afwerking zichtbaar'
-  | 'Gemengde renovatie-indruk'
-  | 'Beperkte visuele beoordeling'
+export type AfwerkingsStaat =
+  | 'Modern afgewerkt'
+  | 'Verzorgde afwerking'
+  | 'Gemengde afwerking'
+  | 'Zichtbaar verouderd'
+  | 'Onvoldoende zichtbaar'
 
 export type RenovatieVisualCondition =
-  | 'moderne_afwerking_zichtbaar'
-  | 'gemengde_renovatie_indruk'
-  | 'beperkte_visuele_beoordeling'
+  | 'modern_afgewerkt'
+  | 'verzorgde_afwerking'
+  | 'gemengde_afwerking'
+  | 'zichtbaar_verouderd'
+  | 'onvoldoende_zichtbaar'
 
 export type RenovatieAreaStatus =
   | 'modern_zichtbaar'
   | 'verzorgd_zichtbaar'
+  | 'verouderd_zichtbaar'
   | 'beperkt_zichtbaar'
   | 'niet_zichtbaar'
 
@@ -37,7 +42,7 @@ export type RenovatiePhotoAnalysis = {
 }
 
 export type RenovatieScan = {
-  renovatieniveau: RenovatieIndicatie
+  renovatieniveau: AfwerkingsStaat
   renovatiecategorie: string
   betrouwbaarheid: 'Beperkt' | 'Gemiddeld' | 'Hoog'
   pluspunten: string[]
@@ -53,7 +58,7 @@ export type RenovatieScan = {
 }
 
 const LIMITED_PHOTO_TEXT =
-  'Beperkte foto-informatie beschikbaar; beoordeling blijft beperkt tot zichtbare elementen.'
+  'Beperkte foto-informatie beschikbaar; de beoordeling blijft beperkt tot zichtbare elementen.'
 
 const DEFAULT_RENOVATION_AREAS: RenovatiePhotoAnalysis['renovationAreas'] = {
   walls: 'niet_zichtbaar',
@@ -91,20 +96,26 @@ function sanitizeRenovatieList(items: string[]) {
 
 function visualConditionToRenovatieniveau(
   condition: RenovatieVisualCondition,
-): RenovatieIndicatie {
-  if (condition === 'moderne_afwerking_zichtbaar') return 'Moderne afwerking zichtbaar'
-  if (condition === 'gemengde_renovatie_indruk') return 'Gemengde renovatie-indruk'
+): AfwerkingsStaat {
+  if (condition === 'modern_afgewerkt') return 'Modern afgewerkt'
+  if (condition === 'verzorgde_afwerking') return 'Verzorgde afwerking'
+  if (condition === 'gemengde_afwerking') return 'Gemengde afwerking'
+  if (condition === 'zichtbaar_verouderd') return 'Zichtbaar verouderd'
 
-  return 'Beperkte visuele beoordeling'
+  return 'Onvoldoende zichtbaar'
 }
 
 function visualConditionToCategorie(condition: RenovatieVisualCondition) {
-  if (condition === 'moderne_afwerking_zichtbaar')
-    return 'Moderne afwerking zichtbaar op basis van zichtbare elementen'
-  if (condition === 'gemengde_renovatie_indruk')
-    return 'Gemengde renovatie-indruk op basis van zichtbare elementen'
+  if (condition === 'modern_afgewerkt')
+    return 'Op basis van zichtbare elementen oogt de afwerking modern.'
+  if (condition === 'verzorgde_afwerking')
+    return 'Op basis van zichtbare elementen oogt de afwerking verzorgd, maar niet duidelijk nieuw gerenoveerd.'
+  if (condition === 'gemengde_afwerking')
+    return 'Op basis van zichtbare elementen oogt de afwerking gemengd: sommige onderdelen lijken moderner en andere duidelijk ouder.'
+  if (condition === 'zichtbaar_verouderd')
+    return 'Op basis van zichtbare elementen oogt de ruimte verouderd.'
 
-  return 'Beperkte visuele beoordeling door beperkte zichtbaarheid'
+  return 'Onvoldoende bruikbare zichtbare details om de staat van afwerking te bepalen.'
 }
 
 function confidenceToBetrouwbaarheid(
@@ -365,9 +376,35 @@ function componentEvidenceSummary(photoAnalysis: RenovatiePhotoAnalysis) {
 
       if (status === 'modern_zichtbaar') return `${label}: modern zichtbaar`
       if (status === 'verzorgd_zichtbaar') return `${label}: verzorgd zichtbaar`
+      if (status === 'verouderd_zichtbaar') return `${label}: verouderd zichtbaar`
 
       return `${label}: beperkt zichtbaar`
     })
+}
+
+
+function normalizeVisualConditionByEvidence(
+  condition: RenovatieVisualCondition,
+  roomsObserved: string[],
+  renovationAreas: RenovatiePhotoAnalysis['renovationAreas'],
+  visibleEvidence: string[],
+): RenovatieVisualCondition {
+  const hasUsableEvidence = roomsObserved.length > 0 || visibleEvidence.length > 0
+
+  if (!hasUsableEvidence) return 'onvoldoende_zichtbaar'
+  if (condition !== 'onvoldoende_zichtbaar') return condition
+
+  const statuses = Object.values(renovationAreas)
+  const hasModern = statuses.includes('modern_zichtbaar')
+  const hasVerzorgd = statuses.includes('verzorgd_zichtbaar')
+  const hasVerouderd = statuses.includes('verouderd_zichtbaar')
+
+  if (hasVerouderd && (hasModern || hasVerzorgd)) return 'gemengde_afwerking'
+  if (hasVerouderd) return 'zichtbaar_verouderd'
+  if (hasModern) return 'modern_afgewerkt'
+  if (hasVerzorgd) return 'verzorgde_afwerking'
+
+  return 'onvoldoende_zichtbaar'
 }
 
 function buildPropertyContextNotes(
@@ -381,7 +418,7 @@ function buildPropertyContextNotes(
 
   if (hasKnownValue(epcValue)) {
     notes.push(
-      `EPC ${String(epcValue).toUpperCase()} is alleen als woningdata-context meegenomen; de visuele renovatie-indruk blijft gebaseerd op foto's.`,
+      `EPC ${String(epcValue).toUpperCase()} is alleen als woningdata-context meegenomen; de staat van afwerking blijft gebaseerd op foto's.`,
     )
   }
   if (hasKnownValue(buildYearValue)) {
@@ -480,9 +517,9 @@ export function getRenovatieScan(
     const nietBeoordeeld = buildNietBeoordeeld(null)
 
     return {
-      renovatieniveau: 'Beperkte visuele beoordeling',
+      renovatieniveau: 'Onvoldoende zichtbaar',
       renovatiecategorie:
-        'Beperkte visuele beoordeling: foto’s werden niet visueel geanalyseerd',
+        'Onvoldoende bruikbare zichtbare details: foto’s werden niet visueel geanalyseerd',
       betrouwbaarheid: 'Beperkt',
       pluspunten: [
         'Geen visuele pluspunten vastgesteld omdat foto’s niet visueel beoordeeld zijn.',
@@ -518,10 +555,12 @@ export function getRenovatieScan(
     ...observedComponents,
   ]).slice(0, 10)
   const nietBeoordeeld = buildNietBeoordeeld(photoAnalysis)
-  const visualCondition =
-    confidence === 'beperkt' && visibleEvidence.length < 2
-      ? 'beperkte_visuele_beoordeling'
-      : photoAnalysis.visualCondition
+  const visualCondition = normalizeVisualConditionByEvidence(
+    photoAnalysis.visualCondition,
+    photoAnalysis.roomsObserved,
+    photoAnalysis.renovationAreas,
+    visibleEvidence,
+  )
   const propertyContextNotes = buildPropertyContextNotes(
     epcValue,
     buildYearValue,
