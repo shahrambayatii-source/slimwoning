@@ -2379,6 +2379,7 @@ function PropertiesContent() {
             value !== null && value !== undefined && String(value).trim() !== ''
 
           const manualData = manualEnergyData[Number(energyScanProperty.id)] || {}
+          const energyHeroImage = getPropertyPrimaryImage(energyScanProperty)
 
           const enrichedEnergyScanProperty = {
             ...energyScanProperty,
@@ -2604,34 +2605,60 @@ function PropertiesContent() {
       <div
         id={reportId}
         className={options.embedded
-          ? 'rounded-[2rem] bg-white p-6 shadow-sm md:p-8'
-          : 'max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-[2rem] bg-white p-6 shadow-2xl md:p-8'}
+          ? 'overflow-hidden rounded-[2rem] border border-blue-100 bg-white shadow-sm'
+          : 'max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-[28px] border border-blue-100 bg-white shadow-2xl'}
       >
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-sm font-black uppercase tracking-wide text-amber-600">
-              EnergieScan
-            </p>
-            <h3 className="mt-2 text-3xl font-black text-[#071B4D]">
-              {energyScanProperty.title || 'Energie-inschatting'}
-            </h3>
-            <p className="mt-3 max-w-xl text-sm font-bold leading-6 text-gray-500">
-              Compact dashboard op basis van beschikbare woningdata. Geen offerte of definitief technisch rapport.
-            </p>
-          </div>
-
-          {options.onClose && (
-            <button
-              type="button"
-              onClick={options.onClose}
-              className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-gray-100 text-2xl font-black text-gray-600 transition hover:bg-gray-200"
-            >
-              ×
-            </button>
+        <header className="relative h-[150px] overflow-hidden rounded-t-[28px] sm:h-[160px]">
+          {energyHeroImage ? (
+            <Image
+              src={energyHeroImage}
+              alt={energyScanProperty.title || 'Woning'}
+              fill
+              unoptimized
+              sizes="(min-width: 1024px) 1024px, 95vw"
+              className="scale-105 object-cover blur-sm brightness-50"
+            />
+          ) : (
+            <div className="h-full w-full bg-gradient-to-br from-[#071B4D] via-[#12377C] to-[#F59E0B]" />
           )}
-        </div>
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                'linear-gradient(to bottom, rgba(7,27,77,0.35), rgba(7,27,77,0.78))',
+            }}
+          />
+          <div className="absolute inset-0 flex items-center justify-between gap-4 px-5 py-4 sm:px-7 sm:py-5">
+            <div className="min-w-0 text-white">
+              <p className="text-xs font-black uppercase tracking-[0.24em] text-amber-200">
+                Energie
+              </p>
+              <h3 className="mt-2 text-2xl font-black sm:text-3xl">
+                SlimWoning Energie Scan
+              </h3>
+              <p className="mt-2 max-w-2xl truncate text-sm font-semibold leading-6 text-white/85 sm:text-base">
+                {energyScanProperty.title || 'Energiepotentieel'}
+              </p>
+              <p className="mt-1 max-w-2xl text-xs font-semibold leading-5 text-white/70 sm:text-sm">
+                EPC, duurzaamheid en energiepotentieel op basis van beschikbare woningdata.
+              </p>
+            </div>
 
-        <section className="mt-6 rounded-[1.5rem] border border-blue-100 bg-blue-50/50 p-5 shadow-sm">
+            {options.onClose && (
+              <button
+                type="button"
+                onClick={options.onClose}
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/15 text-xl font-black text-white shadow-sm ring-1 ring-white/25 backdrop-blur transition hover:bg-white/25"
+                aria-label="Energie Scan sluiten"
+              >
+                ×
+              </button>
+            )}
+          </div>
+        </header>
+
+        <div className="p-6 md:p-8">
+        <section className="rounded-[1.5rem] border border-blue-100 bg-blue-50/50 p-5 shadow-sm">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <p className="text-xs font-black uppercase tracking-wide text-blue-700">
@@ -2776,6 +2803,7 @@ function PropertiesContent() {
             </div>
           </div>
         )}
+        </div>
       </div>
     )
   }
