@@ -62,10 +62,13 @@ function hasTextSignal(text: string, signal: string) {
 }
 
 const PROPERTY_IMAGE_FIELDS = [
-  'image',
   'images',
   'photos',
   'property_images',
+  'image_urls',
+  'gallery',
+  'media',
+  'image',
   'main_image',
   'image_url',
   'photo',
@@ -80,6 +83,12 @@ const IMAGE_VALUE_FIELDS = [
   'photo',
   'photo_url',
   'main_image',
+  'images',
+  'photos',
+  'property_images',
+  'image_urls',
+  'gallery',
+  'media',
 ] as const
 
 function addPhotoReferences(
