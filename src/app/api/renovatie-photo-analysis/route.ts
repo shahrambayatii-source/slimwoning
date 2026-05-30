@@ -505,6 +505,11 @@ export async function POST(request: Request) {
     const requestContext = {
       propertyId: body.propertyId ?? null,
       photoCount: photos.length,
+      epc: stringValue(body.epc),
+      oppervlakte: stringValue(body.oppervlakte),
+      bedrooms: stringValue(body.bedrooms),
+      bathrooms: stringValue(body.bathrooms),
+      propertyType: stringValue(body.propertyType || body.property_type || body.type),
     }
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -524,7 +529,7 @@ export async function POST(request: Request) {
           {
             role: 'system',
             content:
-              'Je analyseert Belgische woningfoto’s voor Renovatie Scan v2: een evidence-based beoordeling van zichtbare renovatie-indicatoren. Foto’s zijn de primaire en enige bron voor room type, renovatieniveau, afwerkingskwaliteit, moderne elementen en verouderde elementen. De architectuur is multi-photo: beoordeel elke foto apart in photoEvidence en combineer daarna alleen de zichtbare evidence over alle foto’s. Niet-zichtbare ruimtes of componenten krijgen geen conditieoordeel en moeten als Niet zichtbaar op basis van foto’s worden vermeld. Bij één foto blijft confidence altijd beperkt en mag je nooit concluderen dat de hele woning gerenoveerd is. EPC, bouwjaar, oppervlakte, verwarmingsdata, titel en beschrijving mogen niet gebruikt worden voor renovatie-oordelen of observaties. Gebruik voorzichtige taal: zichtbaar, lijkt, mogelijk, op basis van zichtbare elementen, niet vast te stellen op basis van foto’s. Verboden formuleringen: vocht aanwezig, elektriciteit slecht, asbest aanwezig, dak defect, moet vervangen worden, is slecht, is kapot. Doe geen bouwkundige, juridische of technische afkeuringen.',
+              'Je analyseert Belgische woningfoto’s voor Renovatie Scan v2: een evidence-based beoordeling van zichtbare renovatie-indicatoren. Foto’s zijn de primaire bron voor room type, renovatieniveau, afwerkingskwaliteit, moderne elementen en verouderde elementen. De architectuur is multi-photo: beoordeel elke foto apart in photoEvidence en combineer daarna de zichtbare evidence over alle foto’s. Niet-zichtbare ruimtes of componenten krijgen geen conditieoordeel en moeten als Niet zichtbaar op basis van foto’s worden vermeld. Bij één foto blijft confidence altijd beperkt en mag je nooit concluderen dat de hele woning gerenoveerd is. EPC, oppervlakte, aantal slaapkamers/badkamers en woningtype zijn alleen secundaire context voor attentionPoints en safeSummary; ze mogen zichtbaar verouderde foto-evidence nooit neutraliseren en EPC betekent niet dat het interieur gerenoveerd is. Gebruik voorzichtige taal: zichtbaar, lijkt, mogelijk, op basis van zichtbare elementen, niet vast te stellen op basis van foto’s. Verboden formuleringen: vocht aanwezig, elektriciteit slecht, asbest aanwezig, dak defect, moet vervangen worden, is slecht, is kapot. Doe geen bouwkundige, juridische of technische afkeuringen en noem geen exacte renovatiekosten.',
           },
           {
             role: 'user',
@@ -546,9 +551,9 @@ export async function POST(request: Request) {
                     'Componentstatussen mogen alleen modern_zichtbaar, verzorgd_zichtbaar, verouderd_zichtbaar, beperkt_zichtbaar of niet_zichtbaar zijn.',
                     "Markeer elk niet zichtbaar component als niet_zichtbaar en voeg aan notAssessed toe met exact: Niet zichtbaar op basis van foto's.",
                     'Beoordeel kamers nooit op basis van andere kamers. Zeg nooit dat de hele woning gerenoveerd is op basis van één of enkele zichtbare ruimtes.',
-                    'safeSummary mag alleen zichtbare foto-evidence samenvatten en mag geen EPC, bouwjaar, oppervlakte of beschrijving gebruiken.',
+                    'safeSummary moet vooral zichtbare foto-evidence samenvatten en mag EPC, oppervlakte, woningtype, slaapkamers en badkamers alleen als korte context vermelden; laat foto-evidence zwaarder wegen dan EPC.',
                     'Verboden: vocht aanwezig, elektriciteit slecht, asbest aanwezig, dak defect, moet vervangen worden, is slecht, is kapot.',
-                    `Geef alleen JSON volgens schema. Requestcontext zonder renovatie-oordeeldata: ${JSON.stringify(requestContext)}`,
+                    `Geef alleen JSON volgens schema. Secundaire woningcontext voor nuance, niet als vervanging van foto-evidence: ${JSON.stringify(requestContext)}`,
                   ].join(' '),
               },
               ...photos.map((photo) => ({
