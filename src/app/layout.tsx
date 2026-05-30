@@ -40,7 +40,7 @@ export default function RootLayout({
 
   return (
     <html lang="nl">
-      <body className="flex min-h-screen flex-col bg-[#f6f8fb] text-[#111827]">
+      <body className="bg-[#f6f8fb] text-[#111827]">
         <header className="sticky top-0 z-50 border-b border-white/10 bg-gradient-to-r from-[#071B4D] via-[#0A2463] to-[#071B4D] text-white shadow-[0_8px_30px_rgba(2,6,23,0.25)] backdrop-blur-xl">
           <div className="mx-auto flex h-[84px] max-w-[1500px] items-center justify-between gap-10 pl-4 pr-8">
             <Link href="/" className="flex items-center transition hover:opacity-90">
@@ -147,9 +147,7 @@ export default function RootLayout({
           </div>
         </header>
 
-        <div className="min-h-0 flex-1 bg-[#f6f8fb]">
-          {children}
-        </div>
+        {children}
         <Footer />
       </body>
     </html>

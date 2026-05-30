@@ -45,9 +45,9 @@ const footerColumns = [
 
 export default function Footer() {
   return (
-    <footer className="border-t border-[#dbe7f3] bg-[#f6f8fb] text-[#0B1F4D]">
-      <div className="mx-auto max-w-[1500px] px-6 py-10 sm:px-8 lg:px-10">
-        <div className="grid grid-cols-1 gap-x-10 gap-y-8 md:grid-cols-2 lg:grid-cols-4">
+    <footer className="border-t border-[#dbe7f3] bg-[#f4f8fc] text-[#0B1F4D]">
+      <div className="mx-auto max-w-[1500px] px-6 py-12 sm:px-8 lg:px-10">
+        <div className="grid grid-cols-1 gap-x-10 gap-y-9 md:grid-cols-2 lg:grid-cols-4">
           {footerColumns.map((column) => (
             <section key={column.title} aria-labelledby={`footer-${column.title.toLowerCase().replaceAll(' ', '-')}`}>
               <h2
@@ -72,7 +72,7 @@ export default function Footer() {
           ))}
         </div>
 
-        <div className="mt-8 border-t border-[#dbe7f3] pt-5 text-[14px] font-medium text-[#53657D]">
+        <div className="mt-10 border-t border-[#dbe7f3] pt-5 text-[14px] font-medium text-[#53657D]">
           © 2026 SlimWoning. Alle rechten voorbehouden.
         </div>
       </div>
