@@ -448,17 +448,17 @@ export default function PropertyDetailsPage() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1.6fr_0.8fr]">
+        <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,58fr)_minmax(380px,42fr)] lg:gap-8">
           <div>
             <div className="relative overflow-hidden rounded-[2.5rem] bg-white shadow-2xl">
               {activePhoto ? (
                 <img
                   src={activePhoto}
                   alt={property.title}
-                  className="h-[500px] w-full object-cover md:h-[720px]"
+                  className="h-[500px] w-full object-cover md:h-[720px] lg:h-[560px]"
                 />
               ) : (
-                <div className="flex h-[500px] w-full items-center justify-center bg-gradient-to-br from-slate-200 via-slate-300 to-slate-400 md:h-[720px]">
+                <div className="flex h-[500px] w-full items-center justify-center bg-gradient-to-br from-slate-200 via-slate-300 to-slate-400 md:h-[720px] lg:h-[560px]">
                   <span className="text-lg font-black text-white/90">Geen foto beschikbaar</span>
                 </div>
               )}
@@ -534,6 +534,7 @@ export default function PropertyDetailsPage() {
                         : 'ring-transparent hover:ring-blue-200'
                     }`}
                     aria-label={`Toon foto ${index + 1}`}
+                    aria-pressed={activePhotoIndex === index}
                   >
                     <img
                       src={photo}
@@ -1084,7 +1085,7 @@ function InfoRow({
   value: any
 }) {
   return (
-    <div className="flex justify-between gap-5 border-b border-gray-100 py-4">
+    <div className="flex justify-between gap-5 border-b border-gray-100 py-4 lg:py-3">
       <span className="text-gray-500">{label}</span>
       <span className="text-right font-bold">
         {value || 'Niet opgegeven'}
