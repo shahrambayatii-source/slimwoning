@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
@@ -629,79 +630,12 @@ export default function PropertyDetailsPage() {
       </div>
 
 
-      {showComparison && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-5"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="comparison-title"
-        >
-          <div className="relative w-full max-w-4xl overflow-hidden rounded-[2rem] bg-white shadow-2xl">
-            <div className="flex items-start justify-between gap-4 border-b border-gray-100 p-6">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.24em] text-amber-600">
-                  Vergelijk
-                </p>
-                <h2 id="comparison-title" className="mt-1 text-2xl font-black text-[#071B4D]">
-                  Vergelijkbare woningen
-                </h2>
-                <p className="mt-2 text-sm leading-6 text-gray-500">
-                  {similarProperties.length > 0
-                    ? `${similarProperties.length} gelijkaardige panden in de buurt.`
-                    : 'Er zijn momenteel geen gelijkaardige panden gevonden voor deze woning.'}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setShowComparison(false)}
-                className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#111827] text-xl font-bold text-white transition hover:bg-black"
-                aria-label="Vergelijking sluiten"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="max-h-[70vh] overflow-y-auto p-6">
-              {similarProperties.length > 0 ? (
-                <div className="overflow-hidden rounded-2xl border border-gray-100">
-                  <div className="grid grid-cols-[1.2fr_1fr_1fr_0.8fr] bg-gray-100 px-4 py-3 text-sm font-black text-[#111827]">
-                    <span>Gemeente</span>
-                    <span>Vraagprijs</span>
-                    <span>Woonopp.</span>
-                    <span>Bouwjaar</span>
-                  </div>
-
-                  {similarProperties.map((similarProperty) => (
-                    <Link
-                      key={similarProperty.id}
-                      href={`/properties/${similarProperty.id}`}
-                      onClick={() => setShowComparison(false)}
-                      className="grid grid-cols-[1.2fr_1fr_1fr_0.8fr] border-t border-gray-100 px-4 py-3 text-sm transition hover:bg-blue-50/60"
-                    >
-                      <span className="font-semibold text-[#111827]">
-                        {similarProperty.city || '-'}
-                      </span>
-                      <span>{formatPrice(similarProperty.price)}</span>
-                      <span>
-                        {similarProperty.bewoonbare_oppervlakte
-                          ? `${similarProperty.bewoonbare_oppervlakte} m²`
-                          : '-'}
-                      </span>
-                      <span>{similarProperty.bouwjaar || '-'}</span>
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <div className="rounded-2xl bg-amber-50 p-5 text-sm font-semibold leading-6 text-amber-800">
-                  Voeg meer woningen toe of pas de zoekcriteria aan om vergelijkbare panden te zien.
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
+      <ComparisonModal
+        isOpen={showComparison}
+        properties={similarProperties}
+        formatPrice={formatPrice}
+        onClose={() => setShowComparison(false)}
+      />
 
       {showMap && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-5">
@@ -759,6 +693,121 @@ export default function PropertyDetailsPage() {
         </div>
       )}
     </div>
+  )
+}
+
+type ComparableProperty = {
+  id: string | number
+  city?: string | null
+  price?: string | number | null
+  bewoonbare_oppervlakte?: string | number | null
+  bouwjaar?: string | number | null
+}
+
+function ComparisonModal({
+  isOpen,
+  properties,
+  formatPrice,
+  onClose,
+}: {
+  isOpen: boolean
+  properties: ComparableProperty[]
+  formatPrice: (value: unknown) => string
+  onClose: () => void
+}) {
+  useEffect(() => {
+    if (!isOpen) return
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onClose])
+
+  if (!isOpen || typeof document === 'undefined') return null
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[120] flex items-center justify-center bg-black/45 p-3 backdrop-blur-sm sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="comparison-title"
+      onClick={onClose}
+    >
+      <div
+        className="relative max-h-[90vh] w-[95vw] max-w-5xl overflow-hidden rounded-[28px] border border-amber-100 bg-white shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <header className="relative overflow-hidden border-b border-amber-100 bg-gradient-to-br from-[#071B4D] via-[#12377C] to-[#F97316] px-5 py-5 sm:px-7">
+          <div className="absolute inset-0 bg-black/20" />
+          <div className="relative flex items-start justify-between gap-4">
+            <div className="min-w-0 text-white">
+              <p className="text-xs font-black uppercase tracking-[0.24em] text-amber-200">
+                Vergelijk
+              </p>
+              <h2 id="comparison-title" className="mt-2 text-2xl font-black sm:text-3xl">
+                Vergelijkbare woningen
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-white/85 sm:text-base">
+                {properties.length > 0
+                  ? `${properties.length} gelijkaardige panden in de buurt.`
+                  : 'Er zijn momenteel geen gelijkaardige panden gevonden voor deze woning.'}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/15 text-xl font-black text-white shadow-sm ring-1 ring-white/25 backdrop-blur transition hover:bg-white/25"
+              aria-label="Vergelijking sluiten"
+            >
+              ×
+            </button>
+          </div>
+        </header>
+
+        <div className="max-h-[calc(90vh-150px)] overflow-y-auto p-5 sm:p-6">
+          {properties.length > 0 ? (
+            <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+              <div className="grid grid-cols-[1.2fr_1fr_1fr_0.8fr] bg-gray-100 px-4 py-3 text-sm font-black text-[#111827]">
+                <span>Gemeente</span>
+                <span>Vraagprijs</span>
+                <span>Woonopp.</span>
+                <span>Bouwjaar</span>
+              </div>
+
+              {properties.map((similarProperty) => (
+                <Link
+                  key={similarProperty.id}
+                  href={`/properties/${similarProperty.id}`}
+                  onClick={onClose}
+                  className="grid grid-cols-[1.2fr_1fr_1fr_0.8fr] border-t border-gray-100 px-4 py-3 text-sm transition hover:bg-blue-50/60"
+                >
+                  <span className="font-semibold text-[#111827]">
+                    {similarProperty.city || '-'}
+                  </span>
+                  <span>{formatPrice(similarProperty.price)}</span>
+                  <span>
+                    {similarProperty.bewoonbare_oppervlakte
+                      ? `${similarProperty.bewoonbare_oppervlakte} m²`
+                      : '-'}
+                  </span>
+                  <span>{similarProperty.bouwjaar || '-'}</span>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-2xl bg-amber-50 p-5 text-sm font-semibold leading-6 text-amber-800">
+              Voeg meer woningen toe of pas de zoekcriteria aan om vergelijkbare panden te zien.
+            </div>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body
   )
 }
 
