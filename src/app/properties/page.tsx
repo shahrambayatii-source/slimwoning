@@ -2248,6 +2248,46 @@ function PropertiesContent() {
                     </section>
 
                     <section className="mt-5 border-t border-blue-50 pt-5">
+                      <h4 className="text-base font-black text-[#071B4D]">Foto-intelligentie</h4>
+                      <div className="mt-3 grid grid-cols-1 gap-3 text-sm font-semibold leading-6 text-[#64748B] md:grid-cols-2">
+                        <div className="rounded-2xl border border-blue-100 bg-[#F6F8FC] p-4">
+                          <span className="block text-[11px] font-black uppercase tracking-wide text-[#64748B]">Zichtbaar renovatieniveau</span>
+                          <span className="mt-1 block font-black text-[#071B4D]">{renovatieScan.zichtbaarRenovatieniveau}</span>
+                        </div>
+                        <div className="rounded-2xl border border-blue-100 bg-[#F6F8FC] p-4">
+                          <span className="block text-[11px] font-black uppercase tracking-wide text-[#64748B]">Zichtbare afwerkingskwaliteit</span>
+                          <span className="mt-1 block font-black text-[#071B4D]">{renovatieScan.zichtbaarAfwerkingsniveau}</span>
+                        </div>
+                      </div>
+                      {(renovatieScan.zichtbareModerneElementen.length > 0 || renovatieScan.zichtbareVerouderdeElementen.length > 0) && (
+                        <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-2">
+                          <div>
+                            <h5 className="text-sm font-black text-[#071B4D]">Zichtbaar modern</h5>
+                            <ul className="mt-2 space-y-2 text-sm font-semibold leading-6 text-[#64748B]">
+                              {(renovatieScan.zichtbareModerneElementen.length > 0 ? renovatieScan.zichtbareModerneElementen : ['Geen moderne elementen zichtbaar vastgesteld.']).map((element, index) => (
+                                <li key={index} className="flex gap-2">
+                                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#F97316]" />
+                                  <span>{element}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                          <div>
+                            <h5 className="text-sm font-black text-[#071B4D]">Zichtbaar verouderd</h5>
+                            <ul className="mt-2 space-y-2 text-sm font-semibold leading-6 text-[#64748B]">
+                              {(renovatieScan.zichtbareVerouderdeElementen.length > 0 ? renovatieScan.zichtbareVerouderdeElementen : ['Geen verouderde elementen zichtbaar vastgesteld.']).map((element, index) => (
+                                <li key={index} className="flex gap-2">
+                                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#071B4D]" />
+                                  <span>{element}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+                      )}
+                    </section>
+
+                    <section className="mt-5 border-t border-blue-50 pt-5">
                       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                         <div>
                           <h4 className="text-base font-black text-[#071B4D]">Waargenomen elementen</h4>
