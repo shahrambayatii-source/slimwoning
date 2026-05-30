@@ -49,8 +49,12 @@ export default function EditPropertyPage() {
     return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase()
   }
 
-  function onlyNumbers(value: string) {
-    return value.replace(/[^\d]/g, '')
+  function toTrimmedString(value: unknown) {
+    return String(value ?? '').trim()
+  }
+
+  function onlyNumbers(value: unknown) {
+    return toTrimmedString(value).replace(/[^\d]/g, '')
   }
 
   function getPropertyImages(property: Record<string, unknown>) {
@@ -150,24 +154,24 @@ export default function EditPropertyPage() {
 
       if (!isMounted) return
 
-      setTitle(data.title || '')
-      setPrice(data.price || '')
-      setCity(data.city || '')
-      setDescription(data.description || '')
+      setTitle(data.title ?? '')
+      setPrice(data.price ?? '')
+      setCity(data.city ?? '')
+      setDescription(data.description ?? '')
 
       const existingImages = getPropertyImages(data)
       setImages(existingImages)
 
-      setSlaapkamers(data.slaapkamers || '')
-      setBadkamers(data.badkamers || '')
-      setBewoonbareOppervlakte(data.bewoonbare_oppervlakte || '')
-      setGrondoppervlakte(data.grondoppervlakte || '')
-      setBouwjaar(data.bouwjaar || '')
-      setEpc(data.epc || '')
+      setSlaapkamers(data.slaapkamers ?? '')
+      setBadkamers(data.badkamers ?? '')
+      setBewoonbareOppervlakte(data.bewoonbare_oppervlakte ?? '')
+      setGrondoppervlakte(data.grondoppervlakte ?? '')
+      setBouwjaar(data.bouwjaar ?? '')
+      setEpc(data.epc ?? '')
       setWoningType(cleanWoningType(data.woning_type))
-      setVerwarmingstype(data.verwarmingstype || '')
-      setPluspunten(data.pluspunten || '')
-      setMinpunten(data.minpunten || '')
+      setVerwarmingstype(data.verwarmingstype ?? '')
+      setPluspunten(data.pluspunten ?? '')
+      setMinpunten(data.minpunten ?? '')
       setWoningkenmerken(Array.isArray(data.woningkenmerken) ? data.woningkenmerken : [])
 
       setParking(Boolean(data.parking))
@@ -186,22 +190,37 @@ export default function EditPropertyPage() {
   }, [params.id])
 
   async function handleUpdateProperty() {
-    if (!title.trim()) {
+    const titleValue = toTrimmedString(title)
+    const priceValue = toTrimmedString(price)
+    const cityValue = toTrimmedString(city)
+    const descriptionValue = toTrimmedString(description)
+    const slaapkamersValue = onlyNumbers(slaapkamers)
+    const badkamersValue = onlyNumbers(badkamers)
+    const bewoonbareOppervlakteValue = onlyNumbers(bewoonbareOppervlakte)
+    const grondoppervlakteValue = onlyNumbers(grondoppervlakte)
+    const bouwjaarValue = onlyNumbers(bouwjaar)
+    const epcValue = toTrimmedString(epc).toUpperCase()
+    const woningTypeValue = toTrimmedString(woningType)
+    const verwarmingstypeValue = toTrimmedString(verwarmingstype)
+    const pluspuntenValue = toTrimmedString(pluspunten)
+    const minpuntenValue = toTrimmedString(minpunten)
+
+    if (!titleValue) {
       alert('Titel is verplicht')
       return
     }
 
-    if (!price.trim()) {
+    if (!priceValue) {
       alert('Prijs is verplicht')
       return
     }
 
-    if (!city.trim()) {
+    if (!cityValue) {
       alert('Stad is verplicht')
       return
     }
 
-    if (!woningType.trim()) {
+    if (!woningTypeValue) {
       alert('Type woning is verplicht')
       return
     }
@@ -212,22 +231,22 @@ export default function EditPropertyPage() {
     const { error } = await supabase
       .from('properties')
       .update({
-        title: title.trim(),
-        price: onlyNumbers(price),
-        city: city.trim(),
-        description: description.trim(),
+        title: titleValue,
+        price: onlyNumbers(priceValue),
+        city: cityValue,
+        description: descriptionValue,
         image: mainImage,
         images: nextImages,
-        slaapkamers: onlyNumbers(slaapkamers),
-        badkamers: onlyNumbers(badkamers),
-        bewoonbare_oppervlakte: onlyNumbers(bewoonbareOppervlakte),
-        grondoppervlakte: onlyNumbers(grondoppervlakte),
-        bouwjaar: onlyNumbers(bouwjaar),
-        epc: epc.trim().toUpperCase(),
-        woning_type: woningType,
-        verwarmingstype: verwarmingstype.trim(),
-        pluspunten: pluspunten.trim(),
-        minpunten: minpunten.trim(),
+        slaapkamers: slaapkamersValue,
+        badkamers: badkamersValue,
+        bewoonbare_oppervlakte: bewoonbareOppervlakteValue,
+        grondoppervlakte: grondoppervlakteValue,
+        bouwjaar: bouwjaarValue,
+        epc: epcValue,
+        woning_type: woningTypeValue,
+        verwarmingstype: verwarmingstypeValue,
+        pluspunten: pluspuntenValue,
+        minpunten: minpuntenValue,
         woningkenmerken,
         parking,
         tuin,
