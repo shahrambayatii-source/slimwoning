@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { calculateEnergyInsight } from '@/lib/energy-calculator'
 import { exportEnergyReport } from '@/lib/export-energy-report'
+import { getAiScoreExplanation } from '@/lib/ai-score-explanation'
 import { getRenovatieScan, type RenovatiePhotoAnalysis } from '@/lib/renovatie-scan'
 import { getWoningkenmerken } from '@/lib/woningkenmerken'
 import { GoogleMap, InfoWindow, Marker, useJsApiLoader } from '@react-google-maps/api'
@@ -2375,9 +2376,6 @@ function PropertiesContent() {
   ) {
           void energyScanRefreshKey
 
-          const hasEnergyValue = (value: unknown) =>
-            value !== null && value !== undefined && String(value).trim() !== ''
-
           const manualData = manualEnergyData[Number(energyScanProperty.id)] || {}
           const energyHeroImage = getPropertyPrimaryImage(energyScanProperty)
 
@@ -2400,15 +2398,6 @@ function PropertiesContent() {
             currency: 'EUR',
             maximumFractionDigits: 0,
           })
-
-          const missingEnergyFields = {
-            laatsteRenovatiejaar: !hasEnergyValue(energyScanProperty.laatste_renovatiejaar),
-            dakGeisoleerd: !hasEnergyValue(energyScanProperty.dakisolatie),
-            dakVernieuwd: !hasEnergyValue(energyScanProperty.dak_vernieuwd),
-            isolatie: !hasEnergyValue(energyScanProperty.muurisolatie) && !hasEnergyValue(energyScanProperty.vloerisolatie),
-            ramenVervangen: !hasEnergyValue(energyScanProperty.ramen_vervangen),
-          }
-          const showManualEnergyInputs = Object.values(missingEnergyFields).some(Boolean)
 
           const setManualEnergyValue = (key: string, value: unknown) => {
             const propertyId = Number(energyScanProperty.id)
@@ -2498,45 +2487,26 @@ function PropertiesContent() {
             : energyInsight.confidence === 'medium'
               ? 'Gemiddeld'
               : 'Laag'
-          const knownAmenities = getKnownAmenities(enrichedEnergyScanProperty)
-          const propertyStrengths = [
-            propertyAiScore >= 70 ? `AI-score ${propertyAiScore}/100 (${propertyAiLabel})` : '',
-            hasGoodEnergyScanEpc ? `Sterk energielabel: ${energyScanEpc}` : '',
-            parseBooleanData(enrichedEnergyScanProperty.zonnepanelen) === true ? 'Zonnepanelen aanwezig volgens de woningdata.' : '',
-            parseBooleanData(enrichedEnergyScanProperty.warmtepomp) === true ? 'Warmtepomp aanwezig volgens de woningdata.' : '',
-            knownAmenities.length > 0 ? `Aanwezige comfortelementen: ${knownAmenities.join(', ')}.` : '',
-          ].filter(Boolean)
-          const propertyLimitations = [
-            marketComparableCount < 3 ? 'Beperkte vergelijkingsbasis voor marktconclusies.' : '',
-            !energyScanEpc ? 'EPC-label ontbreekt in de beschikbare data.' : '',
-            ['E', 'F', 'G'].includes(energyScanEpc) ? `EPC ${energyScanEpc} vraagt extra controle van renovatieplicht en maatregelen.` : '',
-            showManualEnergyInputs ? 'Een deel van de energie- of renovatiedata ontbreekt en kan hieronder aangevuld worden.' : '',
-            parseBooleanData(enrichedEnergyScanProperty.renovatieverplichting) === true ? 'Renovatieverplichting staat als aanwezig in de data.' : '',
-          ].filter(Boolean)
+          const aiScoreRenovatieScan = getRenovatieScan(
+            enrichedEnergyScanProperty,
+            getPropertyPhotoCount(enrichedEnergyScanProperty),
+            renovatiePhotoAnalyses[Number(enrichedEnergyScanProperty.id)] || null,
+          )
+          const aiScoreExplanation = getAiScoreExplanation(
+            enrichedEnergyScanProperty,
+            energyInsight,
+            aiScoreRenovatieScan,
+            {
+              comparableCount: marketComparableCount,
+              marketConfidence,
+              aiScore: propertyAiScore,
+              aiScoreLabel: propertyAiLabel,
+            },
+          )
     const reportId = options.reportId || 'energy-report-content'
     const compactCostText = energyInsight.estimatedMax > 0
       ? `${estimatedCost}`
       : estimatedCost
-    const energyStrengths = [
-      hasGoodEnergyScanEpc ? `EPC ${energyScanEpc}` : '',
-      parseBooleanData(enrichedEnergyScanProperty.warmtepomp) === true ? 'Warmtepomp' : '',
-      parseBooleanData(enrichedEnergyScanProperty.dubbel_glas) === true || parseBooleanData(enrichedEnergyScanProperty.hr_glas) === true ? 'Dubbel glas' : '',
-      knownAmenities.length > 0 ? `Comfortelementen: ${knownAmenities.join(', ')}` : '',
-      parseBooleanData(enrichedEnergyScanProperty.zonnepanelen) === true ? 'Zonnepanelen' : '',
-      ...propertyStrengths,
-    ]
-      .filter(Boolean)
-      .filter((item, index, list) => list.indexOf(item) === index)
-      .slice(0, 5)
-    const attentionPoints = [
-      ...propertyLimitations,
-      marketComparableCount < 3 ? 'Beperkte vergelijkingsbasis voor marktconclusies.' : '',
-      showManualEnergyInputs ? 'Ontbrekende gegevens kunnen hieronder aangevuld worden.' : '',
-      energyInsight.warnings[0] || '',
-    ]
-      .filter(Boolean)
-      .filter((item, index, list) => list.indexOf(item) === index)
-      .slice(0, 5)
     const additionalInfoFields = [
       {
         key: 'renovatiejaar',
@@ -2690,29 +2660,51 @@ function PropertiesContent() {
           </div>
         </section>
 
-        <section className="mt-5 grid gap-5 lg:grid-cols-2">
-          <div className="rounded-[1.5rem] border border-emerald-100 bg-emerald-50 p-5 shadow-sm">
-            <h4 className="text-base font-black text-emerald-900">Sterke punten</h4>
-            <ul className="mt-3 space-y-2 text-sm font-bold leading-6 text-emerald-800">
-              {(energyStrengths.length > 0 ? energyStrengths : ['Geen duidelijke sterke energiepunten gevonden in de beschikbare data.']).map((item, index) => (
-                <li key={`${item}-${index}`} className="flex gap-2">
-                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
+        <section className="mt-5 rounded-[1.5rem] border border-blue-100 bg-white p-5 shadow-sm">
+          <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="text-xs font-black uppercase tracking-wide text-blue-700">
+                AI-score uitleg
+              </p>
+              <h4 className="mt-2 text-xl font-black text-[#071B4D]">
+                Waarom deze AI-score?
+              </h4>
+            </div>
+            <p className="max-w-2xl text-sm font-bold leading-6 text-slate-500">
+              Korte, datagebaseerde factoren die deze score ondersteunen of de zekerheid beperken.
+            </p>
           </div>
 
-          <div className="rounded-[1.5rem] border border-orange-100 bg-orange-50 p-5 shadow-sm">
-            <h4 className="text-base font-black text-orange-900">Aandachtspunten</h4>
-            <ul className="mt-3 space-y-2 text-sm font-bold leading-6 text-orange-800">
-              {(attentionPoints.length > 0 ? attentionPoints : ['Geen extra aandachtspunten gevonden buiten de algemene databetrouwbaarheid.']).map((item, index) => (
-                <li key={`${item}-${index}`} className="flex gap-2">
-                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500" />
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
+          <div className="mt-5 grid gap-5 lg:grid-cols-2">
+            <div className="rounded-[1.25rem] border border-emerald-100 bg-emerald-50 p-5">
+              <h5 className="text-base font-black text-emerald-900">Positieve factoren</h5>
+              <ul className="mt-3 space-y-2 text-sm font-bold leading-6 text-emerald-800">
+                {(aiScoreExplanation.positiveFactors.length > 0
+                  ? aiScoreExplanation.positiveFactors
+                  : ['Geen positieve scorefactoren gevonden in de beschikbare data.']
+                ).map((item, index) => (
+                  <li key={`${item}-${index}`} className="flex gap-2">
+                    <span className="shrink-0 text-emerald-600">✓</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="rounded-[1.25rem] border border-orange-100 bg-orange-50 p-5">
+              <h5 className="text-base font-black text-orange-900">Beperkingen</h5>
+              <ul className="mt-3 space-y-2 text-sm font-bold leading-6 text-orange-800">
+                {(aiScoreExplanation.limitations.length > 0
+                  ? aiScoreExplanation.limitations
+                  : ['Geen specifieke beperkingen gevonden in de beschikbare data.']
+                ).map((item, index) => (
+                  <li key={`${item}-${index}`} className="flex gap-2">
+                    <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </section>
 
