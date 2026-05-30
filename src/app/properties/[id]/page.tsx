@@ -16,11 +16,6 @@ export default function PropertyDetailsPage() {
   const [similarProperties, setSimilarProperties] = useState<any[]>([])
   const [userId, setUserId] = useState('')
   const [showMap, setShowMap] = useState(false)
-  const [nearbyMakelaars, setNearbyMakelaars] = useState<any[]>([])
-  const [makelaarsLoading, setMakelaarsLoading] = useState(false)
-  const [showMatchModal, setShowMatchModal] = useState(false)
-  const [matchPreferences, setMatchPreferences] = useState<string[]>([])
-  const [matchRequestSent, setMatchRequestSent] = useState(false)
   const [activePhotoIndex, setActivePhotoIndex] = useState(0)
 
   const [mapCenter, setMapCenter] = useState({
@@ -31,7 +26,6 @@ export default function PropertyDetailsPage() {
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
-    libraries: ['places'],
   })
 
   useEffect(() => {
@@ -66,127 +60,6 @@ export default function PropertyDetailsPage() {
       }
     )
   }, [showMap, isLoaded, property])
-
-  useEffect(() => {
-    if (!isLoaded || !property?.address || !window.google?.maps?.places) return
-
-    loadNearbyMakelaars()
-  }, [isLoaded, property])
-
-  function calculateDistanceMeters(
-    origin: google.maps.LatLng,
-    destination: google.maps.LatLng
-  ) {
-    const earthRadius = 6371000
-    const originLat = (origin.lat() * Math.PI) / 180
-    const destinationLat = (destination.lat() * Math.PI) / 180
-    const deltaLat = ((destination.lat() - origin.lat()) * Math.PI) / 180
-    const deltaLng = ((destination.lng() - origin.lng()) * Math.PI) / 180
-
-    const a =
-      Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
-      Math.cos(originLat) *
-        Math.cos(destinationLat) *
-        Math.sin(deltaLng / 2) *
-        Math.sin(deltaLng / 2)
-
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-
-    return earthRadius * c
-  }
-
-  async function loadNearbyMakelaars() {
-    if (!property?.address || !window.google?.maps?.places) return
-
-    setMakelaarsLoading(true)
-
-    const address = `${property.address || ''}, ${property.city || ''}, Belgium`
-    const geocoder = new window.google.maps.Geocoder()
-
-    geocoder.geocode({ address }, (geocodeResults, geocodeStatus) => {
-      if (geocodeStatus !== 'OK' || !geocodeResults?.[0]) {
-        setNearbyMakelaars([])
-        setMakelaarsLoading(false)
-        return
-      }
-
-      const location = geocodeResults[0].geometry.location
-      const serviceElement = document.createElement('div')
-      const service = new window.google.maps.places.PlacesService(serviceElement)
-
-      service.nearbySearch(
-        {
-          location,
-          radius: 5000,
-          keyword: 'immo vastgoed makelaar estate realty property',
-        },
-        (places, placesStatus) => {
-          if (
-            placesStatus !== window.google.maps.places.PlacesServiceStatus.OK ||
-            !places
-          ) {
-            setNearbyMakelaars([])
-            setMakelaarsLoading(false)
-            return
-          }
-
-          const filteredMakelaars = places
-            .map((place: any) => {
-              const placeLocation = place.geometry?.location
-              const distanceMeters = placeLocation
-                ? calculateDistanceMeters(location, placeLocation)
-                : 0
-
-              return {
-                name: place.name,
-                address: place.vicinity,
-                vicinity: place.vicinity,
-                distanceMeters,
-                distanceText: distanceMeters
-                  ? distanceMeters >= 1000
-                    ? `${(distanceMeters / 1000).toFixed(1)} km`
-                    : `${Math.round(distanceMeters)} m`
-                  : '',
-              }
-            })
-            .filter((makelaar: any) => {
-              const value = `${makelaar.name || ''} ${makelaar.vicinity || ''}`.toLowerCase()
-              const blockedWords = ['insurance', 'verzekering', 'verzekeringen', 'bank', 'crelan', 'bnp', 'kbc', 'belfius']
-              const allowedWords = ['immo', 'vastgoed', 'makelaar', 'estate', 'realty', 'properties', 'property', 'immobili']
-
-              return (
-                !blockedWords.some((word) => value.includes(word)) &&
-                allowedWords.some((word) => value.includes(word))
-              )
-            })
-            .filter((makelaar: any) => {
-              const distance = Number(makelaar.distanceMeters || 0)
-              return distance > 0 && distance <= 5000
-            })
-            .filter((makelaar: any, index: number, array: any[]) => {
-              const normalized = String(makelaar.name || '')
-                .toLowerCase()
-                .replace(/[^a-z0-9]/g, '')
-
-              return (
-                normalized &&
-                array.findIndex((item: any) =>
-                  String(item.name || '')
-                    .toLowerCase()
-                    .replace(/[^a-z0-9]/g, '') === normalized
-                ) === index
-              )
-            })
-            .sort((a: any, b: any) => {
-              return (a.distanceMeters || 999999) - (b.distanceMeters || 999999)
-            })
-
-          setNearbyMakelaars(filteredMakelaars)
-          setMakelaarsLoading(false)
-        }
-      )
-    })
-  }
 
   async function getUser() {
     const {
@@ -372,36 +245,6 @@ export default function PropertyDetailsPage() {
     return text
   }
 
-  function toggleMatchPreference(value: string) {
-    setMatchPreferences((current) =>
-      current.includes(value)
-        ? current.filter((item) => item !== value)
-        : [...current, value]
-    )
-  }
-
-  async function handleMatchRequest() {
-    if (!property) return
-
-    const { error } = await supabase.from('makelaar_leads').insert([
-      {
-        property_id: property.id,
-        seller_user_id: property.user_id,
-        city: property.city,
-        preferences: matchPreferences,
-        nearby_makelaars_count: nearbyMakelaars.length,
-        status: 'new',
-      },
-    ])
-
-    if (error) {
-      alert(`Fout bij aanvraag: ${error.message}`)
-      return
-    }
-
-    setMatchRequestSent(true)
-    setShowMatchModal(false)
-  }
 
 
   const propertyPhotos = getPropertyPhotos(property)
@@ -655,7 +498,7 @@ export default function PropertyDetailsPage() {
               </div>
             </SectionCard>
 
-            <SectionCard title="Verkoopinformatie">
+            <SectionCard title="Aanbodinformatie">
               <div className="flex flex-col gap-3 rounded-2xl bg-[#f8fafc] p-4 md:flex-row md:items-center md:justify-between">
                 <div>
                   <p className="text-xs font-black uppercase tracking-[0.2em] text-blue-700">
@@ -663,7 +506,7 @@ export default function PropertyDetailsPage() {
                   </p>
 
                   <p className="mt-1 text-lg font-bold text-[#111827]">
-                    Bezig met verkoop door{' '}
+                    Aangeboden door{' '}
                     {property.makelaar_kantoornaam ||
                       property.contact_name ||
                       'Particuliere verkoper'}
@@ -715,69 +558,6 @@ export default function PropertyDetailsPage() {
               </div>
             </AccordionSection>
 
-            <AccordionSection
-              title="Makelaar matching"
-              summary={
-                nearbyMakelaars.length > 0
-                  ? `${nearbyMakelaars.length}+ makelaars actief in de regio.`
-                  : 'Compacte aanvraag voor passende makelaars in deze regio.'
-              }
-            >
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_auto] md:items-stretch">
-                <CompactCtaCard
-                  eyebrow="SlimWoning Matchmaking"
-                  title="Ontvang voorstellen van geschikte makelaars"
-                  text="SlimWoning analyseert automatisch jouw woning, locatie en verkoopprofiel en zoekt actieve vastgoedmakelaars binnen jouw regio. Namen en contactgegevens worden niet openbaar getoond."
-                  meta={
-                    makelaarsLoading
-                      ? 'We scannen jouw regio...'
-                      : nearbyMakelaars.length > 0
-                        ? `${nearbyMakelaars.length} makelaars actief gevonden in jouw regio.`
-                        : 'SlimWoning kan makelaars in jouw regio benaderen.'
-                  }
-                />
-
-                <div className="flex flex-col justify-between rounded-2xl border border-[#DCE7F7] bg-[#F8FBFF] p-4 md:w-72">
-                  <div>
-                    <p className="text-xs font-black uppercase tracking-[0.2em] text-blue-700">
-                      Match status
-                    </p>
-                    <p className="mt-2 text-xl font-black text-[#071B4D]">
-                      {nearbyMakelaars.length > 0
-                        ? `${nearbyMakelaars.length}+ makelaars actief`
-                        : 'Regio wordt gescand'}
-                    </p>
-                    <div className="mt-3 space-y-2 text-sm text-gray-600">
-                      <p><span className="font-black text-[#071B4D]">1.</span> Analyse van woning en locatie.</p>
-                      <p><span className="font-black text-[#071B4D]">2.</span> Matching met regionale kantoren.</p>
-                      <p><span className="font-black text-[#071B4D]">3.</span> Alleen relevante voorstellen.</p>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 rounded-xl bg-white p-3 text-sm text-gray-600 ring-1 ring-[#E2E8F0]">
-                    <p className="font-bold text-[#071B4D]">
-                      {matchRequestSent
-                        ? 'Je aanvraag is verzonden.'
-                        : 'Wil je passende makelaars voor deze verkoop ontvangen?'}
-                    </p>
-                    <p className="mt-1">
-                      {matchRequestSent
-                        ? 'SlimWoning verwerkt je aanvraag en kan relevante makelaars benaderen.'
-                        : 'Start gratis een aanvraag. Je gegevens worden niet als openbare lijst getoond.'}
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setShowMatchModal(true)}
-                    disabled={matchRequestSent}
-                    className="mt-3 rounded-2xl bg-[#071B4D] px-5 py-3 font-black text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {matchRequestSent ? 'Aanvraag verzonden' : 'Start makelaar matching'}
-                  </button>
-                </div>
-              </div>
-            </AccordionSection>
 
             {similarProperties.length > 0 && (
               <AccordionSection
@@ -871,77 +651,6 @@ export default function PropertyDetailsPage() {
         </div>
       </div>
 
-      {showMatchModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-5">
-          <div className="w-full max-w-2xl rounded-[2rem] bg-white p-7 shadow-2xl">
-            <div className="flex items-start justify-between gap-5">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.24em] text-blue-700">
-                  Makelaar matching
-                </p>
-
-                <h2 className="mt-3 text-3xl font-black text-[#071B4D]">
-                  Waar ben je naar op zoek?
-                </h2>
-
-                <p className="mt-3 text-sm leading-7 text-gray-500">
-                  Kies wat belangrijk is voor jouw verkoop. SlimWoning gebruikt dit om relevante makelaars te selecteren.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setShowMatchModal(false)}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#F1F5F9] text-xl font-black text-[#071B4D]"
-              >
-                ×
-              </button>
-            </div>
-
-            <div className="mt-7 grid grid-cols-1 gap-3 md:grid-cols-2">
-              {[
-                'Snel verkopen',
-                'Hoogste verkoopprijs',
-                'Lage commissie',
-                'Lokale makelaar',
-                'Luxe vastgoed expert',
-                'Nieuwbouw specialist',
-              ].map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() => toggleMatchPreference(option)}
-                  className={`rounded-2xl border p-4 text-left font-bold transition ${
-                    matchPreferences.includes(option)
-                      ? 'border-[#071B4D] bg-[#EFF6FF] text-[#071B4D]'
-                      : 'border-[#E2E8F0] bg-white text-gray-600 hover:border-[#071B4D]'
-                  }`}
-                >
-                  {option}
-                </button>
-              ))}
-            </div>
-
-            <div className="mt-8 flex flex-col gap-3 md:flex-row md:justify-end">
-              <button
-                type="button"
-                onClick={() => setShowMatchModal(false)}
-                className="rounded-2xl border border-[#CBD5E1] px-6 py-4 font-bold text-[#071B4D]"
-              >
-                Annuleren
-              </button>
-
-              <button
-                type="button"
-                onClick={handleMatchRequest}
-                className="rounded-2xl bg-[#071B4D] px-6 py-4 font-black text-white transition hover:opacity-90"
-              >
-                Verstuur aanvraag
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {showMap && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-5">
@@ -999,26 +708,6 @@ export default function PropertyDetailsPage() {
         </div>
       )}
     </div>
-  )
-}
-
-function Badge({
-  children,
-  variant,
-}: {
-  children: React.ReactNode
-  variant: 'green' | 'blue' | 'amber'
-}) {
-  const classes = {
-    green: 'bg-emerald-50 text-emerald-700',
-    blue: 'bg-blue-50 text-blue-700',
-    amber: 'bg-amber-50 text-amber-700',
-  }
-
-  return (
-    <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-black ${classes[variant]}`}>
-      {children}
-    </span>
   )
 }
 
@@ -1096,33 +785,6 @@ function CompactPointList({
         {isPositive ? '＋' : '−'} {title}
       </p>
       <p className="mt-2 text-sm leading-6 text-gray-600">{text}</p>
-    </div>
-  )
-}
-
-function CompactCtaCard({
-  eyebrow,
-  title,
-  text,
-  meta,
-}: {
-  eyebrow: string
-  title: string
-  text: string
-  meta: string
-}) {
-  return (
-    <div className="rounded-2xl border border-[#DCE7F7] bg-gradient-to-br from-[#F8FBFF] via-white to-[#EEF4FF] p-4">
-      <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-700">
-        {eyebrow}
-      </p>
-      <h3 className="mt-2 text-2xl font-black leading-tight text-[#071B4D]">
-        {title}
-      </h3>
-      <p className="mt-2 text-sm leading-6 text-gray-600">{text}</p>
-      <p className="mt-3 rounded-xl bg-white px-3 py-2 text-sm font-black text-[#071B4D] ring-1 ring-[#E2E8F0]">
-        {meta}
-      </p>
     </div>
   )
 }
