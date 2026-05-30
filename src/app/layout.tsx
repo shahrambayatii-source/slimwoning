@@ -72,19 +72,21 @@ export default function RootLayout({
                 Verkopen
               </Link>
 
-              <Link
-                href="/verkopen/schatting"
-                className={`transition hover:opacity-80 ${pathname === '/verkopen/schatting' ? activeNavClass : ''}`}
-              >
-                Schatting maken
-              </Link>
-
               <Link href="/properties" className="transition hover:opacity-80">
                 Nieuwbouw
               </Link>
             </nav>
 
             <nav className="flex items-center gap-8 text-[18px] font-semibold tracking-[-0.01em]">
+              <Link
+                href="/verkopen/schatting"
+                className={`flex items-center gap-2 transition hover:opacity-80 ${
+                  pathname === '/verkopen/schatting' ? activeNavClass : ''
+                }`}
+              >
+                <span>Schatting maken</span>
+              </Link>
+
               <Link
                 href={loggedIn ? '/favorites' : '/login'}
                 className={`flex items-center gap-2 transition hover:opacity-80 ${
