@@ -284,7 +284,12 @@ function normalizeAnalysis(
       renovationAreas,
       safeArray(value.notAssessed),
     ),
-    attentionPoints: safeArray(value.attentionPoints),
+    attentionPoints: filterAttentionPoints(
+      safeArray(value.attentionPoints),
+      photoEvidence,
+      safeArray(value.visibleOutdatedElements),
+      roomsObserved,
+    ),
     positivePoints: safeArray(value.positivePoints),
     safeSummary:
       sanitizeText(stringValue(value.safeSummary)) || defaultAnalysis.safeSummary,
@@ -324,6 +329,51 @@ function listFromPhotoEvidence(
   field: 'modernElements' | 'outdatedElements' | 'observations',
 ) {
   return uniqueList(photoEvidence.flatMap((item) => item[field])).slice(0, 8)
+}
+
+function normalizePhrase(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^\p{L}0-9\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function isLuxuryFeatureAttentionPoint(value: string) {
+  return /\b(geen|niet aanwezig|ontbreekt|mist)\s+(zwembad|jacuzzi|sauna|tennisbaan|parking|parkeerplaats|garage|tuin|lift|zonnepanelen|dubbel glas|dubbele beglazing|warmtepomp)\b/i.test(
+    value,
+  )
+}
+
+function filterAttentionPoints(
+  attentionPoints: string[],
+  photoEvidence: RenovatiePhotoEvidence[],
+  visibleOutdatedElements: string[],
+  roomsObserved: string[],
+) {
+  const evidenceSources = uniqueList([
+    ...listFromPhotoEvidence(photoEvidence, 'observations'),
+    ...visibleOutdatedElements,
+  ]).map(normalizePhrase)
+
+  const normalizedRooms = uniqueList(roomsObserved.map(normalizePhrase)).filter(Boolean)
+
+  return attentionPoints.filter((point) => {
+    const normalizedPoint = normalizePhrase(point)
+
+    if (!normalizedPoint) return false
+    if (isLuxuryFeatureAttentionPoint(point)) return false
+
+    const matchesEvidence = evidenceSources.some((source) =>
+      source && normalizedPoint.includes(source),
+    )
+
+    const matchesRoom = normalizedRooms.some((room) =>
+      room && normalizedPoint.includes(room),
+    )
+
+    return matchesEvidence || matchesRoom
+  })
 }
 
 function getValidPhotos(photos: unknown) {
@@ -529,7 +579,7 @@ export async function POST(request: Request) {
           {
             role: 'system',
             content:
-              'Je analyseert Belgische woningfoto’s voor Renovatie Scan v2: een evidence-based beoordeling van zichtbare renovatie-indicatoren. Foto’s zijn de primaire bron voor room type, renovatieniveau, afwerkingskwaliteit, moderne elementen en verouderde elementen. De architectuur is multi-photo: beoordeel elke foto apart in photoEvidence en combineer daarna de zichtbare evidence over alle foto’s. Niet-zichtbare ruimtes of componenten krijgen geen conditieoordeel en moeten als Niet zichtbaar op basis van foto’s worden vermeld. Bij één foto blijft confidence altijd beperkt en mag je nooit concluderen dat de hele woning gerenoveerd is. EPC, oppervlakte, aantal slaapkamers/badkamers en woningtype zijn alleen secundaire context voor attentionPoints en safeSummary; ze mogen zichtbaar verouderde foto-evidence nooit neutraliseren en EPC betekent niet dat het interieur gerenoveerd is. Gebruik voorzichtige taal: zichtbaar, lijkt, mogelijk, op basis van zichtbare elementen, niet vast te stellen op basis van foto’s. Verboden formuleringen: vocht aanwezig, elektriciteit slecht, asbest aanwezig, dak defect, moet vervangen worden, is slecht, is kapot. Doe geen bouwkundige, juridische of technische afkeuringen en noem geen exacte renovatiekosten.',
+              'Je analyseert Belgische woningfoto’s voor Renovatie Scan v2: een evidence-based beoordeling van zichtbare renovatie-indicatoren. Foto’s zijn de primaire bron voor room type, renovatieniveau, afwerkingskwaliteit, moderne elementen en verouderde elementen. De architectuur is multi-photo: beoordeel elke foto apart in photoEvidence en combineer daarna de zichtbare evidence over alle foto’s. Niet-zichtbare ruimtes of componenten krijgen geen conditieoordeel en moeten als Niet zichtbaar op basis van foto’s worden vermeld. Bij één foto blijft confidence altijd beperkt en mag je nooit concluderen dat de hele woning gerenoveerd is. EPC, oppervlakte, aantal slaapkamers/badkamers en woningtype zijn alleen secundaire context voor attentionPoints en safeSummary; ze mogen zichtbaar verouderde foto-evidence nooit neutraliseren en EPC betekent niet dat het interieur gerenoveerd is. Gebruik voorzichtige taal: zichtbaar, lijkt, mogelijk, op basis van zichtbare elementen, niet vast te stellen op basis van foto’s. Genereer geen aandachtspunten op basis van het ontbreken van optionele of luxevoorzieningen zoals zwembad, jacuzzi, sauna, tennisbaan, parking, tuin, lift, zonnepanelen, dubbel glas of warmtepomp. Aandachtspunten mogen alleen ontstaan uit foto-evidence, visibleOutdatedElements of roomsObserved. Verboden formuleringen: vocht aanwezig, elektriciteit slecht, asbest aanwezig, dak defect, moet vervangen worden, is slecht, is kapot. Doe geen bouwkundige, juridische of technische afkeuringen en noem geen exacte renovatiekosten.',
           },
           {
             role: 'user',
@@ -543,11 +593,12 @@ export async function POST(request: Request) {
                     'Stap 1: maak één photoEvidence item per aangeleverde foto met photoIndex, roomType, visibleRenovationLevel, visibleFinishQuality, modernElements, outdatedElements en observations. Gebruik roomType onvoldoende_zichtbaar als de ruimte niet herkenbaar is.',
                     'Stap 2: detecteer alleen zichtbare ruimtes uit woonkamer, keuken, badkamer, slaapkamer, hal, toilet, gevel, tuin, dak, ramen, technische ruimte en zet unieke ruimtes in roomsObserved.',
                     'Stap 3: noteer alleen observeerbare visuele bevindingen in visibleSignals, positivePoints, visibleModernElements en visibleOutdatedElements, altijd met woorden zoals zichtbaar, lijkt of op basis van zichtbare elementen.',
-                    'Stap 4: kies visibleRenovationLevel uit duidelijk_recent_vernieuwd, deels_vernieuwd, onderhouden_niet_recent, zichtbaar_te_moderniseren of onvoldoende_zichtbaar op basis van de zichtbare foto-evidence.',
-                    'Stap 5: kies visibleFinishQuality uit hoogwaardig_zichtbaar, standaard_verzorgd, basis_of_slijtage_zichtbaar, gedateerd_of_sober of onvoldoende_zichtbaar op basis van zichtbare materialen, afwerking, slijtage en detaillering.',
-                    'Stap 6: kies visualCondition uitsluitend uit: modern_afgewerkt als zichtbare ruimtes consequent duidelijk modern ogen; verzorgde_afwerking als zichtbare ruimtes netjes zijn maar niet duidelijk nieuw; gemengde_afwerking als moderne en gedateerde elementen samen zichtbaar zijn; zichtbaar_verouderd als zichtbare elementen duidelijk ouder/gedateerd zijn; onvoldoende_zichtbaar alleen als foto’s ontbreken, onduidelijk zijn, te weinig usable detail tonen of geen bruikbare interieur/exterieurdetails tonen.',
+                    'Stap 4: genereer attentionPoints alleen wanneer ze direct kunnen worden herleid tot photoEvidence observations, visibleOutdatedElements of roomsObserved. Laat geen aandachtspunten zien op basis van het ontbreken van optionele luxevoorzieningen of absentie van features.',
+                    'Stap 5: kies visibleRenovationLevel uit duidelijk_recent_vernieuwd, deels_vernieuwd, onderhouden_niet_recent, zichtbaar_te_moderniseren of onvoldoende_zichtbaar op basis van de zichtbare foto-evidence.',
+                    'Stap 6: kies visibleFinishQuality uit hoogwaardig_zichtbaar, standaard_verzorgd, basis_of_slijtage_zichtbaar, gedateerd_of_sober of onvoldoende_zichtbaar op basis van zichtbare materialen, afwerking, slijtage en detaillering.',
+                    'Stap 7: kies visualCondition uitsluitend uit: modern_afgewerkt als zichtbare ruimtes consequent duidelijk modern ogen; verzorgde_afwerking als zichtbare ruimtes netjes zijn maar niet duidelijk nieuw; gemengde_afwerking als moderne en gedateerde elementen samen zichtbaar zijn; zichtbaar_verouderd als zichtbare elementen duidelijk ouder/gedateerd zijn; onvoldoende_zichtbaar alleen als foto’s ontbreken, onduidelijk zijn, te weinig usable detail tonen of geen bruikbare interieur/exterieurdetails tonen.',
                     'Belangrijk: één duidelijke verouderde kamer of keuken is zichtbaar_verouderd, niet onvoldoende_zichtbaar; één moderne kamer is modern_afgewerkt, maar confidence blijft beperkt.',
-                    'Stap 7: confidence is altijd beperkt bij één foto of bij 0-1 zichtbare ruimtes, gemiddeld bij 2-4 zichtbare ruimtes en hoog alleen bij 5 of meer zichtbare ruimtes met sleutelruimte-dekking zoals woonkamer, keuken, badkamer of exterieur; geef nooit hoog bij één foto of één ruimte.',
+                    'Stap 8: confidence is altijd beperkt bij één foto of bij 0-1 zichtbare ruimtes, gemiddeld bij 2-4 zichtbare ruimtes en hoog alleen bij 5 of meer zichtbare ruimtes met sleutelruimte-dekking zoals woonkamer, keuken, badkamer of exterieur; geef nooit hoog bij één foto of één ruimte.',
                     'Componentstatussen mogen alleen modern_zichtbaar, verzorgd_zichtbaar, verouderd_zichtbaar, beperkt_zichtbaar of niet_zichtbaar zijn.',
                     "Markeer elk niet zichtbaar component als niet_zichtbaar en voeg aan notAssessed toe met exact: Niet zichtbaar op basis van foto's.",
                     'Beoordeel kamers nooit op basis van andere kamers. Zeg nooit dat de hele woning gerenoveerd is op basis van één of enkele zichtbare ruimtes.',
