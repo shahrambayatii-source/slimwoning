@@ -2154,7 +2154,7 @@ function PropertiesContent() {
 
 
   function renderRenovatieScanOverview(
-    renovatieScanProperty: any,
+    renovatieScanProperty: Record<string, unknown>,
     options: { showCloseButton?: boolean; onClose?: () => void } = {}
   ) {
           const renovatiePhotoCount = getPropertyPhotoCount(renovatieScanProperty)
@@ -2167,234 +2167,106 @@ function PropertiesContent() {
             renovatiePhotoCount,
             renovatiePhotoAnalysis,
           )
-          const zichtbareRenovatiezones = Object.entries(renovatieScan.renovatiezones).filter(
-            ([, status]) => status !== 'niet_zichtbaar'
-          )
-          const renovationAreaLabels: Record<string, string> = {
-            walls: 'Muren',
-            floors: 'Vloeren',
-            windows: 'Ramen',
-            kitchen: 'Keuken',
-            bathroom: 'Badkamer',
-            ceiling: 'Plafond',
-            roof: 'Dak',
-            installations: 'Installaties',
-            insulation: 'Isolatie',
-          }
-          const renovationStatusLabels: Record<string, string> = {
-            modern_zichtbaar: 'Modern zichtbaar',
-            verzorgd_zichtbaar: 'Verzorgd zichtbaar',
-            verouderd_zichtbaar: 'Verouderd zichtbaar',
-            beperkt_zichtbaar: 'Beperkt zichtbaar',
-            niet_zichtbaar: 'Niet zichtbaar',
-          }
+          const analyzedPhotoCount = renovatieScan.fotoDekking.aantalFotos
+          const photoLabel = `${analyzedPhotoCount} ${analyzedPhotoCount === 1 ? 'foto' : 'foto’s'} geanalyseerd`
+          const simpleConfidence = renovatieScan.betrouwbaarheid === 'Beperkt' ? 'Laag' : renovatieScan.betrouwbaarheid
+          const isLowConfidence = simpleConfidence === 'Laag' || analyzedPhotoCount <= 1
+          const primaryRoom = renovatieScan.kamersGezien[0]?.toLowerCase() || 'ruimte'
+          const simpleStatus = (() => {
+            if (renovatieScan.renovatieniveau === 'Modern afgewerkt') {
+              return {
+                label: '🟢 Modern',
+                tone: 'border-emerald-100 bg-emerald-50 text-emerald-700',
+                explanation: `Moderne ${primaryRoom} met kwalitatieve afwerking zichtbaar.`,
+              }
+            }
+
+            if (
+              renovatieScan.renovatieniveau === 'Zichtbaar verouderd' ||
+              renovatieScan.renovatieniveau === 'Onvoldoende zichtbaar'
+            ) {
+              return {
+                label: '🔴 Renovatie nodig',
+                tone: 'border-red-100 bg-red-50 text-red-700',
+                explanation: renovatieScan.renovatieniveau === 'Onvoldoende zichtbaar'
+                  ? 'Er zijn onvoldoende duidelijke foto’s om de afwerking goed te beoordelen.'
+                  : `Verouderde afwerking is zichtbaar in de ${primaryRoom}.`,
+              }
+            }
+
+            return {
+              label: '🟡 Gemiddeld',
+              tone: 'border-amber-100 bg-amber-50 text-amber-700',
+              explanation: `Verzorgde afwerking zichtbaar, maar niet overal duidelijk modern.`,
+            }
+          })()
+          const confidenceText = `${simpleConfidence} (${photoLabel})`
+          const confidenceHelpText = isLowConfidence
+            ? 'Upload meer foto’s van belangrijke ruimtes voor een betrouwbaardere analyse.'
+            : 'De analyse is gebaseerd op meerdere zichtbare foto’s.'
+          const recommendedPhotoTypes = ['keuken', 'woonkamer', 'gevel']
 
     return (
                 <div className="bg-[#F6F8FC] p-4 sm:p-6">
-                  <div className="rounded-[28px] border border-blue-100 bg-white p-8 shadow-sm">
-                    <section>
-                      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                        <div>
-                          <p className="text-xs font-black uppercase tracking-wide text-[#64748B]">
-                            Staat van afwerking
-                          </p>
-                          <div className="mt-3 flex flex-wrap items-center gap-3">
-                            <span className="inline-flex w-fit rounded-full border border-orange-100 bg-orange-50 px-4 py-1.5 text-sm font-black text-orange-700">
-                              {isRenovatiePhotoLoading
-                                ? 'Foto’s worden geanalyseerd...'
-                                : renovatieScan.renovatieniveau}
-                            </span>
-                            <p className="text-sm font-semibold leading-6 text-[#64748B]">
-                              Er worden geen kosten berekend in Renovatie Scan v2.
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="grid gap-4 text-sm md:min-w-[320px] md:grid-cols-1">
-                          <div>
-                            <p className="text-[11px] font-black uppercase tracking-wide text-[#64748B]">
-                              Toelichting
-                            </p>
-                            <p className="mt-1 font-semibold leading-6 text-[#64748B]">
-                              {renovatieScan.renovatiecategorie}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-[11px] font-black uppercase tracking-wide text-[#64748B]">
-                              Betrouwbaarheid
-                            </p>
-                            <p className="mt-1 font-semibold leading-6 text-[#64748B]">
-                              {renovatieScan.betrouwbaarheid}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </section>
-
-                    <section className="mt-5 border-t border-blue-50 pt-5">
-                      {isRenovatiePhotoLoading ? (
-                        <div className="rounded-2xl border border-orange-100 bg-orange-50 p-4 text-sm font-bold text-orange-700">
-                          Foto’s worden geanalyseerd...
-                        </div>
-                      ) : renovatiePhotoError ? (
-                        <div className="rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-bold text-red-700">
-                          {renovatiePhotoError} De scan toont voorlopig alleen wat niet visueel is vastgesteld.
-                        </div>
-                      ) : (
-                        <p className="text-sm font-semibold leading-6 text-[#64748B]">
-                          {renovatieScan.fotoAnalyseSamenvatting}
+                  <div className="rounded-[28px] border border-blue-100 bg-white p-5 shadow-sm sm:p-7">
+                    <div className="space-y-5">
+                      <section className="rounded-3xl border border-blue-50 bg-[#F6F8FC] p-5">
+                        <p className="text-xs font-black uppercase tracking-wide text-[#64748B]">
+                          Renovatiestatus
                         </p>
-                      )}
-                    </section>
-
-                    <section className="mt-5 border-t border-blue-50 pt-5">
-                      <h4 className="text-base font-black text-[#071B4D]">Foto-intelligentie</h4>
-                      <div className="mt-3 grid grid-cols-1 gap-3 text-sm font-semibold leading-6 text-[#64748B] md:grid-cols-2">
-                        <div className="rounded-2xl border border-blue-100 bg-[#F6F8FC] p-4">
-                          <span className="block text-[11px] font-black uppercase tracking-wide text-[#64748B]">Zichtbaar renovatieniveau</span>
-                          <span className="mt-1 block font-black text-[#071B4D]">{renovatieScan.zichtbaarRenovatieniveau}</span>
+                        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
+                          <span className={`inline-flex w-fit rounded-full border px-4 py-2 text-base font-black ${simpleStatus.tone}`}>
+                            {isRenovatiePhotoLoading ? 'Foto’s worden geanalyseerd...' : simpleStatus.label}
+                          </span>
                         </div>
-                        <div className="rounded-2xl border border-blue-100 bg-[#F6F8FC] p-4">
-                          <span className="block text-[11px] font-black uppercase tracking-wide text-[#64748B]">Zichtbare afwerkingskwaliteit</span>
-                          <span className="mt-1 block font-black text-[#071B4D]">{renovatieScan.zichtbaarAfwerkingsniveau}</span>
-                        </div>
-                      </div>
-                      {(renovatieScan.zichtbareModerneElementen.length > 0 || renovatieScan.zichtbareVerouderdeElementen.length > 0) && (
-                        <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-2">
-                          <div>
-                            <h5 className="text-sm font-black text-[#071B4D]">Zichtbaar modern</h5>
-                            <ul className="mt-2 space-y-2 text-sm font-semibold leading-6 text-[#64748B]">
-                              {(renovatieScan.zichtbareModerneElementen.length > 0 ? renovatieScan.zichtbareModerneElementen : ['Geen moderne elementen zichtbaar vastgesteld.']).map((element, index) => (
-                                <li key={index} className="flex gap-2">
-                                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#F97316]" />
-                                  <span>{element}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                          <div>
-                            <h5 className="text-sm font-black text-[#071B4D]">Zichtbaar verouderd</h5>
-                            <ul className="mt-2 space-y-2 text-sm font-semibold leading-6 text-[#64748B]">
-                              {(renovatieScan.zichtbareVerouderdeElementen.length > 0 ? renovatieScan.zichtbareVerouderdeElementen : ['Geen verouderde elementen zichtbaar vastgesteld.']).map((element, index) => (
-                                <li key={index} className="flex gap-2">
-                                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#071B4D]" />
-                                  <span>{element}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        </div>
-                      )}
-                    </section>
+                        {renovatiePhotoError ? (
+                          <p className="mt-3 text-sm font-semibold leading-6 text-red-700">
+                            {renovatiePhotoError} Upload meer duidelijke foto’s om de renovatiestatus te verbeteren.
+                          </p>
+                        ) : (
+                          <p className="mt-3 text-sm font-semibold leading-6 text-[#64748B]">
+                            {isRenovatiePhotoLoading
+                              ? 'We bekijken de zichtbare afwerking op de beschikbare foto’s.'
+                              : simpleStatus.explanation}
+                          </p>
+                        )}
+                      </section>
 
-                    <section className="mt-5 border-t border-blue-50 pt-5">
-                      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                        <div>
-                          <h4 className="text-base font-black text-[#071B4D]">Waargenomen elementen</h4>
-                          <ul className="mt-3 space-y-2 text-sm font-semibold leading-6 text-[#64748B]">
-                            {renovatieScan.visueleObservaties.map((observatie, index) => (
-                              <li key={index} className="flex gap-2">
-                                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#F97316]" />
-                                <span>{observatie}</span>
-                              </li>
-                            ))}
-                          </ul>
-                          {renovatieScan.kamersGezien.length > 0 && (
-                            <p className="mt-3 text-xs font-bold text-[#64748B]">
-                              Ruimtes gezien: {renovatieScan.kamersGezien.join(', ')} · Foto’s geanalyseerd: {renovatieScan.fotoDekking.aantalFotos}
-                            </p>
-                          )}
-                        </div>
+                      <section className="rounded-3xl border border-blue-50 bg-white p-5 shadow-sm">
+                        <p className="text-xs font-black uppercase tracking-wide text-[#64748B]">
+                          Betrouwbaarheid
+                        </p>
+                        <p className="mt-3 text-xl font-black text-[#071B4D]">
+                          {isRenovatiePhotoLoading ? 'Bezig...' : confidenceText}
+                        </p>
+                        <p className="mt-2 text-sm font-semibold leading-6 text-[#64748B]">
+                          {confidenceHelpText}
+                        </p>
+                      </section>
 
-                        <div>
-                          <h4 className="text-base font-black text-[#071B4D]">Waargenomen componenten</h4>
-                          {zichtbareRenovatiezones.length > 0 ? (
-                            <div className="mt-3 grid grid-cols-2 gap-2 text-xs font-black text-[#64748B]">
-                              {zichtbareRenovatiezones.map(([zone, status]) => (
-                                <div key={zone} className="rounded-xl border border-blue-100 bg-[#F6F8FC] px-3 py-2">
-                                  <span className="block text-[#071B4D]">{renovationAreaLabels[zone] || zone}</span>
-                                  <span className="mt-1 block">{renovationStatusLabels[String(status)] || String(status).replace('_', ' ')}</span>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <p className="mt-3 text-sm font-semibold leading-6 text-[#64748B]">
-                              Geen afzonderlijke componenten zichtbaar genoeg om te beoordelen. Niet-zichtbare onderdelen staan apart bij Niet beoordeeld.
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </section>
-
-                    <section className="mt-5 border-t border-blue-50 pt-5">
-                      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                        <div>
-                          <h4 className="text-base font-black text-[#071B4D]">Zichtbare pluspunten</h4>
-                          <ul className="mt-3 space-y-2 text-sm font-semibold leading-6 text-[#64748B]">
-                            {renovatieScan.pluspunten.map((pluspunt, index) => (
-                              <li key={index} className="flex gap-2">
-                                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#071B4D]" />
-                                <span>{pluspunt}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-
-                        <div>
-                          <h4 className="text-base font-black text-[#071B4D]">Mogelijke aandachtspunten</h4>
-                          <ul className="mt-3 space-y-2 text-sm font-semibold leading-6 text-[#64748B]">
-                            {renovatieScan.aandachtspunten.map((aandachtspunt, index) => (
-                              <li key={index} className="flex gap-2">
-                                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#071B4D]" />
-                                <span>{aandachtspunt}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      </div>
-                    </section>
-
-
-                    {renovatieScan.nietBeoordeeld.length > 0 && (
-                      <section className="mt-5 border-t border-blue-50 pt-5">
-                        <h4 className="text-base font-black text-[#071B4D]">Niet beoordeeld</h4>
-                        <ul className="mt-3 grid grid-cols-1 gap-2 text-sm font-semibold leading-6 text-[#64748B] sm:grid-cols-2">
-                          {renovatieScan.nietBeoordeeld.map((onderdeel, index) => (
-                            <li key={index} className="rounded-xl border border-blue-100 bg-[#F6F8FC] px-3 py-2">
-                              {onderdeel}
+                      <section className="rounded-3xl border border-blue-50 bg-white p-5 shadow-sm">
+                        <p className="text-xs font-black uppercase tracking-wide text-[#64748B]">
+                          Verbeter analyse
+                        </p>
+                        <p className="mt-3 text-sm font-semibold leading-6 text-[#64748B]">
+                          Upload foto’s van:
+                        </p>
+                        <ul className="mt-3 space-y-2 text-sm font-bold text-[#071B4D]">
+                          {recommendedPhotoTypes.map((photoType) => (
+                            <li key={photoType} className="flex items-center gap-2">
+                              <span className="h-1.5 w-1.5 rounded-full bg-[#F97316]" />
+                              <span>{photoType}</span>
                             </li>
                           ))}
                         </ul>
+                        <Link
+                          href={`/edit-property/${renovatiePropertyId}`}
+                          className="mt-5 inline-flex w-full items-center justify-center rounded-xl bg-[#F97316] px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-[#EA580C] sm:w-auto"
+                        >
+                          Upload meer foto&apos;s
+                        </Link>
                       </section>
-                    )}
-
-                    <section className="mt-5 border-t border-blue-50 pt-5">
-                      <h4 className="text-base font-black text-[#071B4D]">Gebaseerd op</h4>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {renovatieScan.gebaseerdOp.map((datapunt, index) => (
-                          <span key={index} className="rounded-full border border-blue-100 bg-[#F6F8FC] px-3 py-1 text-xs font-black text-[#64748B] shadow-sm">
-                            {datapunt}
-                          </span>
-                        ))}
-                      </div>
-                    </section>
-
-                    {renovatieScan.beperkteFotoInformatie && (
-                      <p className="mt-5 border-t border-blue-50 pt-5 text-sm font-semibold leading-6 text-[#64748B]">
-                        Beperkte foto-informatie beschikbaar.
-                      </p>
-                    )}
-
-                    <footer className="mt-5 border-t border-blue-50 pt-5 text-xs font-semibold leading-5 text-[#64748B]">
-                      <p>
-                        {renovatieScan.fotoAnalyseStatus === 'geanalyseerd'
-                          ? 'Foto’s zijn visueel door AI beoordeeld op basis van zichtbare elementen.'
-                          : 'Foto’s werden niet visueel beoordeeld.'}
-                      </p>
-                      <p className="mt-2">
-                        Deze beoordeling is gebaseerd op zichtbare elementen in beschikbare foto&apos;s, met woninggegevens alleen als context. Het betreft geen bouwkundig rapport, expertiseverslag of professionele inspectie.
-                      </p>
-                    </footer>
+                    </div>
 
                     {options.showCloseButton && (
                       <button
