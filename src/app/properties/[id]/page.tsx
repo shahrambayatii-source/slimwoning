@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createPortal } from 'react-dom'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
@@ -17,7 +16,6 @@ export default function PropertyDetailsPage() {
   const [similarProperties, setSimilarProperties] = useState<any[]>([])
   const [userId, setUserId] = useState('')
   const [showMap, setShowMap] = useState(false)
-  const [showComparison, setShowComparison] = useState(false)
   const [activePhotoIndex, setActivePhotoIndex] = useState(0)
 
   const [mapCenter, setMapCenter] = useState({
@@ -93,7 +91,7 @@ export default function PropertyDetailsPage() {
       .from('properties')
       .select('*')
       .neq('id', currentProperty.id)
-      .limit(6)
+      .limit(3)
 
     if (currentProperty.city) {
       query = query.ilike('city', `%${currentProperty.city}%`)
@@ -110,7 +108,7 @@ export default function PropertyDetailsPage() {
       return
     }
 
-    setSimilarProperties(data || [])
+    setSimilarProperties((data || []).slice(0, 3))
   }
 
   async function handleDelete() {
@@ -463,16 +461,6 @@ export default function PropertyDetailsPage() {
                 <QuickStat label="EPC" value={property.epc || '-'} />
               </div>
 
-              <div className="mt-5 flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowComparison(true)}
-                  className="shrink-0 rounded-full border border-amber-200 bg-amber-50 px-3.5 py-1.5 text-sm font-semibold leading-none whitespace-nowrap text-amber-700 transition hover:bg-amber-100"
-                  aria-haspopup="dialog"
-                >
-                  Vergelijk
-                </button>
-              </div>
             </div>
 
             <SectionCard title="Beschrijving">
@@ -480,6 +468,12 @@ export default function PropertyDetailsPage() {
                 {property.description || 'Geen beschrijving beschikbaar.'}
               </p>
             </SectionCard>
+
+            <ComparablePropertiesSection
+              properties={similarProperties}
+              formatPrice={formatPrice}
+              getPropertyPhotos={getPropertyPhotos}
+            />
 
             {getWoningkenmerken(property).length > 0 && (
               <SectionCard title="Woningkenmerken">
@@ -630,13 +624,6 @@ export default function PropertyDetailsPage() {
       </div>
 
 
-      <ComparisonModal
-        isOpen={showComparison}
-        properties={similarProperties}
-        formatPrice={formatPrice}
-        onClose={() => setShowComparison(false)}
-      />
-
       {showMap && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-5">
           <div className="relative w-full max-w-7xl overflow-hidden rounded-[2rem] bg-white shadow-2xl">
@@ -698,117 +685,226 @@ export default function PropertyDetailsPage() {
 
 type ComparableProperty = {
   id: string | number
+  title?: string | null
+  address?: string | null
   city?: string | null
   price?: string | number | null
+  slaapkamers?: string | number | null
+  bedrooms?: string | number | null
+  badkamers?: string | number | null
+  bathrooms?: string | number | null
   bewoonbare_oppervlakte?: string | number | null
-  bouwjaar?: string | number | null
+  oppervlakte?: string | number | null
+  living_area?: string | number | null
+  grondoppervlakte?: string | number | null
+  epc?: string | null
+  epc_code?: string | null
+  ai_rank_score?: string | number | null
+  ai_score?: string | number | null
+  aiScore?: string | number | null
+  match_score?: string | number | null
+  matchScore?: string | number | null
+  rank_score?: string | number | null
+  rankScore?: string | number | null
+  photos?: unknown
+  images?: unknown
+  photo?: string | null
+  image?: string | null
+  mainImage?: string | null
+  photo_url?: string | null
 }
 
-function ComparisonModal({
-  isOpen,
+function ComparablePropertiesSection({
   properties,
   formatPrice,
-  onClose,
+  getPropertyPhotos,
 }: {
-  isOpen: boolean
   properties: ComparableProperty[]
   formatPrice: (value: unknown) => string
-  onClose: () => void
+  getPropertyPhotos: (propertyValue: unknown) => string[]
 }) {
-  useEffect(() => {
-    if (!isOpen) return
+  const visibleProperties = properties.slice(0, 3)
 
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
-    }
+  return (
+    <section className="mt-5 rounded-[1.75rem] bg-white p-4 shadow-xl md:p-5">
+      <div className="mb-4 flex flex-col gap-1">
+        <p className="text-xs font-black uppercase tracking-[0.24em] text-blue-700">
+          Meer woningen zoals deze
+        </p>
+        <h2 className="text-2xl font-bold text-[#111827]">Vergelijkbare woningen</h2>
+        <p className="text-sm font-semibold text-gray-500">
+          {visibleProperties.length} gelijkaardige panden in de buurt
+        </p>
+      </div>
 
-    document.addEventListener('keydown', handleKeyDown)
+      {visibleProperties.length > 0 ? (
+        <div className="flex flex-col gap-3">
+          {visibleProperties.map((similarProperty) => (
+            <ComparablePropertyCard
+              key={similarProperty.id}
+              property={similarProperty}
+              formatPrice={formatPrice}
+              getPropertyPhotos={getPropertyPhotos}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-2xl bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-800">
+          Er zijn momenteel geen gelijkaardige panden gevonden voor deze woning.
+        </div>
+      )}
+    </section>
+  )
+}
 
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, onClose])
+function ComparablePropertyCard({
+  property,
+  formatPrice,
+  getPropertyPhotos,
+}: {
+  property: ComparableProperty
+  formatPrice: (value: unknown) => string
+  getPropertyPhotos: (propertyValue: unknown) => string[]
+}) {
+  const photo = getPropertyPhotos(property)[0] || ''
+  const bedrooms = numberValue(property.slaapkamers || property.bedrooms)
+  const bathrooms = numberValue(property.badkamers || property.bathrooms)
+  const area = getPropertyArea(property)
+  const epcLabel = String(property.epc || property.epc_code || '').trim()
+  const aiScore = getAvailableAiScore(property)
 
-  if (!isOpen || typeof document === 'undefined') return null
-
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[120] flex items-center justify-center bg-black/45 p-3 backdrop-blur-sm sm:p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="comparison-title"
-      onClick={onClose}
+  return (
+    <Link
+      href={`/properties/${property.id}`}
+      className="group flex overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md"
     >
-      <div
-        className="relative max-h-[90vh] w-[95vw] max-w-5xl overflow-hidden rounded-[28px] border border-amber-100 bg-white shadow-2xl"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <header className="relative overflow-hidden border-b border-amber-100 bg-gradient-to-br from-[#071B4D] via-[#12377C] to-[#F97316] px-5 py-5 sm:px-7">
-          <div className="absolute inset-0 bg-black/20" />
-          <div className="relative flex items-start justify-between gap-4">
-            <div className="min-w-0 text-white">
-              <p className="text-xs font-black uppercase tracking-[0.24em] text-amber-200">
-                Vergelijk
-              </p>
-              <h2 id="comparison-title" className="mt-2 text-2xl font-black sm:text-3xl">
-                Vergelijkbare woningen
-              </h2>
-              <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-white/85 sm:text-base">
-                {properties.length > 0
-                  ? `${properties.length} gelijkaardige panden in de buurt.`
-                  : 'Er zijn momenteel geen gelijkaardige panden gevonden voor deze woning.'}
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={onClose}
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/15 text-xl font-black text-white shadow-sm ring-1 ring-white/25 backdrop-blur transition hover:bg-white/25"
-              aria-label="Vergelijking sluiten"
-            >
-              ×
-            </button>
+      <div className="relative h-32 w-36 shrink-0 overflow-hidden bg-gradient-to-br from-slate-200 via-slate-300 to-slate-400 sm:w-44">
+        {photo ? (
+          <img
+            src={photo}
+            alt={property.title || 'Vergelijkbare woning'}
+            className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-4xl text-white/80">
+            ⌂
           </div>
-        </header>
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
+      </div>
 
-        <div className="max-h-[calc(90vh-150px)] overflow-y-auto p-5 sm:p-6">
-          {properties.length > 0 ? (
-            <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
-              <div className="grid grid-cols-[1.2fr_1fr_1fr_0.8fr] bg-gray-100 px-4 py-3 text-sm font-black text-[#111827]">
-                <span>Gemeente</span>
-                <span>Vraagprijs</span>
-                <span>Woonopp.</span>
-                <span>Bouwjaar</span>
+      <div className="flex min-w-0 flex-1 flex-col justify-between p-3 sm:p-4">
+        <div className="min-w-0">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h3 className="truncate text-base font-black text-[#071B4D]">
+                {property.title || 'Woning zonder titel'}
+              </h3>
+              <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">
+                {property.address
+                  ? `${property.address}, ${property.city || ''}`
+                  : property.city || 'Locatie niet opgegeven'}
+              </p>
+            </div>
+
+            {aiScore !== null && (
+              <div className="shrink-0 rounded-2xl border border-blue-100 bg-blue-50 px-2.5 py-1.5 text-center">
+                <p className="text-[9px] font-black uppercase tracking-wide text-blue-700">AI</p>
+                <p className="text-sm font-black leading-none text-[#071B4D]">{aiScore}</p>
               </div>
+            )}
+          </div>
 
-              {properties.map((similarProperty) => (
-                <Link
-                  key={similarProperty.id}
-                  href={`/properties/${similarProperty.id}`}
-                  onClick={onClose}
-                  className="grid grid-cols-[1.2fr_1fr_1fr_0.8fr] border-t border-gray-100 px-4 py-3 text-sm transition hover:bg-blue-50/60"
-                >
-                  <span className="font-semibold text-[#111827]">
-                    {similarProperty.city || '-'}
-                  </span>
-                  <span>{formatPrice(similarProperty.price)}</span>
-                  <span>
-                    {similarProperty.bewoonbare_oppervlakte
-                      ? `${similarProperty.bewoonbare_oppervlakte} m²`
-                      : '-'}
-                  </span>
-                  <span>{similarProperty.bouwjaar || '-'}</span>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-2xl bg-amber-50 p-5 text-sm font-semibold leading-6 text-amber-800">
-              Voeg meer woningen toe of pas de zoekcriteria aan om vergelijkbare panden te zien.
-            </div>
+          <p className="mt-1 text-lg font-black leading-tight text-blue-700">
+            {formatPrice(property.price)}
+          </p>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+          <CompactBadge text={`${bedrooms || '-'} slp.`} />
+          <CompactBadge text={`${bathrooms || '-'} badk.`} />
+          <CompactBadge text={`${area || '-'} m²`} />
+          {epcLabel && (
+            <span className="inline-flex h-6 overflow-hidden rounded-md shadow-sm">
+              <span className="flex items-center bg-[#1F3B57] px-2 text-[9px] font-black text-white">
+                EPC
+              </span>
+              <span
+                className="flex min-w-[30px] items-center justify-center px-2 text-[9px] font-black text-white"
+                style={{ backgroundColor: getEpcColor(epcLabel) }}
+              >
+                {epcLabel}
+              </span>
+            </span>
           )}
         </div>
       </div>
-    </div>,
-    document.body
+    </Link>
   )
+}
+
+function CompactBadge({ text }: { text: string }) {
+  return (
+    <span className="inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-gray-100 px-2.5 py-1.5 text-[11px] font-black text-gray-700">
+      {text}
+    </span>
+  )
+}
+
+function numberValue(value: unknown) {
+  const rawValue = String(value || '').trim()
+
+  if (!rawValue) return 0
+
+  const onlyNumbers = rawValue.replace(/[^\d]/g, '')
+
+  return Number(onlyNumbers) || 0
+}
+
+function getPropertyArea(property: ComparableProperty) {
+  return numberValue(
+    property.bewoonbare_oppervlakte ||
+      property.oppervlakte ||
+      property.living_area ||
+      property.grondoppervlakte
+  )
+}
+
+function getAvailableAiScore(property: ComparableProperty) {
+  const rawScore =
+    property.ai_rank_score ??
+    property.ai_score ??
+    property.aiScore ??
+    property.match_score ??
+    property.matchScore ??
+    property.rank_score ??
+    property.rankScore
+
+  const score = Number(rawScore)
+
+  if (!Number.isFinite(score) || score <= 0) return null
+
+  return Math.max(0, Math.min(100, Math.round(score)))
+}
+
+function getEpcColor(value: unknown) {
+  const cleanLabel = String(value || '').trim().toUpperCase()
+  const epcColors: Record<string, string> = {
+    'A+++++': '#0b5f2a',
+    'A++++': '#0b5f2a',
+    'A+++': '#0b5f2a',
+    'A++': '#0f6f34',
+    'A+': '#1f7a3a',
+    A: '#3f9a45',
+    B: '#a7cf20',
+    C: '#f3df00',
+    D: '#f6b428',
+    E: '#f47c20',
+    F: '#ef2a2a',
+    G: '#c8191e',
+  }
+
+  return epcColors[cleanLabel] || '#59d000'
 }
 
 function QuickStat({
