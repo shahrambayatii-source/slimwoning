@@ -797,29 +797,32 @@ function PropertiesContent() {
   }
 
   const propertyImageFields = [
-    'images',
     'photos',
+    'images',
+    'photo',
+    'image',
+    'mainImage',
+    'main_image',
+    'photo_url',
+    'image_url',
     'property_images',
     'image_urls',
     'gallery',
     'media',
-    'image',
-    'main_image',
-    'image_url',
-    'photo',
     'fotos',
   ] as const
 
   const propertyImageValueFields = [
     'url',
     'src',
-    'image',
-    'image_url',
-    'photo',
-    'photo_url',
-    'main_image',
-    'images',
     'photos',
+    'images',
+    'photo',
+    'image',
+    'mainImage',
+    'main_image',
+    'photo_url',
+    'image_url',
     'property_images',
     'image_urls',
     'gallery',
@@ -890,24 +893,47 @@ function PropertiesContent() {
     references.push(`${fallbackKey}:${String(value)}`)
   }
 
-  function getPropertyPhotoCount(property: Record<string, unknown>) {
+  function collectFieldImages(property: Record<string, unknown>, field: string) {
     const references: string[] = []
 
-    propertyImageFields.forEach((field) => {
-      collectPropertyImageReferences(property[field], references, field)
-    })
+    collectPropertyImageReferences(property[field], references, field)
 
-    return new Set(references).size
+    return references
+  }
+
+  function getNormalizedPropertyPhotos(property: Record<string, unknown>) {
+    const propertyPhotos =
+      collectFieldImages(property, 'photos').length
+        ? collectFieldImages(property, 'photos')
+        : collectFieldImages(property, 'images').length
+          ? collectFieldImages(property, 'images')
+          : property.photo
+            ? collectFieldImages(property, 'photo')
+            : property.image
+              ? collectFieldImages(property, 'image')
+              : property.mainImage
+                ? collectFieldImages(property, 'mainImage')
+                : property.main_image
+                  ? collectFieldImages(property, 'main_image')
+                  : property.photo_url
+                    ? collectFieldImages(property, 'photo_url')
+                    : property.image_url
+                      ? collectFieldImages(property, 'image_url')
+                      : []
+
+    const fallbackReferences = propertyImageFields.flatMap((field) =>
+      collectFieldImages(property, field)
+    )
+
+    return Array.from(new Set([...propertyPhotos, ...fallbackReferences]))
+  }
+
+  function getPropertyPhotoCount(property: Record<string, unknown>) {
+    return getNormalizedPropertyPhotos(property).length
   }
 
   function getPropertyPrimaryImage(property: Record<string, unknown>) {
-    const references: string[] = []
-
-    propertyImageFields.forEach((field) => {
-      collectPropertyImageReferences(property[field], references, field)
-    })
-
-    return references.find((reference) => {
+    return getNormalizedPropertyPhotos(property).find((reference) => {
       return (
         /^(https?:|\/|data:image|blob:)/i.test(reference) ||
         /\.(jpe?g|png|webp|gif|avif)(\?|#|$)/i.test(reference)
@@ -917,13 +943,7 @@ function PropertiesContent() {
 
 
   function getPropertyImages(property: Record<string, unknown>) {
-    const references: string[] = []
-
-    propertyImageFields.forEach((field) => {
-      collectPropertyImageReferences(property[field], references, field)
-    })
-
-    return Array.from(new Set(references)).filter((reference) => {
+    return getNormalizedPropertyPhotos(property).filter((reference) => {
       return /^(https?:|data:image\/)/i.test(reference)
     })
   }
