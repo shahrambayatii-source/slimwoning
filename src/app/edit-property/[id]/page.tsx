@@ -14,7 +14,7 @@ export default function EditPropertyPage() {
   const [price, setPrice] = useState('')
   const [city, setCity] = useState('')
   const [description, setDescription] = useState('')
-  const [image, setImage] = useState('')
+  const [images, setImages] = useState<string[]>([])
 
   const [slaapkamers, setSlaapkamers] = useState('')
   const [badkamers, setBadkamers] = useState('')
@@ -40,50 +40,7 @@ export default function EditPropertyPage() {
   const textareaClass =
     'min-h-32 w-full rounded-2xl border border-gray-200 bg-[#f8fafc] p-5 text-[15px] text-[#111827] outline-none transition placeholder:text-gray-400 focus:border-blue-600'
 
-  useEffect(() => {
-    getProperty()
-  }, [])
-
-  async function getProperty() {
-    const { data, error } = await supabase
-      .from('properties')
-      .select('*')
-      .eq('id', params.id)
-      .single()
-
-    if (error) {
-      alert(error.message)
-      console.log(error)
-      return
-    }
-
-    setTitle(data.title || '')
-    setPrice(data.price || '')
-    setCity(data.city || '')
-    setDescription(data.description || '')
-    setImage(data.image || '')
-
-    setSlaapkamers(data.slaapkamers || '')
-    setBadkamers(data.badkamers || '')
-    setBewoonbareOppervlakte(data.bewoonbare_oppervlakte || '')
-    setGrondoppervlakte(data.grondoppervlakte || '')
-    setBouwjaar(data.bouwjaar || '')
-    setEpc(data.epc || '')
-    setWoningType(cleanWoningType(data.woning_type))
-    setVerwarmingstype(data.verwarmingstype || '')
-    setPluspunten(data.pluspunten || '')
-    setMinpunten(data.minpunten || '')
-    setWoningkenmerken(Array.isArray(data.woningkenmerken) ? data.woningkenmerken : [])
-
-    setParking(Boolean(data.parking))
-    setTuin(Boolean(data.tuin))
-    setTerras(Boolean(data.terras))
-    setLift(Boolean(data.lift))
-    setGemeubeld(Boolean(data.gemeubeld))
-    setDubbelGlas(Boolean(data.dubbel_glas))
-  }
-
-  function cleanWoningType(value: any) {
+  function cleanWoningType(value: unknown) {
     const text = String(value || '').trim()
 
     if (!text) return ''
@@ -96,29 +53,137 @@ export default function EditPropertyPage() {
     return value.replace(/[^\d]/g, '')
   }
 
+  function getPropertyImages(property: Record<string, unknown>) {
+    const imageSources = [
+      ...(Array.isArray(property.images) ? property.images : []),
+      ...(Array.isArray(property.photos) ? property.photos : []),
+      property.image,
+      property.photo,
+    ]
+
+    return Array.from(
+      new Set(
+        imageSources
+          .map((source) => String(source || '').trim())
+          .filter(Boolean)
+      )
+    )
+  }
+
+  function isAcceptedImage(file: File) {
+    const acceptedTypes = ['image/jpeg', 'image/png', 'image/webp']
+    const acceptedExtensions = ['jpg', 'jpeg', 'png', 'webp']
+    const extension = file.name.split('.').pop()?.toLowerCase() || ''
+
+    return acceptedTypes.includes(file.type) || acceptedExtensions.includes(extension)
+  }
+
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
+    const files = Array.from(e.target.files || [])
 
-    if (!file) return
+    if (files.length === 0) return
 
-    const fileName = `${Date.now()}-${file.name}`
+    const validFiles = files.filter(isAcceptedImage)
 
-    const { error } = await supabase.storage
-      .from('properties')
-      .upload(fileName, file)
+    if (validFiles.length !== files.length) {
+      alert('Je kunt alleen jpg, jpeg, png of webp foto’s uploaden.')
+    }
 
-    if (error) {
-      alert(`Upload fout: ${error.message}`)
-      console.log(error)
+    if (validFiles.length === 0) {
+      e.target.value = ''
       return
     }
 
-    const { data } = supabase.storage
-      .from('properties')
-      .getPublicUrl(fileName)
+    const uploadedImages: string[] = []
 
-    setImage(data.publicUrl)
+    for (const file of validFiles) {
+      const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '-')
+      const fileName = `${Date.now()}-${crypto.randomUUID()}-${safeFileName}`
+
+      const { error } = await supabase.storage
+        .from('properties')
+        .upload(fileName, file)
+
+      if (error) {
+        alert(`Upload fout: ${error.message}`)
+        console.log(error)
+        continue
+      }
+
+      const { data } = supabase.storage
+        .from('properties')
+        .getPublicUrl(fileName)
+
+      uploadedImages.push(data.publicUrl)
+    }
+
+    if (uploadedImages.length > 0) {
+      setImages((current) => {
+        return Array.from(new Set([...current, ...uploadedImages]))
+      })
+    }
+
+    e.target.value = ''
   }
+
+  function handleRemoveImage(imageToRemove: string) {
+    setImages((current) => {
+      return current.filter((currentImage) => currentImage !== imageToRemove)
+    })
+  }
+
+  useEffect(() => {
+    let isMounted = true
+
+    async function loadProperty() {
+      const { data, error } = await supabase
+        .from('properties')
+        .select('*')
+        .eq('id', params.id)
+        .single()
+
+      if (error) {
+        alert(error.message)
+        console.log(error)
+        return
+      }
+
+      if (!isMounted) return
+
+      setTitle(data.title || '')
+      setPrice(data.price || '')
+      setCity(data.city || '')
+      setDescription(data.description || '')
+
+      const existingImages = getPropertyImages(data)
+      setImages(existingImages)
+
+      setSlaapkamers(data.slaapkamers || '')
+      setBadkamers(data.badkamers || '')
+      setBewoonbareOppervlakte(data.bewoonbare_oppervlakte || '')
+      setGrondoppervlakte(data.grondoppervlakte || '')
+      setBouwjaar(data.bouwjaar || '')
+      setEpc(data.epc || '')
+      setWoningType(cleanWoningType(data.woning_type))
+      setVerwarmingstype(data.verwarmingstype || '')
+      setPluspunten(data.pluspunten || '')
+      setMinpunten(data.minpunten || '')
+      setWoningkenmerken(Array.isArray(data.woningkenmerken) ? data.woningkenmerken : [])
+
+      setParking(Boolean(data.parking))
+      setTuin(Boolean(data.tuin))
+      setTerras(Boolean(data.terras))
+      setLift(Boolean(data.lift))
+      setGemeubeld(Boolean(data.gemeubeld))
+      setDubbelGlas(Boolean(data.dubbel_glas))
+    }
+
+    loadProperty()
+
+    return () => {
+      isMounted = false
+    }
+  }, [params.id])
 
   async function handleUpdateProperty() {
     if (!title.trim()) {
@@ -141,6 +206,9 @@ export default function EditPropertyPage() {
       return
     }
 
+    const nextImages = images.filter(Boolean)
+    const mainImage = nextImages[0] || ''
+
     const { error } = await supabase
       .from('properties')
       .update({
@@ -148,7 +216,8 @@ export default function EditPropertyPage() {
         price: onlyNumbers(price),
         city: city.trim(),
         description: description.trim(),
-        image,
+        image: mainImage,
+        images: nextImages,
         slaapkamers: onlyNumbers(slaapkamers),
         badkamers: onlyNumbers(badkamers),
         bewoonbare_oppervlakte: onlyNumbers(bewoonbareOppervlakte),
@@ -369,19 +438,45 @@ export default function EditPropertyPage() {
           </div>
         </FormSection>
 
-        <FormSection title="Foto">
+        <FormSection title="Foto's">
           <input
             type="file"
+            multiple
+            accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
             onChange={handleImageUpload}
             className="w-full rounded-2xl border border-gray-200 bg-[#f8fafc] p-4 text-[#111827]"
           />
 
-          {image && (
-            <img
-              src={image}
-              alt=""
-              className="mt-5 h-80 w-full rounded-[2rem] object-cover"
-            />
+          {images.length > 0 && (
+            <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {images.map((photo, index) => (
+                <div
+                  key={photo}
+                  className="group relative overflow-hidden rounded-[2rem] bg-[#f8fafc] shadow-sm"
+                >
+                  <img
+                    src={photo}
+                    alt={`Woningfoto ${index + 1}`}
+                    className="h-56 w-full object-cover"
+                  />
+
+                  {index === 0 && (
+                    <span className="absolute left-3 top-3 rounded-full bg-blue-700 px-3 py-1 text-xs font-bold text-white shadow-sm">
+                      Hoofdfoto
+                    </span>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveImage(photo)}
+                    className="absolute right-3 top-3 rounded-full bg-white/95 px-3 py-1 text-sm font-bold text-[#111827] shadow-sm transition hover:bg-red-600 hover:text-white"
+                    aria-label={`Verwijder woningfoto ${index + 1}`}
+                  >
+                    Verwijder
+                  </button>
+                </div>
+              ))}
+            </div>
           )}
         </FormSection>
 
