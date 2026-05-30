@@ -688,6 +688,7 @@ type ComparableProperty = {
   title?: string | null
   address?: string | null
   city?: string | null
+  postcode?: string | number | null
   price?: string | number | null
   slaapkamers?: string | number | null
   bedrooms?: string | number | null
@@ -772,75 +773,124 @@ function ComparablePropertyCard({
   const area = getPropertyArea(property)
   const epcLabel = String(property.epc || property.epc_code || '').trim()
   const aiScore = getAvailableAiScore(property)
+  const location = formatComparableLocation(property)
 
   return (
     <Link
       href={`/properties/${property.id}`}
-      className="group flex overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md"
+      className="group flex min-h-[175px] w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md"
     >
-      <div className="relative h-32 w-36 shrink-0 overflow-hidden bg-gradient-to-br from-slate-200 via-slate-300 to-slate-400 sm:w-44">
+      <div className="relative h-auto w-[42%] max-w-[250px] shrink-0 overflow-hidden bg-gradient-to-br from-slate-200 via-slate-300 to-slate-400 sm:w-[250px]">
         {photo ? (
-          <img
-            src={photo}
-            alt={property.title || 'Vergelijkbare woning'}
-            className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-          />
+          <>
+            <img
+              src={photo}
+              alt={property.title || 'Vergelijkbare woning'}
+              className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-transparent" />
+          </>
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-4xl text-white/80">
-            ⌂
+          <div className="relative flex h-full min-h-[175px] w-full items-center justify-center overflow-hidden bg-gradient-to-br from-slate-200 via-slate-300 to-slate-400">
+            <svg
+              viewBox="0 0 64 64"
+              aria-hidden="true"
+              className="h-20 w-20 text-white/80"
+              fill="none"
+            >
+              <path
+                d="M12 30L32 14L52 30"
+                stroke="currentColor"
+                strokeWidth="4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M18 29V52H46V29"
+                stroke="currentColor"
+                strokeWidth="4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M27 52V39H37V52"
+                stroke="currentColor"
+                strokeWidth="4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <div className="absolute inset-0 bg-black/10" />
           </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-col justify-between p-3 sm:p-4">
-        <div className="min-w-0">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <h3 className="truncate text-base font-black text-[#071B4D]">
-                {property.title || 'Woning zonder titel'}
-              </h3>
-              <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">
-                {property.address
-                  ? `${property.address}, ${property.city || ''}`
-                  : property.city || 'Locatie niet opgegeven'}
-              </p>
-            </div>
+      <div className="flex min-w-0 flex-1 items-stretch">
+        <div className="flex min-w-0 flex-1 flex-col justify-center px-4 py-3.5">
+          <h3 className="truncate text-base font-black text-[#071B4D]">
+            {property.title || 'Woning zonder titel'}
+          </h3>
 
-            {aiScore !== null && (
-              <div className="shrink-0 rounded-2xl border border-blue-100 bg-blue-50 px-2.5 py-1.5 text-center">
-                <p className="text-[9px] font-black uppercase tracking-wide text-blue-700">AI</p>
-                <p className="text-sm font-black leading-none text-[#071B4D]">{aiScore}</p>
-              </div>
-            )}
-          </div>
-
-          <p className="mt-1 text-lg font-black leading-tight text-blue-700">
+          <p className="mt-0.5 text-lg font-black leading-tight text-blue-700">
             {formatPrice(property.price)}
           </p>
-        </div>
 
-        <div className="mt-3 flex flex-wrap items-center gap-1.5">
-          <CompactBadge text={`${bedrooms || '-'} slp.`} />
-          <CompactBadge text={`${bathrooms || '-'} badk.`} />
-          <CompactBadge text={`${area || '-'} m²`} />
-          {epcLabel && (
+          <p className="mt-1 truncate text-xs font-semibold text-slate-500">
+            {location}
+          </p>
+
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            <CompactBadge text={`${bedrooms || '-'} slp.`} />
+            <CompactBadge text={`${bathrooms || '-'} badk.`} />
+            <CompactBadge text={`${area || '-'} m²`} />
             <span className="inline-flex h-6 overflow-hidden rounded-md shadow-sm">
               <span className="flex items-center bg-[#1F3B57] px-2 text-[9px] font-black text-white">
                 EPC
               </span>
               <span
                 className="flex min-w-[30px] items-center justify-center px-2 text-[9px] font-black text-white"
-                style={{ backgroundColor: getEpcColor(epcLabel) }}
+                style={{ backgroundColor: epcLabel ? getEpcColor(epcLabel) : '#64748b' }}
               >
-                {epcLabel}
+                {epcLabel || '-'}
               </span>
             </span>
-          )}
+            {aiScore !== null && (
+              <span className="inline-flex h-6 items-center rounded-full bg-blue-50 px-2.5 text-[10px] font-black text-blue-700 sm:hidden">
+                AI-score {aiScore}
+              </span>
+            )}
+          </div>
         </div>
+
+        {aiScore !== null && (
+          <div className="hidden w-[96px] shrink-0 items-center justify-center border-l border-slate-200 px-1.5 sm:flex">
+            <div className="flex w-[76px] flex-col items-center rounded-2xl border border-blue-100 bg-white px-2 py-2 text-center shadow-sm">
+              <div className="grid h-11 w-11 place-items-center rounded-full border-2 border-blue-500 text-lg font-black text-blue-700">
+                {aiScore}
+              </div>
+              <p className="mt-1 text-[11px] font-bold text-slate-700">
+                AI-score
+              </p>
+              <p className="rounded-full bg-blue-50 px-1.5 text-[10px] font-bold text-blue-700">
+                Match
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </Link>
   )
+}
+
+function formatComparableLocation(property: ComparableProperty) {
+  const address = String(property.address || '').trim()
+  const postcode = String(property.postcode || '').trim()
+  const city = String(property.city || '').trim()
+  const cityLine = [postcode, city].filter(Boolean).join(' ')
+
+  if (address && cityLine) return `${address}, ${cityLine}`
+
+  return address || cityLine || 'Locatie niet opgegeven'
 }
 
 function CompactBadge({ text }: { text: string }) {
