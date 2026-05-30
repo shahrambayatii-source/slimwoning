@@ -15,6 +15,7 @@ export default function EditPropertyPage() {
   const [city, setCity] = useState('')
   const [description, setDescription] = useState('')
   const [images, setImages] = useState<string[]>([])
+  const [currentStep, setCurrentStep] = useState(0)
 
   const [slaapkamers, setSlaapkamers] = useState('')
   const [badkamers, setBadkamers] = useState('')
@@ -65,6 +66,36 @@ export default function EditPropertyPage() {
       { value: 'Grond', label: 'Grond' },
       { value: 'Opbrengsteigendom', label: 'Opbrengsteigendom' },
       { value: 'Appartementsblok', label: 'Appartementsblok' },
+    ],
+    []
+  )
+
+  const wizardSteps = useMemo(
+    () => [
+      {
+        title: 'Basisinformatie',
+        helperText: 'Start met de belangrijkste gegevens waarmee bezoekers je woning meteen herkennen.',
+      },
+      {
+        title: 'Woningdetails',
+        helperText: 'Vul de praktische specificaties aan zodat de advertentie volledig en duidelijk is.',
+      },
+      {
+        title: 'Kenmerken',
+        helperText: 'Selecteer de troeven die het karakter van deze woning het beste beschrijven.',
+      },
+      {
+        title: 'Voorzieningen',
+        helperText: 'Duid aan welke extra voorzieningen beschikbaar zijn voor toekomstige bewoners.',
+      },
+      {
+        title: 'Beoordeling',
+        helperText: 'Voeg een eerlijke samenvatting toe van de sterke punten en aandachtspunten.',
+      },
+      {
+        title: 'Foto’s',
+        helperText: 'Beheer de fotogalerij. De eerste foto wordt automatisch gebruikt als hoofdfoto.',
+      },
     ],
     []
   )
@@ -231,6 +262,37 @@ export default function EditPropertyPage() {
     }
   }, [params.id])
 
+  function validateCurrentStep() {
+    if (currentStep !== 0) return true
+
+    if (!toTrimmedString(title)) {
+      alert('Titel is verplicht')
+      return false
+    }
+
+    if (!toTrimmedString(price)) {
+      alert('Prijs is verplicht')
+      return false
+    }
+
+    if (!toTrimmedString(city)) {
+      alert('Stad is verplicht')
+      return false
+    }
+
+    return true
+  }
+
+  function goToPreviousStep() {
+    setCurrentStep((step) => Math.max(step - 1, 0))
+  }
+
+  function goToNextStep() {
+    if (!validateCurrentStep()) return
+
+    setCurrentStep((step) => Math.min(step + 1, wizardSteps.length - 1))
+  }
+
   async function handleUpdateProperty() {
     const titleValue = toTrimmedString(title)
     const priceValue = toTrimmedString(price)
@@ -308,6 +370,10 @@ export default function EditPropertyPage() {
     router.push(`/properties/${params.id}`)
   }
 
+  const activeStep = wizardSteps[currentStep]
+  const isFirstStep = currentStep === 0
+  const isLastStep = currentStep === wizardSteps.length - 1
+
   return (
     <div className="min-h-screen bg-[#f6f8fb] px-5 py-8 text-[#111827] md:px-10">
       <div className="mx-auto flex max-w-5xl flex-col gap-6">
@@ -322,210 +388,280 @@ export default function EditPropertyPage() {
             </h1>
 
             <p className="mt-3 text-gray-600">
-              Pas de woninggegevens aan. Stad, prijs en type woning worden nu gecontroleerd.
+              Werk stap voor stap door de advertentie. Je wijzigingen worden pas opgeslagen op de laatste stap.
             </p>
           </div>
 
           <Link
             href={`/properties/${params.id}`}
-            className="w-fit rounded-2xl bg-white px-5 py-3 font-bold text-[#111827] shadow-sm"
+            className="w-fit rounded-2xl bg-white px-5 py-3 font-bold text-[#111827] shadow-sm transition hover:bg-blue-50"
           >
             Terug naar woning
           </Link>
         </div>
 
-        <FormSection title="Basisinformatie">
-          <div className="grid grid-cols-1 gap-4">
-            <input
-              className={inputClass}
-              placeholder="Titel"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
+        <div className="rounded-[2rem] bg-white p-4 shadow-sm md:p-5">
+          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm font-bold uppercase tracking-[0.2em] text-blue-700">
+              Stap {currentStep + 1} van {wizardSteps.length}
+            </p>
+            <p className="text-sm font-semibold text-gray-500">
+              {activeStep.title}
+            </p>
+          </div>
 
-            <input
-              className={inputClass}
-              placeholder="Prijs"
-              inputMode="numeric"
-              value={price}
-              onChange={(e) => setPrice(onlyNumbers(e.target.value))}
-            />
-
-            <input
-              className={inputClass}
-              placeholder="Stad"
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-            />
-
-            <textarea
-              className={textareaClass}
-              placeholder="Beschrijving"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+          <div className="h-2 overflow-hidden rounded-full bg-blue-50">
+            <div
+              className="h-full rounded-full bg-blue-700 transition-all duration-300"
+              style={{ width: `${((currentStep + 1) / wizardSteps.length) * 100}%` }}
             />
           </div>
-        </FormSection>
 
-        <FormSection title="Woningdetails">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <input
-              className={inputClass}
-              placeholder="Aantal slaapkamers"
-              inputMode="numeric"
-              value={slaapkamers}
-              onChange={(e) => setSlaapkamers(onlyNumbers(e.target.value))}
-            />
-
-            <input
-              className={inputClass}
-              placeholder="Aantal badkamers"
-              inputMode="numeric"
-              value={badkamers}
-              onChange={(e) => setBadkamers(onlyNumbers(e.target.value))}
-            />
-
-            <input
-              className={inputClass}
-              placeholder="Bewoonbare oppervlakte (m²)"
-              inputMode="numeric"
-              value={bewoonbareOppervlakte}
-              onChange={(e) => setBewoonbareOppervlakte(onlyNumbers(e.target.value))}
-            />
-
-            <input
-              className={inputClass}
-              placeholder="Grondoppervlakte (m²)"
-              inputMode="numeric"
-              value={grondoppervlakte}
-              onChange={(e) => setGrondoppervlakte(onlyNumbers(e.target.value))}
-            />
-
-            <input
-              className={inputClass}
-              placeholder="Bouwjaar"
-              inputMode="numeric"
-              maxLength={4}
-              value={bouwjaar}
-              onChange={(e) => setBouwjaar(onlyNumbers(e.target.value).slice(0, 4))}
-            />
-
-            <SlimSelect
-              label="EPC-score"
-              value={epc}
-              options={epcOptions}
-              onChange={setEpc}
-            />
-
-            <SlimSelect
-              label="Type woning"
-              value={woningType}
-              options={woningTypeOptions}
-              onChange={setWoningType}
-            />
-
-            <SlimSelect
-              label="Verwarmingstype"
-              value={verwarmingstype}
-              options={verwarmingstypeOptions}
-              onChange={setVerwarmingstype}
-            />
-          </div>
-        </FormSection>
-
-        <FormSection title="Woningkenmerken">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {WONINGKENMERKEN_OPTIONS.map((kenmerk) => (
-              <CheckBox
-                key={kenmerk}
-                label={kenmerk}
-                checked={woningkenmerken.includes(kenmerk)}
-                onChange={() => setWoningkenmerken((current) => toggleWoningkenmerk(current, kenmerk))}
-              />
+          <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-6">
+            {wizardSteps.map((step, index) => (
+              <button
+                key={step.title}
+                type="button"
+                onClick={() => setCurrentStep(index)}
+                disabled={index > currentStep}
+                className={`rounded-2xl px-3 py-2 text-left text-xs font-bold transition ${
+                  index === currentStep
+                    ? 'bg-blue-700 text-white shadow-sm'
+                    : index < currentStep
+                      ? 'bg-blue-50 text-blue-800 hover:bg-blue-100'
+                      : 'cursor-not-allowed bg-[#f8fafc] text-gray-400'
+                }`}
+                aria-current={index === currentStep ? 'step' : undefined}
+              >
+                {index + 1}. {step.title}
+              </button>
             ))}
           </div>
-        </FormSection>
+        </div>
 
-        <FormSection title="Voorzieningen">
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-            <CheckBox label="Parking" checked={parking} onChange={setParking} />
-            <CheckBox label="Tuin" checked={tuin} onChange={setTuin} />
-            <CheckBox label="Terras" checked={terras} onChange={setTerras} />
-            <CheckBox label="Lift" checked={lift} onChange={setLift} />
-            <CheckBox label="Gemeubeld" checked={gemeubeld} onChange={setGemeubeld} />
-            <CheckBox label="Dubbel glas" checked={dubbelGlas} onChange={setDubbelGlas} />
-          </div>
-        </FormSection>
+        <WizardCard title={activeStep.title} helperText={activeStep.helperText}>
+          {currentStep === 0 && (
+            <div className="grid grid-cols-1 gap-4">
+              <input
+                className={inputClass}
+                placeholder="Titel *"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
 
-        <FormSection title="Beoordeling">
-          <div className="grid grid-cols-1 gap-4">
-            <textarea
-              className={textareaClass}
-              placeholder="Pluspunten van de woning"
-              value={pluspunten}
-              onChange={(e) => setPluspunten(e.target.value)}
-            />
+              <input
+                className={inputClass}
+                placeholder="Prijs *"
+                inputMode="numeric"
+                value={price}
+                onChange={(e) => setPrice(onlyNumbers(e.target.value))}
+              />
 
-            <textarea
-              className={textareaClass}
-              placeholder="Minpunten van de woning"
-              value={minpunten}
-              onChange={(e) => setMinpunten(e.target.value)}
-            />
-          </div>
-        </FormSection>
+              <input
+                className={inputClass}
+                placeholder="Stad *"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+              />
 
-        <FormSection title="Foto's">
-          <input
-            type="file"
-            multiple
-            accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
-            onChange={handleImageUpload}
-            className="w-full rounded-2xl border border-gray-200 bg-[#f8fafc] p-4 font-sans text-[15px] text-[#111827] transition file:mr-4 file:rounded-xl file:border-0 file:bg-blue-700 file:px-4 file:py-2 file:font-bold file:text-white hover:border-blue-200 hover:bg-white focus:border-blue-600 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-100"
-          />
+              <textarea
+                className={textareaClass}
+                placeholder="Beschrijving"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
+            </div>
+          )}
 
-          {images.length > 0 && (
-            <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {images.map((photo, index) => (
-                <div
-                  key={photo}
-                  className="group relative overflow-hidden rounded-[2rem] bg-[#f8fafc] shadow-sm"
-                >
-                  <img
-                    src={photo}
-                    alt={`Woningfoto ${index + 1}`}
-                    className="h-56 w-full object-cover"
-                  />
+          {currentStep === 1 && (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <input
+                className={inputClass}
+                placeholder="Aantal slaapkamers"
+                inputMode="numeric"
+                value={slaapkamers}
+                onChange={(e) => setSlaapkamers(onlyNumbers(e.target.value))}
+              />
 
-                  {index === 0 && (
-                    <span className="absolute left-3 top-3 rounded-full bg-blue-700 px-3 py-1 text-xs font-bold text-white shadow-sm">
-                      Hoofdfoto
-                    </span>
-                  )}
+              <input
+                className={inputClass}
+                placeholder="Aantal badkamers"
+                inputMode="numeric"
+                value={badkamers}
+                onChange={(e) => setBadkamers(onlyNumbers(e.target.value))}
+              />
 
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveImage(photo)}
-                    className="absolute right-3 top-3 rounded-full bg-white/95 px-3 py-1 text-sm font-bold text-[#111827] shadow-sm transition hover:bg-red-600 hover:text-white"
-                    aria-label={`Verwijder woningfoto ${index + 1}`}
-                  >
-                    Verwijder
-                  </button>
-                </div>
+              <input
+                className={inputClass}
+                placeholder="Bewoonbare oppervlakte (m²)"
+                inputMode="numeric"
+                value={bewoonbareOppervlakte}
+                onChange={(e) => setBewoonbareOppervlakte(onlyNumbers(e.target.value))}
+              />
+
+              <input
+                className={inputClass}
+                placeholder="Grondoppervlakte (m²)"
+                inputMode="numeric"
+                value={grondoppervlakte}
+                onChange={(e) => setGrondoppervlakte(onlyNumbers(e.target.value))}
+              />
+
+              <input
+                className={inputClass}
+                placeholder="Bouwjaar"
+                inputMode="numeric"
+                maxLength={4}
+                value={bouwjaar}
+                onChange={(e) => setBouwjaar(onlyNumbers(e.target.value).slice(0, 4))}
+              />
+
+              <SlimSelect
+                label="EPC-score"
+                value={epc}
+                options={epcOptions}
+                onChange={setEpc}
+              />
+
+              <SlimSelect
+                label="Type woning"
+                value={woningType}
+                options={woningTypeOptions}
+                onChange={setWoningType}
+              />
+
+              <SlimSelect
+                label="Verwarmingstype"
+                value={verwarmingstype}
+                options={verwarmingstypeOptions}
+                onChange={setVerwarmingstype}
+              />
+            </div>
+          )}
+
+          {currentStep === 2 && (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {WONINGKENMERKEN_OPTIONS.map((kenmerk) => (
+                <CheckBox
+                  key={kenmerk}
+                  label={kenmerk}
+                  checked={woningkenmerken.includes(kenmerk)}
+                  onChange={() => setWoningkenmerken((current) => toggleWoningkenmerk(current, kenmerk))}
+                />
               ))}
             </div>
           )}
-        </FormSection>
 
-        <button
-          onClick={handleUpdateProperty}
-          className="rounded-2xl bg-blue-700 p-5 text-lg font-bold text-white transition hover:bg-blue-800"
-        >
-          Wijzigingen opslaan
-        </button>
+          {currentStep === 3 && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
+              <CheckBox label="Parking" checked={parking} onChange={setParking} />
+              <CheckBox label="Tuin" checked={tuin} onChange={setTuin} />
+              <CheckBox label="Terras" checked={terras} onChange={setTerras} />
+              <CheckBox label="Lift" checked={lift} onChange={setLift} />
+              <CheckBox label="Gemeubeld" checked={gemeubeld} onChange={setGemeubeld} />
+              <CheckBox label="Dubbel glas" checked={dubbelGlas} onChange={setDubbelGlas} />
+            </div>
+          )}
+
+          {currentStep === 4 && (
+            <div className="grid grid-cols-1 gap-4">
+              <textarea
+                className={textareaClass}
+                placeholder="Pluspunten van de woning"
+                value={pluspunten}
+                onChange={(e) => setPluspunten(e.target.value)}
+              />
+
+              <textarea
+                className={textareaClass}
+                placeholder="Minpunten van de woning"
+                value={minpunten}
+                onChange={(e) => setMinpunten(e.target.value)}
+              />
+            </div>
+          )}
+
+          {currentStep === 5 && (
+            <div>
+              <input
+                type="file"
+                multiple
+                accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+                onChange={handleImageUpload}
+                className="w-full rounded-2xl border border-gray-200 bg-[#f8fafc] p-4 font-sans text-[15px] text-[#111827] transition file:mr-4 file:rounded-xl file:border-0 file:bg-blue-700 file:px-4 file:py-2 file:font-bold file:text-white hover:border-blue-200 hover:bg-white focus:border-blue-600 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-100"
+              />
+
+              {images.length > 0 ? (
+                <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {images.map((photo, index) => (
+                    <div
+                      key={photo}
+                      className="group relative overflow-hidden rounded-[2rem] bg-[#f8fafc] shadow-sm"
+                    >
+                      <img
+                        src={photo}
+                        alt={`Woningfoto ${index + 1}`}
+                        className="h-56 w-full object-cover"
+                      />
+
+                      {index === 0 && (
+                        <span className="absolute left-3 top-3 rounded-full bg-blue-700 px-3 py-1 text-xs font-bold text-white shadow-sm">
+                          Hoofdfoto
+                        </span>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveImage(photo)}
+                        className="absolute right-3 top-3 rounded-full bg-white/95 px-3 py-1 text-sm font-bold text-[#111827] shadow-sm transition hover:bg-red-600 hover:text-white"
+                        aria-label={`Verwijder woningfoto ${index + 1}`}
+                      >
+                        Verwijder
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-4 rounded-2xl bg-[#f8fafc] p-4 text-sm font-semibold text-gray-500">
+                  Er zijn nog geen foto’s toegevoegd aan deze woning.
+                </p>
+              )}
+            </div>
+          )}
+        </WizardCard>
+
+        <div className="flex flex-col gap-3 rounded-[2rem] bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+          <button
+            type="button"
+            onClick={goToPreviousStep}
+            disabled={isFirstStep}
+            className="rounded-2xl border border-gray-200 px-5 py-4 font-bold text-[#111827] transition hover:border-blue-200 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Vorige
+          </button>
+
+          {isLastStep ? (
+            <button
+              type="button"
+              onClick={handleUpdateProperty}
+              className="rounded-2xl bg-blue-700 px-5 py-4 text-lg font-bold text-white transition hover:bg-blue-800"
+            >
+              Wijzigingen opslaan
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={goToNextStep}
+              className="rounded-2xl bg-blue-700 px-5 py-4 text-lg font-bold text-white transition hover:bg-blue-800"
+            >
+              Volgende
+            </button>
+          )}
+        </div>
       </div>
     </div>
   )
+
 }
 
 
@@ -655,16 +791,21 @@ function SlimSelect({
   )
 }
 
-function FormSection({
+function WizardCard({
   title,
+  helperText,
   children,
 }: {
   title: string
+  helperText: string
   children: React.ReactNode
 }) {
   return (
-    <section className="rounded-[2rem] bg-white p-6 shadow-lg md:p-7">
-      <h2 className="mb-5 text-2xl font-bold">{title}</h2>
+    <section className="rounded-[2rem] bg-white p-6 shadow-lg md:p-8">
+      <div className="mb-6">
+        <h2 className="text-3xl font-bold md:text-4xl">{title}</h2>
+        <p className="mt-3 max-w-2xl text-base leading-7 text-gray-600">{helperText}</p>
+      </div>
       {children}
     </section>
   )
