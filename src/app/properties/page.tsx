@@ -960,6 +960,12 @@ function PropertiesContent() {
           bedrooms:
             property.slaapkamers || property.bedrooms || property.bedroom_count || '',
           bathrooms: property.badkamers || property.bathrooms || '',
+          propertyType:
+            property.woning_type ||
+            property.property_type ||
+            property.type ||
+            property.propertyType ||
+            '',
           heating:
             property.heating ||
             property.verwarming ||
@@ -2167,44 +2173,33 @@ function PropertiesContent() {
             renovatiePhotoCount,
             renovatiePhotoAnalysis,
           )
-          const analyzedPhotoCount = renovatieScan.fotoDekking.aantalFotos
-          const photoLabel = `${analyzedPhotoCount} ${analyzedPhotoCount === 1 ? 'foto' : 'foto’s'} geanalyseerd`
-          const simpleConfidence = renovatieScan.betrouwbaarheid === 'Beperkt' ? 'Laag' : renovatieScan.betrouwbaarheid
-          const isLowConfidence = simpleConfidence === 'Laag' || analyzedPhotoCount <= 1
-          const primaryRoom = renovatieScan.kamersGezien[0]?.toLowerCase() || 'ruimte'
-          const simpleStatus = (() => {
+          const statusView = (() => {
             if (renovatieScan.renovatieniveau === 'Modern afgewerkt') {
               return {
-                label: '🟢 Modern',
+                label: '🟢 Modern afgewerkt',
                 tone: 'border-emerald-100 bg-emerald-50 text-emerald-700',
-                explanation: `Moderne ${primaryRoom} met kwalitatieve afwerking zichtbaar.`,
               }
             }
 
-            if (
-              renovatieScan.renovatieniveau === 'Zichtbaar verouderd' ||
-              renovatieScan.renovatieniveau === 'Onvoldoende zichtbaar'
-            ) {
+            if (renovatieScan.renovatieniveau === 'Renovatie nodig') {
               return {
                 label: '🔴 Renovatie nodig',
                 tone: 'border-red-100 bg-red-50 text-red-700',
-                explanation: renovatieScan.renovatieniveau === 'Onvoldoende zichtbaar'
-                  ? 'Er zijn onvoldoende duidelijke foto’s om de afwerking goed te beoordelen.'
-                  : `Verouderde afwerking is zichtbaar in de ${primaryRoom}.`,
               }
             }
 
             return {
               label: '🟡 Gemiddeld',
               tone: 'border-amber-100 bg-amber-50 text-amber-700',
-              explanation: `Verzorgde afwerking zichtbaar, maar niet overal duidelijk modern.`,
             }
           })()
-          const confidenceText = `${simpleConfidence} (${photoLabel})`
-          const confidenceHelpText = isLowConfidence
-            ? 'Upload meer foto’s van belangrijke ruimtes voor een betrouwbaardere analyse.'
-            : 'De analyse is gebaseerd op meerdere zichtbare foto’s.'
-          const recommendedPhotoTypes = ['keuken', 'woonkamer', 'gevel']
+          const whatWeSee = renovatieScan.watWeZien.slice(0, 6)
+          const attentionPoints = renovatieScan.aandachtspunten.slice(0, 5)
+          const basedOnChips = renovatieScan.gebaseerdOp.slice(0, 6)
+          const showExtraPhotoSuggestions =
+            renovatieScan.extraFotoSuggesties.length > 0 &&
+            (renovatieScan.betrouwbaarheid === 'Beperkt' || renovatieScan.fotoDekking.zichtbareRuimtes < 4)
+
 
     return (
                 <div className="bg-[#F6F8FC] p-4 sm:p-6">
@@ -2215,57 +2210,96 @@ function PropertiesContent() {
                           Renovatiestatus
                         </p>
                         <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
-                          <span className={`inline-flex w-fit rounded-full border px-4 py-2 text-base font-black ${simpleStatus.tone}`}>
-                            {isRenovatiePhotoLoading ? 'Foto’s worden geanalyseerd...' : simpleStatus.label}
+                          <span className={`inline-flex w-fit rounded-full border px-4 py-2 text-base font-black ${statusView.tone}`}>
+                            {isRenovatiePhotoLoading ? 'Foto’s worden geanalyseerd...' : statusView.label}
                           </span>
                         </div>
                         {renovatiePhotoError ? (
                           <p className="mt-3 text-sm font-semibold leading-6 text-red-700">
-                            {renovatiePhotoError} Upload meer duidelijke foto’s om de renovatiestatus te verbeteren.
+                            {renovatiePhotoError} De renovatie-inschatting blijft voorlopig beperkt.
                           </p>
                         ) : (
                           <p className="mt-3 text-sm font-semibold leading-6 text-[#64748B]">
                             {isRenovatiePhotoLoading
-                              ? 'We bekijken de zichtbare afwerking op de beschikbare foto’s.'
-                              : simpleStatus.explanation}
+                              ? 'We combineren zichtbare foto-evidence met EPC, oppervlakte, type woning en kamerindeling.'
+                              : renovatieScan.korteToelichting}
                           </p>
                         )}
                       </section>
 
-                      <section className="rounded-3xl border border-blue-50 bg-white p-5 shadow-sm">
-                        <p className="text-xs font-black uppercase tracking-wide text-[#64748B]">
-                          Betrouwbaarheid
-                        </p>
-                        <p className="mt-3 text-xl font-black text-[#071B4D]">
-                          {isRenovatiePhotoLoading ? 'Bezig...' : confidenceText}
-                        </p>
-                        <p className="mt-2 text-sm font-semibold leading-6 text-[#64748B]">
-                          {confidenceHelpText}
-                        </p>
-                      </section>
+                      <div className="grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
+                        <section className="rounded-3xl border border-blue-50 bg-white p-5 shadow-sm">
+                          <p className="text-xs font-black uppercase tracking-wide text-[#64748B]">
+                            Betrouwbaarheid
+                          </p>
+                          <p className="mt-3 text-xl font-black text-[#071B4D]">
+                            {isRenovatiePhotoLoading ? 'Bezig...' : renovatieScan.betrouwbaarheidToelichting}
+                          </p>
+                          <p className="mt-2 text-sm font-semibold leading-6 text-[#64748B]">
+                            Foto’s blijven de primaire bron; EPC en woningkenmerken bepalen vooral context en mogelijke renovatie-impact.
+                          </p>
+                        </section>
 
-                      <section className="rounded-3xl border border-blue-50 bg-white p-5 shadow-sm">
-                        <p className="text-xs font-black uppercase tracking-wide text-[#64748B]">
-                          Verbeter analyse
-                        </p>
-                        <p className="mt-3 text-sm font-semibold leading-6 text-[#64748B]">
-                          Upload foto’s van:
-                        </p>
-                        <ul className="mt-3 space-y-2 text-sm font-bold text-[#071B4D]">
-                          {recommendedPhotoTypes.map((photoType) => (
-                            <li key={photoType} className="flex items-center gap-2">
-                              <span className="h-1.5 w-1.5 rounded-full bg-[#F97316]" />
-                              <span>{photoType}</span>
-                            </li>
-                          ))}
-                        </ul>
-                        <Link
-                          href={`/edit-property/${renovatiePropertyId}`}
-                          className="mt-5 inline-flex w-full items-center justify-center rounded-xl bg-[#F97316] px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-[#EA580C] sm:w-auto"
-                        >
-                          Upload meer foto&apos;s
-                        </Link>
-                      </section>
+                        <section className="rounded-3xl border border-blue-50 bg-white p-5 shadow-sm">
+                          <p className="text-xs font-black uppercase tracking-wide text-[#64748B]">
+                            Gebaseerd op
+                          </p>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {basedOnChips.map((chip) => (
+                              <span key={chip} className="rounded-full bg-[#EEF4FF] px-3 py-1.5 text-xs font-black text-[#071B4D]">
+                                {chip}
+                              </span>
+                            ))}
+                          </div>
+                        </section>
+                      </div>
+
+                      <div className="grid gap-5 lg:grid-cols-2">
+                        <section className="rounded-3xl border border-blue-50 bg-white p-5 shadow-sm">
+                          <p className="text-xs font-black uppercase tracking-wide text-[#64748B]">
+                            Wat we zien
+                          </p>
+                          <ul className="mt-4 space-y-3 text-sm font-bold leading-6 text-[#071B4D]">
+                            {whatWeSee.map((item) => (
+                              <li key={item} className="flex gap-2">
+                                <span className="mt-0.5 text-emerald-600">✓</span>
+                                <span>{item}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </section>
+
+                        <section className="rounded-3xl border border-blue-50 bg-white p-5 shadow-sm">
+                          <p className="text-xs font-black uppercase tracking-wide text-[#64748B]">
+                            Mogelijke aandachtspunten
+                          </p>
+                          <ul className="mt-4 space-y-3 text-sm font-bold leading-6 text-[#071B4D]">
+                            {attentionPoints.map((item) => (
+                              <li key={item} className="flex gap-2">
+                                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#F97316]" />
+                                <span>{item}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </section>
+                      </div>
+
+                      {showExtraPhotoSuggestions && (
+                        <section className="rounded-3xl border border-orange-100 bg-orange-50/70 p-5 shadow-sm">
+                          <p className="text-xs font-black uppercase tracking-wide text-[#C2410C]">
+                            Analyse verfijnen
+                          </p>
+                          <p className="mt-3 text-sm font-semibold leading-6 text-[#9A3412]">
+                            Extra foto’s zijn alleen nuttig voor ontbrekende sleutelruimtes: {renovatieScan.extraFotoSuggesties.join(', ')}.
+                          </p>
+                          <Link
+                            href={`/edit-property/${renovatiePropertyId}`}
+                            className="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-[#F97316] px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-[#EA580C] sm:w-auto"
+                          >
+                            Foto’s aanvullen
+                          </Link>
+                        </section>
+                      )}
                     </div>
 
                     {options.showCloseButton && (
