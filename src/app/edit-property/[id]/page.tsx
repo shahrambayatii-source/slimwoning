@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
@@ -36,9 +36,51 @@ export default function EditPropertyPage() {
   const [dubbelGlas, setDubbelGlas] = useState(false)
 
   const inputClass =
-    'h-14 w-full rounded-2xl border border-gray-200 bg-[#f8fafc] px-5 text-[15px] text-[#111827] outline-none transition placeholder:text-gray-400 focus:border-blue-600'
+    'h-14 w-full rounded-2xl border border-gray-200 bg-[#f8fafc] px-5 font-sans text-[15px] text-[#111827] outline-none transition placeholder:text-gray-400 hover:border-blue-200 hover:bg-white focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-100'
   const textareaClass =
-    'min-h-32 w-full rounded-2xl border border-gray-200 bg-[#f8fafc] p-5 text-[15px] text-[#111827] outline-none transition placeholder:text-gray-400 focus:border-blue-600'
+    'min-h-32 w-full rounded-2xl border border-gray-200 bg-[#f8fafc] p-5 font-sans text-[15px] text-[#111827] outline-none transition placeholder:text-gray-400 hover:border-blue-200 hover:bg-white focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-100'
+
+  const epcOptions = useMemo(
+    () => [
+      { value: '', label: 'EPC-score' },
+      { value: 'A+', label: 'A+' },
+      { value: 'A', label: 'A' },
+      { value: 'B', label: 'B' },
+      { value: 'C', label: 'C' },
+      { value: 'D', label: 'D' },
+      { value: 'E', label: 'E' },
+      { value: 'F', label: 'F' },
+    ],
+    []
+  )
+
+  const woningTypeOptions = useMemo(
+    () => [
+      { value: '', label: 'Type woning' },
+      { value: 'Appartement', label: 'Appartement' },
+      { value: 'Huis', label: 'Huis' },
+      { value: 'Studio', label: 'Studio' },
+      { value: 'Commercieel', label: 'Commercieel' },
+      { value: 'Garage', label: 'Garage' },
+      { value: 'Grond', label: 'Grond' },
+      { value: 'Opbrengsteigendom', label: 'Opbrengsteigendom' },
+      { value: 'Appartementsblok', label: 'Appartementsblok' },
+    ],
+    []
+  )
+
+  const verwarmingstypeOptions = useMemo(
+    () => [
+      { value: '', label: 'Verwarmingstype' },
+      { value: 'Gas', label: 'Gas' },
+      { value: 'Elektrisch', label: 'Elektrisch' },
+      { value: 'Warmtepomp', label: 'Warmtepomp' },
+      { value: 'Mazout', label: 'Mazout' },
+      { value: 'Vloerverwarming', label: 'Vloerverwarming' },
+      { value: 'Niet opgegeven', label: 'Niet opgegeven' },
+    ],
+    []
+  )
 
   function cleanWoningType(value: unknown) {
     const text = String(value || '').trim()
@@ -368,50 +410,26 @@ export default function EditPropertyPage() {
               onChange={(e) => setBouwjaar(onlyNumbers(e.target.value).slice(0, 4))}
             />
 
-            <select
-              className={inputClass}
+            <SlimSelect
+              label="EPC-score"
               value={epc}
-              onChange={(e) => setEpc(e.target.value)}
-            >
-              <option value="">EPC-score</option>
-              <option value="A+">A+</option>
-              <option value="A">A</option>
-              <option value="B">B</option>
-              <option value="C">C</option>
-              <option value="D">D</option>
-              <option value="E">E</option>
-              <option value="F">F</option>
-            </select>
+              options={epcOptions}
+              onChange={setEpc}
+            />
 
-            <select
-              className={inputClass}
+            <SlimSelect
+              label="Type woning"
               value={woningType}
-              onChange={(e) => setWoningType(e.target.value)}
-            >
-              <option value="">Type woning</option>
-              <option value="Appartement">Appartement</option>
-              <option value="Huis">Huis</option>
-              <option value="Studio">Studio</option>
-              <option value="Commercieel">Commercieel</option>
-              <option value="Garage">Garage</option>
-              <option value="Grond">Grond</option>
-              <option value="Opbrengsteigendom">Opbrengsteigendom</option>
-              <option value="Appartementsblok">Appartementsblok</option>
-            </select>
+              options={woningTypeOptions}
+              onChange={setWoningType}
+            />
 
-            <select
-              className={inputClass}
+            <SlimSelect
+              label="Verwarmingstype"
               value={verwarmingstype}
-              onChange={(e) => setVerwarmingstype(e.target.value)}
-            >
-              <option value="">Verwarmingstype</option>
-              <option value="Gas">Gas</option>
-              <option value="Elektrisch">Elektrisch</option>
-              <option value="Warmtepomp">Warmtepomp</option>
-              <option value="Mazout">Mazout</option>
-              <option value="Vloerverwarming">Vloerverwarming</option>
-              <option value="Niet opgegeven">Niet opgegeven</option>
-            </select>
+              options={verwarmingstypeOptions}
+              onChange={setVerwarmingstype}
+            />
           </div>
         </FormSection>
 
@@ -463,7 +481,7 @@ export default function EditPropertyPage() {
             multiple
             accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
             onChange={handleImageUpload}
-            className="w-full rounded-2xl border border-gray-200 bg-[#f8fafc] p-4 text-[#111827]"
+            className="w-full rounded-2xl border border-gray-200 bg-[#f8fafc] p-4 font-sans text-[15px] text-[#111827] transition file:mr-4 file:rounded-xl file:border-0 file:bg-blue-700 file:px-4 file:py-2 file:font-bold file:text-white hover:border-blue-200 hover:bg-white focus:border-blue-600 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-100"
           />
 
           {images.length > 0 && (
@@ -506,6 +524,133 @@ export default function EditPropertyPage() {
           Wijzigingen opslaan
         </button>
       </div>
+    </div>
+  )
+}
+
+
+type SelectOption = {
+  value: string
+  label: string
+}
+
+function SlimSelect({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string
+  value: string
+  options: SelectOption[]
+  onChange: (value: string) => void
+}) {
+  const [isOpen, setIsOpen] = useState(false)
+  const selectedOption = options.find((option) => option.value === value) || options[0]
+
+  function chooseOption(nextValue: string) {
+    onChange(nextValue)
+    setIsOpen(false)
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLButtonElement>) {
+    const currentIndex = Math.max(
+      options.findIndex((option) => option.value === value),
+      0
+    )
+
+    if (e.key === 'Escape') {
+      setIsOpen(false)
+      return
+    }
+
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      setIsOpen((current) => !current)
+      return
+    }
+
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault()
+      const direction = e.key === 'ArrowDown' ? 1 : -1
+      const nextIndex = (currentIndex + direction + options.length) % options.length
+      onChange(options[nextIndex].value)
+      setIsOpen(true)
+    }
+  }
+
+  return (
+    <div
+      className="relative"
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget)) {
+          setIsOpen(false)
+        }
+      }}
+    >
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        aria-label={label}
+        onClick={() => setIsOpen((current) => !current)}
+        onKeyDown={handleKeyDown}
+        className="flex h-14 w-full items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-[#f8fafc] px-5 font-sans text-[15px] text-[#111827] outline-none transition hover:border-blue-200 hover:bg-white focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-100"
+      >
+        <span className={value ? 'truncate' : 'truncate text-gray-400'}>
+          {selectedOption?.label || label}
+        </span>
+        <span
+          aria-hidden="true"
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-blue-700 shadow-sm transition ${isOpen ? 'rotate-180' : ''}`}
+        >
+          <svg
+            viewBox="0 0 20 20"
+            fill="none"
+            className="h-4 w-4"
+          >
+            <path
+              d="M5 7.5L10 12.5L15 7.5"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </span>
+      </button>
+
+      {isOpen && (
+        <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 overflow-hidden rounded-2xl border border-gray-100 bg-white p-2 shadow-2xl shadow-blue-950/10">
+          <div
+            role="listbox"
+            aria-label={label}
+            className="max-h-64 overflow-y-auto overscroll-contain pr-1"
+          >
+            {options.map((option) => {
+              const isSelected = option.value === value
+
+              return (
+                <button
+                  key={option.value || option.label}
+                  type="button"
+                  role="option"
+                  aria-selected={isSelected}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => chooseOption(option.value)}
+                  className={`flex min-h-11 w-full items-center rounded-xl px-4 py-2.5 text-left font-sans text-[15px] transition ${
+                    isSelected
+                      ? 'bg-blue-700 font-bold text-white'
+                      : 'text-[#111827] hover:bg-blue-50 hover:text-blue-800'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
