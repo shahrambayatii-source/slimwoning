@@ -72,7 +72,12 @@ export default function RootLayout({
                 Verkopen
               </Link>
 
-              <Link href="/properties" className="transition hover:opacity-80">
+              <Link
+                href="/nieuwbouw"
+                className={`transition hover:opacity-80 ${
+                  pathname.startsWith('/nieuwbouw') ? activeNavClass : ''
+                }`}
+              >
                 Nieuwbouw
               </Link>
             </nav>
