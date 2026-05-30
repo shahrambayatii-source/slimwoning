@@ -430,9 +430,9 @@ export default function PropertyDetailsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f6f8fb] px-5 py-8 text-[#111827] md:px-10">
+    <div className="min-h-screen bg-[#f6f8fb] px-4 py-5 text-[#111827] md:px-8">
       <div className="mx-auto max-w-[1500px]">
-        <div className="mb-8 flex items-center justify-between">
+        <div className="mb-5 flex items-center justify-between">
           <Link
             href="/properties"
             className="rounded-2xl bg-white px-5 py-3 font-bold text-[#111827] shadow-sm"
@@ -448,17 +448,17 @@ export default function PropertyDetailsPage() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,58fr)_minmax(380px,42fr)] lg:gap-8">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,58fr)_minmax(360px,42fr)] lg:gap-6">
           <div>
-            <div className="relative overflow-hidden rounded-[2.5rem] bg-white shadow-2xl">
+            <div className="relative overflow-hidden rounded-[2rem] bg-white shadow-xl">
               {activePhoto ? (
                 <img
                   src={activePhoto}
                   alt={property.title}
-                  className="h-[500px] w-full object-cover md:h-[720px] lg:h-[560px]"
+                  className="h-[330px] w-full object-cover md:h-[430px] lg:h-[460px]"
                 />
               ) : (
-                <div className="flex h-[500px] w-full items-center justify-center bg-gradient-to-br from-slate-200 via-slate-300 to-slate-400 md:h-[720px] lg:h-[560px]">
+                <div className="flex h-[330px] w-full items-center justify-center bg-gradient-to-br from-slate-200 via-slate-300 to-slate-400 md:h-[430px] lg:h-[460px]">
                   <span className="text-lg font-black text-white/90">Geen foto beschikbaar</span>
                 </div>
               )}
@@ -522,13 +522,13 @@ export default function PropertyDetailsPage() {
             </div>
 
             {propertyPhotos.length > 1 && (
-              <div className="mt-4 flex gap-3 overflow-x-auto rounded-[1.5rem] bg-white p-3 shadow-lg">
+              <div className="mt-3 flex gap-2 overflow-x-auto rounded-[1.25rem] bg-white p-2 shadow-md">
                 {propertyPhotos.map((photo, index) => (
                   <button
                     key={`${photo}-${index}`}
                     type="button"
                     onClick={() => setActivePhotoIndex(index)}
-                    className={`relative h-20 w-28 shrink-0 overflow-hidden rounded-2xl ring-4 transition ${
+                    className={`relative h-16 w-24 shrink-0 overflow-hidden rounded-xl ring-4 transition ${
                       activePhotoIndex === index
                         ? 'ring-blue-700'
                         : 'ring-transparent hover:ring-blue-200'
@@ -546,19 +546,19 @@ export default function PropertyDetailsPage() {
               </div>
             )}
 
-            <div className="mt-8 rounded-[2rem] bg-white p-8 shadow-xl">
-              <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+            <div className="mt-5 rounded-[1.75rem] bg-white p-5 shadow-xl md:p-6">
+              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div>
-                  <p className="mb-4 text-sm font-bold uppercase tracking-[0.3em] text-blue-700">
+                  <p className="mb-2 text-xs font-bold uppercase tracking-[0.26em] text-blue-700">
                     {property.city || 'Locatie niet opgegeven'}
                   </p>
 
-                  <h1 className="max-w-3xl text-2xl font-bold leading-tight tracking-[-0.03em] md:text-4xl">
+                  <h1 className="max-w-3xl text-2xl font-bold leading-tight tracking-[-0.03em] md:text-3xl">
                     {property.title}
                   </h1>
 
                   {property.address && (
-                    <div className="mt-5 flex flex-col gap-3 rounded-2xl bg-[#f8fafc] p-4 md:flex-row md:items-center md:justify-between">
+                    <div className="mt-3 flex flex-col gap-3 rounded-2xl bg-[#f8fafc] p-3 md:flex-row md:items-center md:justify-between">
                       <div>
                         <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-blue-700">
                           Adres
@@ -579,21 +579,21 @@ export default function PropertyDetailsPage() {
                   )}
                 </div>
 
-                <div className="rounded-[1.5rem] bg-[#eef2ff] px-7 py-6">
+                <div className="rounded-[1.5rem] bg-[#eef2ff] px-5 py-4">
                   <p className="text-sm font-bold uppercase tracking-[0.2em] text-blue-700">
                     Vraagprijs
                   </p>
 
-                  <p className="mt-2 text-4xl font-bold text-blue-700">
+                  <p className="mt-1 text-3xl font-bold text-blue-700">
                     {formatPrice(property.price)}
                   </p>
 
-                  <div className="mt-5 rounded-2xl bg-white/70 p-4">
+                  <div className="mt-3 rounded-2xl bg-white/70 p-3">
                     <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-700">
                       Geschatte maandelijkse aflossing
                     </p>
 
-                    <p className="mt-2 text-2xl font-bold text-[#0B1F4D]">
+                    <p className="mt-1 text-xl font-bold text-[#0B1F4D]">
                       {estimatedMonthlyPayment(property.price)} / mnd
                     </p>
 
@@ -604,7 +604,7 @@ export default function PropertyDetailsPage() {
                 </div>
               </div>
 
-              <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-4">
+              <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
                 <QuickStat label="Slaapkamers" value={property.slaapkamers || '-'} />
                 <QuickStat label="Badkamers" value={property.badkamers || '-'} />
                 <QuickStat
@@ -640,64 +640,29 @@ export default function PropertyDetailsPage() {
               </SectionCard>
             )}
 
-            <SectionCard title="Slim zoeken">
-              <div className="overflow-hidden rounded-[1.75rem] border border-emerald-100 bg-gradient-to-br from-emerald-50/80 via-white to-blue-50/80">
-                <div className="flex flex-col gap-5 border-b border-emerald-100 px-6 py-6 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <p className="text-xs font-black uppercase tracking-[0.24em] text-emerald-700">
-                      SlimWoning woonmatch
-                    </p>
-                    <h3 className="mt-3 text-3xl font-black leading-tight text-[#071B4D]">
-                      Waarom past deze woning bij jouw zoekprofiel?
-                    </h3>
-                    <p className="mt-3 max-w-2xl text-base leading-8 text-gray-600">
-                      SlimWoning bekijkt locatie, prijs en woningkenmerken om sneller relevante woningen te herkennen.
-                    </p>
-                  </div>
-
-                  <div className="rounded-[1.5rem] bg-emerald-700 px-6 py-5 text-white shadow-xl shadow-emerald-900/15">
-                    <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-100">
-                      Matchscore
-                    </p>
-                    <p className="mt-2 text-4xl font-black">
-                      {getWoonMatchScore()}%
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 gap-4 px-6 py-6 md:grid-cols-3">
-                  {getWoonMatchPoints().map((point) => (
-                    <div key={point.title} className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-emerald-100">
-                      <p className="text-sm font-black text-[#071B4D]">{point.title}</p>
-                      <p className="mt-2 text-sm leading-6 text-gray-500">{point.text}</p>
-                    </div>
-                  ))}
-                </div>
+            <SectionCard title="Plus- en minpunten">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <CompactPointList
+                  title="Pluspunten"
+                  tone="positive"
+                  text={property.pluspunten || 'Niet opgegeven'}
+                />
+                <CompactPointList
+                  title="Minpunten"
+                  tone="negative"
+                  text={property.minpunten || 'Niet opgegeven'}
+                />
               </div>
             </SectionCard>
 
-            <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
-              <SectionCard title="Pluspunten">
-                <p className="leading-8 text-gray-600">
-                  {property.pluspunten || 'Niet opgegeven'}
-                </p>
-              </SectionCard>
-
-              <SectionCard title="Minpunten">
-                <p className="leading-8 text-gray-600">
-                  {property.minpunten || 'Niet opgegeven'}
-                </p>
-              </SectionCard>
-            </div>
-
             <SectionCard title="Verkoopinformatie">
-              <div className="flex items-center justify-between rounded-2xl bg-[#f8fafc] p-5">
+              <div className="flex flex-col gap-3 rounded-2xl bg-[#f8fafc] p-4 md:flex-row md:items-center md:justify-between">
                 <div>
                   <p className="text-xs font-black uppercase tracking-[0.2em] text-blue-700">
                     Status
                   </p>
 
-                  <p className="mt-2 text-xl font-bold text-[#111827]">
+                  <p className="mt-1 text-lg font-bold text-[#111827]">
                     Bezig met verkoop door{' '}
                     {property.makelaar_kantoornaam ||
                       property.contact_name ||
@@ -705,90 +670,97 @@ export default function PropertyDetailsPage() {
                   </p>
                 </div>
 
-                <div className="rounded-full bg-blue-700 px-5 py-3 text-sm font-bold text-white">
+                <div className="w-fit rounded-full bg-blue-700 px-4 py-2 text-sm font-bold text-white">
                   Actief
                 </div>
               </div>
+            </SectionCard>
 
-              <div className="mt-6 overflow-hidden rounded-[1.75rem] border border-[#DCE7F7] bg-gradient-to-br from-[#F8FBFF] via-white to-[#EEF4FF]">
-                <div className="border-b border-[#E5EDF9] px-6 py-6 md:px-8">
-                  <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-                    <div className="max-w-3xl">
-                      <p className="text-xs font-black uppercase tracking-[0.24em] text-blue-700">
-                        SlimWoning Matchmaking
-                      </p>
-
-                      <h3 className="mt-3 text-3xl font-black leading-tight text-[#071B4D]">
-                        Ontvang voorstellen van geschikte makelaars
-                      </h3>
-
-                      <p className="mt-4 text-base leading-8 text-gray-600">
-                        SlimWoning analyseert automatisch jouw woning, locatie en verkoopprofiel en zoekt actieve vastgoedmakelaars binnen jouw regio.
-                      </p>
-                    </div>
-
-                    <div className="rounded-[1.5rem] bg-[#071B4D] px-6 py-5 text-white shadow-xl">
-                      <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-200">
-                        Match status
-                      </p>
-
-                      <p className="mt-2 text-2xl font-black">
-                        {nearbyMakelaars.length > 0
-                          ? `${nearbyMakelaars.length}+ makelaars actief`
-                          : 'Regio wordt gescand'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="px-6 py-6 md:px-8">
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                    <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-[#E2E8F0]">
-                      <p className="text-sm font-black text-[#071B4D]">1. Analyse</p>
-                      <p className="mt-2 text-sm leading-6 text-gray-500">
-                        We bekijken locatie, type vastgoed, prijs en verkoopprofiel.
-                      </p>
-                    </div>
-
-                    <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-[#E2E8F0]">
-                      <p className="text-sm font-black text-[#071B4D]">2. Matching</p>
-                      <p className="mt-2 text-sm leading-6 text-gray-500">
-                        Geschikte makelaars in de regio kunnen interesse tonen.
-                      </p>
-                    </div>
-
-                    <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-[#E2E8F0]">
-                      <p className="text-sm font-black text-[#071B4D]">3. Voorstellen</p>
-                      <p className="mt-2 text-sm leading-6 text-gray-500">
-                        Je ontvangt alleen relevante voorstellen, geen openbare lijst.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mt-6 rounded-2xl border border-[#DCE7F7] bg-white p-5">
-                    <p className="text-sm font-black text-[#071B4D]">
-                      {makelaarsLoading
-                        ? 'We scannen jouw regio...'
-                        : nearbyMakelaars.length > 0
-                          ? `${nearbyMakelaars.length} makelaars actief gevonden in jouw regio.`
-                          : 'SlimWoning kan makelaars in jouw regio benaderen.'}
-                    </p>
-
-                    <p className="mt-2 text-sm leading-6 text-gray-500">
-                      Namen en contactgegevens worden niet openbaar getoond. Relevante makelaars kunnen via SlimWoning reageren op jouw verkoopaanvraag.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-4 border-t border-[#E5EDF9] px-6 py-6 md:flex-row md:items-center md:justify-between md:px-8">
+            <AccordionSection
+              title="Slim zoeken details"
+              summary={`${getWoonMatchScore()}% matchscore op basis van locatie, prijs en kenmerken.`}
+            >
+              <div className="rounded-[1.5rem] border border-emerald-100 bg-gradient-to-br from-emerald-50/80 via-white to-blue-50/80 p-4">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                   <div>
-                    <p className="text-sm font-bold text-[#071B4D]">
+                    <p className="text-xs font-black uppercase tracking-[0.24em] text-emerald-700">
+                      SlimWoning woonmatch
+                    </p>
+                    <h3 className="mt-2 text-2xl font-black leading-tight text-[#071B4D]">
+                      Waarom past deze woning bij jouw zoekprofiel?
+                    </h3>
+                    <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-600">
+                      SlimWoning bekijkt locatie, prijs en woningkenmerken om sneller relevante woningen te herkennen.
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl bg-emerald-700 px-5 py-4 text-white shadow-lg shadow-emerald-900/15">
+                    <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-100">
+                      Matchscore
+                    </p>
+                    <p className="mt-1 text-3xl font-black">
+                      {getWoonMatchScore()}%
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+                  {getWoonMatchPoints().map((point) => (
+                    <div key={point.title} className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-emerald-100">
+                      <p className="text-sm font-black text-[#071B4D]">{point.title}</p>
+                      <p className="mt-1 text-sm leading-6 text-gray-500">{point.text}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </AccordionSection>
+
+            <AccordionSection
+              title="Makelaar matching"
+              summary={
+                nearbyMakelaars.length > 0
+                  ? `${nearbyMakelaars.length}+ makelaars actief in de regio.`
+                  : 'Compacte aanvraag voor passende makelaars in deze regio.'
+              }
+            >
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_auto] md:items-stretch">
+                <CompactCtaCard
+                  eyebrow="SlimWoning Matchmaking"
+                  title="Ontvang voorstellen van geschikte makelaars"
+                  text="SlimWoning analyseert automatisch jouw woning, locatie en verkoopprofiel en zoekt actieve vastgoedmakelaars binnen jouw regio. Namen en contactgegevens worden niet openbaar getoond."
+                  meta={
+                    makelaarsLoading
+                      ? 'We scannen jouw regio...'
+                      : nearbyMakelaars.length > 0
+                        ? `${nearbyMakelaars.length} makelaars actief gevonden in jouw regio.`
+                        : 'SlimWoning kan makelaars in jouw regio benaderen.'
+                  }
+                />
+
+                <div className="flex flex-col justify-between rounded-2xl border border-[#DCE7F7] bg-[#F8FBFF] p-4 md:w-72">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.2em] text-blue-700">
+                      Match status
+                    </p>
+                    <p className="mt-2 text-xl font-black text-[#071B4D]">
+                      {nearbyMakelaars.length > 0
+                        ? `${nearbyMakelaars.length}+ makelaars actief`
+                        : 'Regio wordt gescand'}
+                    </p>
+                    <div className="mt-3 space-y-2 text-sm text-gray-600">
+                      <p><span className="font-black text-[#071B4D]">1.</span> Analyse van woning en locatie.</p>
+                      <p><span className="font-black text-[#071B4D]">2.</span> Matching met regionale kantoren.</p>
+                      <p><span className="font-black text-[#071B4D]">3.</span> Alleen relevante voorstellen.</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 rounded-xl bg-white p-3 text-sm text-gray-600 ring-1 ring-[#E2E8F0]">
+                    <p className="font-bold text-[#071B4D]">
                       {matchRequestSent
                         ? 'Je aanvraag is verzonden.'
                         : 'Wil je passende makelaars voor deze verkoop ontvangen?'}
                     </p>
-
-                    <p className="mt-1 text-sm text-gray-500">
+                    <p className="mt-1">
                       {matchRequestSent
                         ? 'SlimWoning verwerkt je aanvraag en kan relevante makelaars benaderen.'
                         : 'Start gratis een aanvraag. Je gegevens worden niet als openbare lijst getoond.'}
@@ -799,16 +771,19 @@ export default function PropertyDetailsPage() {
                     type="button"
                     onClick={() => setShowMatchModal(true)}
                     disabled={matchRequestSent}
-                    className="rounded-2xl bg-[#071B4D] px-6 py-4 font-black text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="mt-3 rounded-2xl bg-[#071B4D] px-5 py-3 font-black text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {matchRequestSent ? 'Aanvraag verzonden' : 'Start makelaar matching'}
                   </button>
                 </div>
               </div>
-            </SectionCard>
+            </AccordionSection>
 
             {similarProperties.length > 0 && (
-              <SectionCard title="Gelijkaardige panden in de buurt">
+              <AccordionSection
+                title="Vergelijkbare woningen"
+                summary={`${similarProperties.length} gelijkaardige panden in de buurt.`}
+              >
                 <div className="overflow-hidden rounded-2xl border border-gray-100">
                   <div className="grid grid-cols-[1.2fr_1fr_1fr_0.8fr] bg-gray-100 px-4 py-3 text-sm font-black text-[#111827]">
                     <span>Gemeente</span>
@@ -836,13 +811,13 @@ export default function PropertyDetailsPage() {
                     </Link>
                   ))}
                 </div>
-              </SectionCard>
+              </AccordionSection>
             )}
 
           </div>
 
-          <div className="h-fit rounded-[2rem] bg-white p-7 shadow-xl lg:sticky lg:top-8">
-            <h2 className="mb-6 text-3xl font-bold">Vastgoeddetails</h2>
+          <div className="h-fit rounded-[1.75rem] bg-white p-5 shadow-xl lg:sticky lg:top-5">
+            <h2 className="mb-4 text-2xl font-bold">Vastgoeddetails</h2>
 
             <div className="space-y-1">
               <InfoRow label="Adres" value={property.address} />
@@ -1055,9 +1030,9 @@ function QuickStat({
   value: string
 }) {
   return (
-    <div className="rounded-[1.5rem] bg-[#f8fafc] p-5">
-      <p className="text-sm text-gray-500">{label}</p>
-      <p className="mt-2 text-2xl font-bold">{value}</p>
+    <div className="rounded-[1.25rem] bg-[#f8fafc] p-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-gray-500">{label}</p>
+      <p className="mt-1 text-xl font-bold">{value}</p>
     </div>
   )
 }
@@ -1070,9 +1045,84 @@ function SectionCard({
   children: React.ReactNode
 }) {
   return (
-    <div className="mt-6 rounded-[2rem] bg-white p-8 shadow-xl">
-      <h2 className="mb-5 text-3xl font-bold">{title}</h2>
+    <div className="mt-5 rounded-[1.75rem] bg-white p-5 shadow-xl md:p-6">
+      <h2 className="mb-4 text-2xl font-bold">{title}</h2>
       {children}
+    </div>
+  )
+}
+
+function AccordionSection({
+  title,
+  summary,
+  children,
+}: {
+  title: string
+  summary: string
+  children: React.ReactNode
+}) {
+  return (
+    <details className="group mt-5 overflow-hidden rounded-[1.5rem] bg-white shadow-lg">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 marker:content-none md:px-6 [&::-webkit-details-marker]:hidden">
+        <div>
+          <h2 className="text-xl font-black text-[#071B4D]">{title}</h2>
+          <p className="mt-1 text-sm leading-6 text-gray-500">{summary}</p>
+        </div>
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-blue-50 text-2xl font-black text-blue-700 transition group-open:rotate-45">
+          +
+        </span>
+      </summary>
+      <div className="border-t border-gray-100 px-5 py-5 md:px-6">
+        {children}
+      </div>
+    </details>
+  )
+}
+
+function CompactPointList({
+  title,
+  text,
+  tone,
+}: {
+  title: string
+  text: string
+  tone: 'positive' | 'negative'
+}) {
+  const isPositive = tone === 'positive'
+
+  return (
+    <div className={`rounded-2xl border p-4 ${isPositive ? 'border-emerald-100 bg-emerald-50/70' : 'border-amber-100 bg-amber-50/70'}`}>
+      <p className={`text-sm font-black ${isPositive ? 'text-emerald-700' : 'text-amber-700'}`}>
+        {isPositive ? '＋' : '−'} {title}
+      </p>
+      <p className="mt-2 text-sm leading-6 text-gray-600">{text}</p>
+    </div>
+  )
+}
+
+function CompactCtaCard({
+  eyebrow,
+  title,
+  text,
+  meta,
+}: {
+  eyebrow: string
+  title: string
+  text: string
+  meta: string
+}) {
+  return (
+    <div className="rounded-2xl border border-[#DCE7F7] bg-gradient-to-br from-[#F8FBFF] via-white to-[#EEF4FF] p-4">
+      <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-700">
+        {eyebrow}
+      </p>
+      <h3 className="mt-2 text-2xl font-black leading-tight text-[#071B4D]">
+        {title}
+      </h3>
+      <p className="mt-2 text-sm leading-6 text-gray-600">{text}</p>
+      <p className="mt-3 rounded-xl bg-white px-3 py-2 text-sm font-black text-[#071B4D] ring-1 ring-[#E2E8F0]">
+        {meta}
+      </p>
     </div>
   )
 }
@@ -1085,9 +1135,9 @@ function InfoRow({
   value: any
 }) {
   return (
-    <div className="flex justify-between gap-5 border-b border-gray-100 py-4 lg:py-3">
-      <span className="text-gray-500">{label}</span>
-      <span className="text-right font-bold">
+    <div className="flex justify-between gap-4 border-b border-gray-100 py-2.5">
+      <span className="text-sm text-gray-500">{label}</span>
+      <span className="text-right text-sm font-bold">
         {value || 'Niet opgegeven'}
       </span>
     </div>
