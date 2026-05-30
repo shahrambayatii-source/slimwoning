@@ -16,6 +16,7 @@ export default function PropertyDetailsPage() {
   const [similarProperties, setSimilarProperties] = useState<any[]>([])
   const [userId, setUserId] = useState('')
   const [showMap, setShowMap] = useState(false)
+  const [showComparison, setShowComparison] = useState(false)
   const [activePhotoIndex, setActivePhotoIndex] = useState(0)
 
   const [mapCenter, setMapCenter] = useState({
@@ -460,6 +461,17 @@ export default function PropertyDetailsPage() {
                 />
                 <QuickStat label="EPC" value={property.epc || '-'} />
               </div>
+
+              <div className="mt-5 flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowComparison(true)}
+                  className="shrink-0 rounded-full border border-amber-200 bg-amber-50 px-3.5 py-1.5 text-sm font-semibold leading-none whitespace-nowrap text-amber-700 transition hover:bg-amber-100"
+                  aria-haspopup="dialog"
+                >
+                  Vergelijk
+                </button>
+              </div>
             </div>
 
             <SectionCard title="Beschrijving">
@@ -559,41 +571,6 @@ export default function PropertyDetailsPage() {
             </AccordionSection>
 
 
-            {similarProperties.length > 0 && (
-              <AccordionSection
-                title="Vergelijkbare woningen"
-                summary={`${similarProperties.length} gelijkaardige panden in de buurt.`}
-              >
-                <div className="overflow-hidden rounded-2xl border border-gray-100">
-                  <div className="grid grid-cols-[1.2fr_1fr_1fr_0.8fr] bg-gray-100 px-4 py-3 text-sm font-black text-[#111827]">
-                    <span>Gemeente</span>
-                    <span>Vraagprijs</span>
-                    <span>Woonopp.</span>
-                    <span>Bouwjaar</span>
-                  </div>
-
-                  {similarProperties.map((similarProperty) => (
-                    <Link
-                      key={similarProperty.id}
-                      href={`/properties/${similarProperty.id}`}
-                      className="grid grid-cols-[1.2fr_1fr_1fr_0.8fr] border-t border-gray-100 px-4 py-3 text-sm transition hover:bg-blue-50/60"
-                    >
-                      <span className="font-semibold text-[#111827]">
-                        {similarProperty.city || '-'}
-                      </span>
-                      <span>{formatPrice(similarProperty.price)}</span>
-                      <span>
-                        {similarProperty.bewoonbare_oppervlakte
-                          ? `${similarProperty.bewoonbare_oppervlakte} m²`
-                          : '-'}
-                      </span>
-                      <span>{similarProperty.bouwjaar || '-'}</span>
-                    </Link>
-                  ))}
-                </div>
-              </AccordionSection>
-            )}
-
           </div>
 
           <div className="h-fit rounded-[1.75rem] bg-white p-5 shadow-xl lg:sticky lg:top-5">
@@ -650,6 +627,80 @@ export default function PropertyDetailsPage() {
           </div>
         </div>
       </div>
+
+
+      {showComparison && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-5"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="comparison-title"
+        >
+          <div className="relative w-full max-w-4xl overflow-hidden rounded-[2rem] bg-white shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-gray-100 p-6">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.24em] text-amber-600">
+                  Vergelijk
+                </p>
+                <h2 id="comparison-title" className="mt-1 text-2xl font-black text-[#071B4D]">
+                  Vergelijkbare woningen
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-gray-500">
+                  {similarProperties.length > 0
+                    ? `${similarProperties.length} gelijkaardige panden in de buurt.`
+                    : 'Er zijn momenteel geen gelijkaardige panden gevonden voor deze woning.'}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowComparison(false)}
+                className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#111827] text-xl font-bold text-white transition hover:bg-black"
+                aria-label="Vergelijking sluiten"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="max-h-[70vh] overflow-y-auto p-6">
+              {similarProperties.length > 0 ? (
+                <div className="overflow-hidden rounded-2xl border border-gray-100">
+                  <div className="grid grid-cols-[1.2fr_1fr_1fr_0.8fr] bg-gray-100 px-4 py-3 text-sm font-black text-[#111827]">
+                    <span>Gemeente</span>
+                    <span>Vraagprijs</span>
+                    <span>Woonopp.</span>
+                    <span>Bouwjaar</span>
+                  </div>
+
+                  {similarProperties.map((similarProperty) => (
+                    <Link
+                      key={similarProperty.id}
+                      href={`/properties/${similarProperty.id}`}
+                      onClick={() => setShowComparison(false)}
+                      className="grid grid-cols-[1.2fr_1fr_1fr_0.8fr] border-t border-gray-100 px-4 py-3 text-sm transition hover:bg-blue-50/60"
+                    >
+                      <span className="font-semibold text-[#111827]">
+                        {similarProperty.city || '-'}
+                      </span>
+                      <span>{formatPrice(similarProperty.price)}</span>
+                      <span>
+                        {similarProperty.bewoonbare_oppervlakte
+                          ? `${similarProperty.bewoonbare_oppervlakte} m²`
+                          : '-'}
+                      </span>
+                      <span>{similarProperty.bouwjaar || '-'}</span>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-2xl bg-amber-50 p-5 text-sm font-semibold leading-6 text-amber-800">
+                  Voeg meer woningen toe of pas de zoekcriteria aan om vergelijkbare panden te zien.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
 
       {showMap && (
