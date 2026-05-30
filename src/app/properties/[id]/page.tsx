@@ -21,6 +21,7 @@ export default function PropertyDetailsPage() {
   const [showMatchModal, setShowMatchModal] = useState(false)
   const [matchPreferences, setMatchPreferences] = useState<string[]>([])
   const [matchRequestSent, setMatchRequestSent] = useState(false)
+  const [activePhotoIndex, setActivePhotoIndex] = useState(0)
 
   const [mapCenter, setMapCenter] = useState({
     lat: 51.2194,
@@ -37,6 +38,10 @@ export default function PropertyDetailsPage() {
     getProperty()
     getUser()
   }, [])
+
+  useEffect(() => {
+    setActivePhotoIndex(0)
+  }, [property?.id])
 
   useEffect(() => {
     if (!showMap || !isLoaded || !property?.address || !window.google) return
@@ -329,6 +334,35 @@ export default function PropertyDetailsPage() {
     ]
   }
 
+  function getStringArray(value: any) {
+    if (!Array.isArray(value)) return []
+
+    return value
+      .map((item) => String(item || '').trim())
+      .filter(Boolean)
+  }
+
+  function getPropertyPhotos(propertyValue: any) {
+    if (!propertyValue) return []
+
+    const propertyPhotos =
+      getStringArray(propertyValue.photos).length
+        ? getStringArray(propertyValue.photos)
+        : getStringArray(propertyValue.images).length
+          ? getStringArray(propertyValue.images)
+          : propertyValue.photo
+            ? [propertyValue.photo]
+            : propertyValue.image
+              ? [propertyValue.image]
+              : propertyValue.mainImage
+                ? [propertyValue.mainImage]
+                : propertyValue.photo_url
+                  ? [propertyValue.photo_url]
+                  : []
+
+    return Array.from(new Set(propertyPhotos.map((photo) => String(photo).trim()).filter(Boolean)))
+  }
+
   function cleanWoningType(value: any) {
     const text = String(value || '').trim()
 
@@ -370,6 +404,23 @@ export default function PropertyDetailsPage() {
   }
 
 
+  const propertyPhotos = getPropertyPhotos(property)
+  const activePhoto = propertyPhotos[activePhotoIndex] || propertyPhotos[0] || ''
+
+  function showPreviousPhoto() {
+    setActivePhotoIndex((current) =>
+      propertyPhotos.length > 0
+        ? (current - 1 + propertyPhotos.length) % propertyPhotos.length
+        : 0
+    )
+  }
+
+  function showNextPhoto() {
+    setActivePhotoIndex((current) =>
+      propertyPhotos.length > 0 ? (current + 1) % propertyPhotos.length : 0
+    )
+  }
+
   if (!property) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#f6f8fb] text-2xl font-bold text-[#111827]">
@@ -400,13 +451,45 @@ export default function PropertyDetailsPage() {
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1.6fr_0.8fr]">
           <div>
             <div className="relative overflow-hidden rounded-[2.5rem] bg-white shadow-2xl">
-              <img
-                src={property.image}
-                alt={property.title}
-                className="h-[500px] w-full object-cover md:h-[720px]"
-              />
+              {activePhoto ? (
+                <img
+                  src={activePhoto}
+                  alt={property.title}
+                  className="h-[500px] w-full object-cover md:h-[720px]"
+                />
+              ) : (
+                <div className="flex h-[500px] w-full items-center justify-center bg-gradient-to-br from-slate-200 via-slate-300 to-slate-400 md:h-[720px]">
+                  <span className="text-lg font-black text-white/90">Geen foto beschikbaar</span>
+                </div>
+              )}
 
               <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent" />
+
+              {propertyPhotos.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={showPreviousPhoto}
+                    className="absolute left-6 top-1/2 grid h-12 w-12 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-2xl font-black text-[#071B4D] shadow-xl transition hover:bg-white"
+                    aria-label="Vorige foto"
+                  >
+                    ‹
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={showNextPhoto}
+                    className="absolute right-6 top-1/2 grid h-12 w-12 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-2xl font-black text-[#071B4D] shadow-xl transition hover:bg-white"
+                    aria-label="Volgende foto"
+                  >
+                    ›
+                  </button>
+
+                  <div className="absolute bottom-8 left-8 rounded-full bg-black/55 px-4 py-2 text-sm font-black text-white backdrop-blur">
+                    {activePhotoIndex + 1} / {propertyPhotos.length}
+                  </div>
+                </>
+              )}
 
               <div className="absolute bottom-8 right-8">
                 <div className="inline-flex items-center overflow-visible text-white drop-shadow-xl">
@@ -437,6 +520,30 @@ export default function PropertyDetailsPage() {
                   </div>
                 )}
             </div>
+
+            {propertyPhotos.length > 1 && (
+              <div className="mt-4 flex gap-3 overflow-x-auto rounded-[1.5rem] bg-white p-3 shadow-lg">
+                {propertyPhotos.map((photo, index) => (
+                  <button
+                    key={`${photo}-${index}`}
+                    type="button"
+                    onClick={() => setActivePhotoIndex(index)}
+                    className={`relative h-20 w-28 shrink-0 overflow-hidden rounded-2xl ring-4 transition ${
+                      activePhotoIndex === index
+                        ? 'ring-blue-700'
+                        : 'ring-transparent hover:ring-blue-200'
+                    }`}
+                    aria-label={`Toon foto ${index + 1}`}
+                  >
+                    <img
+                      src={photo}
+                      alt={`${property.title || 'Woning'} foto ${index + 1}`}
+                      className="h-full w-full object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
 
             <div className="mt-8 rounded-[2rem] bg-white p-8 shadow-xl">
               <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
