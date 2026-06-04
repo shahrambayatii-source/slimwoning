@@ -2012,6 +2012,90 @@ function InfoRow({
   )
 }
 
+function StreetViewFrame({
+  position,
+}: {
+  position: { lat: number; lng: number }
+}) {
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const panoramaRef = useRef<any>(null)
+
+  useEffect(() => {
+    if (!containerRef.current || !window.google?.maps) return
+
+    const requestedPosition = new window.google.maps.LatLng(
+      position.lat,
+      position.lng
+    )
+
+    if (!panoramaRef.current) {
+      panoramaRef.current = new window.google.maps.StreetViewPanorama(
+        containerRef.current,
+        {
+          position: requestedPosition,
+          pov: {
+            heading: 0,
+            pitch: 0,
+          },
+          zoom: 1,
+          addressControl: false,
+          fullscreenControl: true,
+          motionTracking: false,
+          panControl: true,
+          zoomControl: true,
+          showRoadLabels: true,
+          visible: true,
+        }
+      )
+    }
+
+    const panorama = panoramaRef.current
+    const service = new window.google.maps.StreetViewService()
+
+    service.getPanorama(
+      {
+        location: requestedPosition,
+        radius: 100,
+        source: window.google.maps.StreetViewSource.OUTDOOR,
+      },
+      (data: any, status: any) => {
+        if (
+          status === window.google.maps.StreetViewStatus.OK &&
+          data?.location?.latLng
+        ) {
+          panorama.setPosition(data.location.latLng)
+          panorama.setPov({
+            heading: 0,
+            pitch: 0,
+          })
+          panorama.setVisible(true)
+          return
+        }
+
+        panorama.setPosition(requestedPosition)
+        panorama.setVisible(true)
+      }
+    )
+  }, [position.lat, position.lng])
+
+  return <div ref={containerRef} className="h-full w-full" />
+}
+
+function SectionCard({
+  title,
+  children,
+}: {
+  title: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="mx-auto mt-5 max-w-[1180px] rounded-[1.75rem] bg-white p-5 shadow-sm md:p-6">
+      <h2 className="mb-4 text-2xl font-bold">{title}</h2>
+      {children}
+    </div>
+  )
+}
+
 type ComparableProperty = {
   id: string | number
   title?: string | null
