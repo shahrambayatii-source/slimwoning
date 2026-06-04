@@ -631,7 +631,69 @@ export default function HomePage() {
   }
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#f4f7fb] text-[#111827]">
+    <>
+    <main className="min-h-screen bg-[#f4f7fb] px-5 py-6 text-[#111827] md:hidden">
+      <section className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-sm flex-col justify-between">
+        <div className="pt-8">
+          <div className="flex justify-center">
+            <div className="flex h-24 w-24 items-center justify-center rounded-[1.75rem] bg-[#071B4D] shadow-2xl shadow-blue-900/20">
+              <img
+                src="/logo.png"
+                alt="SlimWoning"
+                className="h-20 w-auto object-contain brightness-0 invert"
+              />
+            </div>
+          </div>
+
+          <div className="mt-8 text-center">
+            <h1 className="text-4xl font-black tracking-[-0.04em] text-[#071B4D]">
+              SlimWoning
+            </h1>
+            <p className="mx-auto mt-4 max-w-xs text-base font-semibold leading-7 text-slate-600">
+              Slim vastgoedplatform voor kopen, verkopen en analyseren van woningen.
+            </p>
+          </div>
+
+          <div className="mt-10 space-y-3">
+            <Link
+              href="/properties"
+              className="flex h-14 w-full items-center justify-center rounded-2xl bg-[#071B4D] text-base font-black text-white shadow-xl shadow-blue-900/20 transition active:scale-[0.99]"
+            >
+              Woningen zoeken
+            </Link>
+
+            <Link
+              href="/verkopen"
+              className="flex h-14 w-full items-center justify-center rounded-2xl border border-blue-100 bg-white text-base font-black text-[#071B4D] shadow-sm transition active:scale-[0.99]"
+            >
+              Woning verkopen
+            </Link>
+          </div>
+
+          <div className="mt-5 grid grid-cols-2 gap-3">
+            <Link
+              href="/login"
+              className="flex h-12 items-center justify-center rounded-2xl border border-slate-200 bg-white text-sm font-black text-blue-700 shadow-sm transition active:scale-[0.99]"
+            >
+              Inloggen
+            </Link>
+
+            <Link
+              href="/favorites"
+              className="flex h-12 items-center justify-center rounded-2xl border border-slate-200 bg-white text-sm font-black text-blue-700 shadow-sm transition active:scale-[0.99]"
+            >
+              Favorieten
+            </Link>
+          </div>
+        </div>
+
+        <p className="pb-5 text-center text-xs font-bold leading-5 text-slate-500">
+          Open in Safari → Deel → Zet op beginscherm
+        </p>
+      </section>
+    </main>
+
+    <main className="hidden min-h-screen overflow-hidden bg-[#f4f7fb] text-[#111827] md:block">
       <style>{`
         .leaflet-container {
           background: #dbeafe;
@@ -1315,5 +1377,6 @@ export default function HomePage() {
         </div>
       </section>
     </main>
+    </>
   )
 }
