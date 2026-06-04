@@ -1,856 +1,546 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { useJsApiLoader } from '@react-google-maps/api'
-import Link from 'next/link'
-import { supabase } from '@/lib/supabase'
+import { useEffect, useState } from 'react'
 
-const features = [
-  {
-    title: 'AI-waardescore',
-    icon: '📊',
-    text: 'Krijg een duidelijke score op basis van woningdata, ligging en marktpositie.',
-  },
-  {
-    title: 'Marktvergelijking',
-    icon: '📈',
-    text: 'Vergelijk je woning met relevante panden in dezelfde regio en prijsklasse.',
-  },
-  {
-    title: 'Verkoopadvies',
-    icon: '💡',
-    text: 'Ontdek welke stappen je verkoopkansen en presentatie kunnen versterken.',
-  },
-  {
-    title: 'Energie-impact',
-    icon: '⚡',
-    text: 'Zie hoe EPC en renovaties je verwachte verkoopwaarde kunnen beïnvloeden.',
-  },
-]
 
-const woningTypes = [
-  'Huis',
-  'Appartement',
-  'Villa',
-  'Studio',
-  'Duplex appartement',
-  'Penthouse',
-  'Rijwoning',
-  'Halfopen bebouwing',
-  'Open bebouwing',
-  'Nieuwbouw woning',
-  'Nieuwbouw appartement',
-  'Handelszaak',
-  'Kantoor',
-  'Bouwgrond',
-]
+function extractPriceRange(analysisResult: string | null) {
+  if (!analysisResult) return 'Nog niet berekend'
+
+  const normalizedResult = analysisResult.replace(/\s+/g, ' ')
+  const priceRangeMatch = normalizedResult.match(
+    /€?\s*\d{1,3}(?:[.\s]\d{3})+(?:,\d+)?\s*(?:-|–|—|tot)\s*€?\s*\d{1,3}(?:[.\s]\d{3})+(?:,\d+)?/i,
+  )
+
+  return priceRangeMatch?.[0].trim() || 'Niet gevonden'
+}
+
+function extractResultLabel(
+  analysisResult: string | null,
+  heading: string,
+  labels: string[],
+) {
+  if (!analysisResult) return 'Nog niet berekend'
+
+  const normalizedResult = analysisResult.replace(/\s+/g, ' ')
+  const headingMatch = normalizedResult.match(new RegExp(`${heading}[^.\\n:]*[:\\-]?\\s*([^.]*)`, 'i'))
+  const scopedText = headingMatch?.[1] || normalizedResult
+  const matchedLabel = labels.find((label) => new RegExp(`\\b${label}\\b`, 'i').test(scopedText))
+
+  return matchedLabel || 'Niet gevonden'
+}
+
 
 export default function VerkopenPage() {
-  const [address, setAddress] = useState('')
-  const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null)
-  const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(null)
-  const [streetViewUrl, setStreetViewUrl] = useState('')
-  const [isPreviewLoading, setIsPreviewLoading] = useState(false)
-  const [previewError, setPreviewError] = useState('')
-  const [propertyType, setPropertyType] = useState('')
-  const [livingArea, setLivingArea] = useState('')
-  const [bedrooms, setBedrooms] = useState('')
-  const [epcLabel, setEpcLabel] = useState('')
-  const [expectedPrice, setExpectedPrice] = useState('')
-  const [woningStaat, setWoningStaat] = useState('')
-  const [bathrooms, setBathrooms] = useState('')
-  const [buildYear, setBuildYear] = useState('')
-  const [landArea, setLandArea] = useState('')
-  const [buitenruimte, setBuitenruimte] = useState('')
-  const [parking, setParking] = useState('')
-  const [lift, setLift] = useState('')
-  const [renovationYear, setRenovationYear] = useState('')
-  const [heatingType, setHeatingType] = useState('')
-  const [solarPanels, setSolarPanels] = useState('')
-  const [doubleGlass, setDoubleGlass] = useState('')
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({})
+  // Helper to compute heading from Street View panorama to the actual address
+  function getHeading(fromLat: number, fromLng: number, toLat: number, toLng: number) {
+    const fromLatRad = (fromLat * Math.PI) / 180
+    const toLatRad = (toLat * Math.PI) / 180
+    const deltaLngRad = ((toLng - fromLng) * Math.PI) / 180
 
-  const [showInsights, setShowInsights] = useState(false)
-  const [city, setCity] = useState('')
-  const [comparables, setComparables] = useState<any[]>([])
-  const [comparisonLoading, setComparisonLoading] = useState(false)
-  const addressInputRef = useRef<HTMLInputElement | null>(null)
-  const formCardRef = useRef<HTMLDivElement | null>(null)
-  const featureCardsRef = useRef<HTMLDivElement | null>(null)
+    const y = Math.sin(deltaLngRad) * Math.cos(toLatRad)
+    const x =
+      Math.cos(fromLatRad) * Math.sin(toLatRad) -
+      Math.sin(fromLatRad) * Math.cos(toLatRad) * Math.cos(deltaLngRad)
 
-  const priceFormatter = new Intl.NumberFormat('nl-BE', {
-    style: 'currency',
-    currency: 'EUR',
-    maximumFractionDigits: 0,
+    return (Math.atan2(y, x) * 180) / Math.PI + 360
+  }
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [analysisResult, setAnalysisResult] = useState<string | null>(null)
+  const [analysisError, setAnalysisError] = useState<string | null>(null)
+  const [dashboardError, setDashboardError] = useState<string | null>(null)
+  const [streetViewOpenUrl, setStreetViewOpenUrl] = useState<string | null>(null)
+  const [citySuggestions, setCitySuggestions] = useState<Array<{ postcode: string; name: string; label: string }>>([])
+  const [radarForm, setRadarForm] = useState({
+    address: '',
+    city: '',
+    propertyType: '',
+    livingArea: '',
+    bedrooms: '',
+    epc: '',
+    description: '',
   })
 
-  const parseNumeric = (value: string) => {
-    const digits = value.replace(/[^\d]/g, '')
-    return digits ? Number(digits) : NaN
-  }
+  const analysisSummary = analysisResult
+    ? analysisResult.length > 520
+      ? `${analysisResult.slice(0, 520).trim()}...`
+      : analysisResult
+    : null
 
-  const extractCityFromPlace = (addressComponents: any[] | undefined) => {
-    if (!addressComponents?.length) return ''
+  const hasHouseNumber = /\d/.test(radarForm.address)
+  const marktRadarResults = [
+    { label: 'Waarderaming', value: extractPriceRange(analysisResult) },
+    {
+      label: 'Marktpositie',
+      value: extractResultLabel(analysisResult, 'Marktpositie', ['Sterk', 'Gemiddeld', 'Zwak']),
+    },
+    {
+      label: 'Verkoopkans',
+      value: extractResultLabel(analysisResult, 'Verkoopkans', ['Hoog', 'Gemiddeld', 'Laag']),
+    },
+  ]
 
-    const cityComponent =
-      addressComponents.find((component) =>
-        component.types?.includes('locality') ||
-        component.types?.includes('postal_town') ||
-        component.types?.includes('administrative_area_level_2') ||
-        component.types?.includes('administrative_area_level_1')
-      ) || addressComponents[addressComponents.length - 1]
+  const streetViewAddress = [radarForm.address, radarForm.city, 'Belgium']
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .join(', ')
 
-    return cityComponent?.long_name ?? ''
-  }
-
-  const parseRegionFromAddress = (value: string) => {
-    const parts = value.split(',').map((part) => part.trim()).filter(Boolean)
-    return parts.length > 1 ? parts[parts.length - 1] : parts[0] || ''
-  }
-
-  const userPrice = parseNumeric(expectedPrice)
-  const userArea = parseNumeric(livingArea)
-  const userPricePerM2 = Number.isFinite(userPrice) && Number.isFinite(userArea) && userArea > 0 ? userPrice / userArea : NaN
-  const hasValidPricePerM2 = Number.isFinite(userPricePerM2) && userPricePerM2 > 0
-
-  const cityQuery = (city || parseRegionFromAddress(address)).trim()
-  const comparableAreaMin = Number.isFinite(userArea) ? Math.floor(userArea * 0.8) : NaN
-  const comparableAreaMax = Number.isFinite(userArea) ? Math.ceil(userArea * 1.2) : NaN
-
-  const comparableCount = comparables.length
-  const comparableAvgPricePerM2 = comparableCount > 0
-    ? comparables.reduce((sum, item) => sum + (Number(item.pricePerM2) || 0), 0) / comparableCount
-    : NaN
-  const comparableDifferencePercent = hasValidPricePerM2 && comparableCount > 0
-    ? ((userPricePerM2 - comparableAvgPricePerM2) / comparableAvgPricePerM2) * 100
-    : NaN
-  const hasEnoughComparables = comparableCount >= 3
-
-  const comparisonMessage = comparisonLoading
-    ? 'Beschikbare woningdata wordt geladen ...'
-    : hasEnoughComparables
-      ? 'Deze vergelijking gebruikt beschikbare regionale woningdata en vergelijkbare panden met een vergelijkbaar type, oppervlakte en prijs per m².'
-      : 'Er zijn onvoldoende vergelijkbare panden beschikbaar voor een betrouwbare vergelijking.'
-
-  const getFormattedNumber = (value: number) =>
-    Number.isFinite(value) ? priceFormatter.format(value) : '-'
-
-  const getRoundedPercent = (value: number) => `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`
-
-  const { isLoaded } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
-    libraries: ['places'],
-  })
+  const streetViewUrl = streetViewAddress
+    ? `https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}&q=${encodeURIComponent(streetViewAddress)}`
+    : null
 
   useEffect(() => {
-    const query = address.trim()
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+    const query = radarForm.city.trim()
 
-    setStreetViewUrl('')
-    setPreviewError('')
-
-    if (!query) {
-      setIsPreviewLoading(false)
+    if (query.length < 1) {
+      setCitySuggestions([])
       return
     }
 
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
+
     if (!apiKey) {
-      setPreviewError('Locatiepreview is tijdelijk niet beschikbaar.')
-      setIsPreviewLoading(false)
+      setCitySuggestions([])
       return
     }
 
     const controller = new AbortController()
-    const timeout = window.setTimeout(async () => {
-      setIsPreviewLoading(true)
 
+    async function loadCitySuggestions() {
       try {
-        const locationCoordinates = coordinates
-          ? { lat: coordinates.lat, lng: coordinates.lng }
-          : null
+        const response = await fetch(
+          `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&types=(regions)&components=country:be&language=nl&key=${apiKey}`,
+          { signal: controller.signal },
+        )
+        const data = await response.json()
 
-        const coordinatesString = locationCoordinates
-          ? `${locationCoordinates.lat},${locationCoordinates.lng}`
-          : null
+        const predictions = Array.isArray(data?.predictions) ? data.predictions : []
 
-        const useSelectedPlaceLocation = selectedPlaceId !== null && coordinatesString
+        const suggestions = predictions.slice(0, 8).map((prediction: any) => {
+          const mainText = prediction?.structured_formatting?.main_text || prediction?.description || ''
+          const label = prediction?.description || mainText
+          const postcodeMatch = label.match(/\b\d{4}\b/)
 
-        if (useSelectedPlaceLocation) {
-          const metadataResponse = await fetch(
-            `https://maps.googleapis.com/maps/api/streetview/metadata?location=${coordinatesString}&radius=50&key=${apiKey}`,
-            { signal: controller.signal }
-          )
-          const metadata = await metadataResponse.json()
-
-          if (!metadataResponse.ok || metadata?.status !== 'OK') {
-            throw new Error('Street View unavailable')
+          return {
+            postcode: postcodeMatch?.[0] || '',
+            name: mainText,
+            label,
           }
+        }).filter((option: { name: string; label: string }) => option.name || option.label)
 
-          setStreetViewUrl(
-            `https://www.google.com/maps/embed/v1/streetview?key=${apiKey}&location=${coordinatesString}&heading=210&pitch=10&fov=80`
-          )
-          setPreviewError('')
-          return
+        setCitySuggestions(suggestions)
+      } catch (error) {
+        if ((error as Error).name !== 'AbortError') {
+          setCitySuggestions([])
         }
+      }
+    }
 
+    loadCitySuggestions()
+
+    return () => controller.abort()
+  }, [radarForm.city])
+
+  useEffect(() => {
+    if (!streetViewAddress) {
+      setStreetViewOpenUrl(null)
+      return
+    }
+
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
+
+    if (!apiKey) {
+      setStreetViewOpenUrl(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(streetViewAddress)}`)
+      return
+    }
+
+    let cancelled = false
+
+    async function loadStreetViewPanorama() {
+      try {
+        // Geocode the address to get the real property location
         const geocodeResponse = await fetch(
-          `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${apiKey}`,
-          { signal: controller.signal }
+          `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(streetViewAddress)}&key=${apiKey}`,
         )
         const geocodeData = await geocodeResponse.json()
-        const location = geocodeData?.results?.[0]?.geometry?.location
+        const targetLocation = geocodeData?.results?.[0]?.geometry?.location
 
-        if (!geocodeResponse.ok || geocodeData?.status !== 'OK' || !location) {
-          throw new Error('Geocoding failed')
-        }
-
-        const coordinateString = `${location.lat},${location.lng}`
+        // Find the nearest Street View panorama
         const metadataResponse = await fetch(
-          `https://maps.googleapis.com/maps/api/streetview/metadata?location=${coordinateString}&radius=50&key=${apiKey}`,
-          { signal: controller.signal }
+          `https://maps.googleapis.com/maps/api/streetview/metadata?location=${encodeURIComponent(streetViewAddress)}&radius=120&source=outdoor&key=${apiKey}`,
         )
         const metadata = await metadataResponse.json()
 
-        if (!metadataResponse.ok || metadata?.status !== 'OK') {
-          throw new Error('Street View unavailable')
+        if (cancelled) return
+
+        if (metadata?.status === 'OK' && metadata?.location?.lat && metadata?.location?.lng && targetLocation?.lat && targetLocation?.lng) {
+          const heading = Math.round(
+            getHeading(
+              Number(metadata.location.lat),
+              Number(metadata.location.lng),
+              Number(targetLocation.lat),
+              Number(targetLocation.lng),
+            ) % 360,
+          )
+
+          const panoParam = metadata?.pano_id
+            ? `&pano=${encodeURIComponent(metadata.pano_id)}`
+            : `&viewpoint=${metadata.location.lat},${metadata.location.lng}`
+
+          setStreetViewOpenUrl(`https://www.google.com/maps/@?api=1&map_action=pano${panoParam}&heading=${heading}&pitch=0&fov=80`)
+          return
         }
 
-        setStreetViewUrl(
-          `https://www.google.com/maps/embed/v1/streetview?key=${apiKey}&location=${coordinateString}&heading=210&pitch=10&fov=80`
-        )
-        setPreviewError('')
-      } catch (error) {
-        if (!controller.signal.aborted) {
-          setStreetViewUrl('')
-          setPreviewError('Geen Street View-preview gevonden voor dit adres.')
+        if (metadata?.status === 'OK' && metadata?.pano_id) {
+          setStreetViewOpenUrl(`https://www.google.com/maps/@?api=1&map_action=pano&pano=${encodeURIComponent(metadata.pano_id)}&pitch=0&fov=80`)
+          return
         }
-      } finally {
-        if (!controller.signal.aborted) {
-          setIsPreviewLoading(false)
+
+        setStreetViewOpenUrl(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(streetViewAddress)}`)
+      } catch {
+        if (!cancelled) {
+          setStreetViewOpenUrl(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(streetViewAddress)}`)
         }
       }
-    }, 700)
+    }
+
+    loadStreetViewPanorama()
 
     return () => {
-      window.clearTimeout(timeout)
-      controller.abort()
+      cancelled = true
     }
-  }, [address, coordinates, selectedPlaceId])
+  }, [streetViewAddress])
 
-  const scrollToForm = () => {
-    formCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    addressInputRef.current?.focus()
-  }
+  function goToDashboard() {
+    setDashboardError(null)
 
-  const scrollToMarketInfo = () => {
-    featureCardsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
+    const hasSupabaseSession =
+      typeof window !== 'undefined' &&
+      Object.keys(window.localStorage).some((key) => {
+        if (!key.startsWith('sb-') || !key.includes('auth-token')) return false
 
-  const loadComparableListings = async () => {
-    if (!propertyType || Number.isNaN(userArea) || userArea <= 0) {
-      setComparables([])
-      return
-    }
-
-    setComparisonLoading(true)
-    setComparables([])
-
-    const bedroomsNumber = Number.isFinite(parseNumeric(bedrooms)) ? parseNumeric(bedrooms) : null
-    const epcTerm = epcLabel.trim()
-
-    let query = supabase
-      .from('market_comparables')
-      .select('id,price,living_area,property_type,city,postcode,bedrooms,epc')
-
-    if (cityQuery) {
-      query = query.ilike('city', `%${cityQuery}%`)
-    }
-
-    if (propertyType) {
-      query = query.eq('property_type', propertyType)
-    }
-
-    if (Number.isFinite(comparableAreaMin) && Number.isFinite(comparableAreaMax)) {
-      query = query.gte('living_area', comparableAreaMin).lte('living_area', comparableAreaMax)
-    }
-
-    if (bedroomsNumber !== null) {
-      query = query.eq('bedrooms', bedroomsNumber)
-    }
-
-    if (epcTerm) {
-      query = query.ilike('epc', `${epcTerm}%`)
-    }
-
-    const { data, error } = await query.limit(100)
-
-    if (error || !data) {
-      setComparisonLoading(false)
-      return
-    }
-
-    const filteredData = (data as any[])
-      .map((item) => {
-        const price = Number(item.price ?? NaN)
-        const area = Number(item.living_area ?? NaN)
-        const pricePerM2 = area > 0 && Number.isFinite(price) ? price / area : NaN
-        return { ...item, pricePerM2 }
+        const value = window.localStorage.getItem(key)
+        return Boolean(value && value !== 'null' && value !== 'undefined')
       })
-      .filter((item) => Number.isFinite(item.pricePerM2) && item.pricePerM2 > 0)
 
-    const comparableResults = hasValidPricePerM2
-      ? filteredData.filter(
-          (item) =>
-            item.pricePerM2 >= userPricePerM2 * 0.8 &&
-            item.pricePerM2 <= userPricePerM2 * 1.2
-        )
-      : filteredData
-
-    setComparables(comparableResults)
-    setComparisonLoading(false)
-  }
-
-  const handleSubmitForm = () => {
-    const errors: Record<string, string> = {}
-
-    if (!address.trim()) {
-      errors.address = 'Vul het adres in.'
-    }
-
-    if (!propertyType.trim()) {
-      errors.propertyType = 'Vul het type woning in.'
-    }
-
-    if (!livingArea.trim()) {
-      errors.livingArea = 'Vul de woonoppervlakte in.'
-    }
-
-    if (!woningStaat.trim()) {
-      errors.woningStaat = 'Vul de staat van de woning in.'
-    }
-
-    setFormErrors(errors)
-
-    if (Object.keys(errors).length > 0) {
-      setShowInsights(false)
-      setComparables([])
+    if (!hasSupabaseSession) {
+      setDashboardError('Oops, je bent niet ingelogd.')
       return
     }
 
-    setShowInsights(true)
+    window.location.href = '/dashboard'
   }
 
-  useEffect(() => {
-    if (!showInsights) return
-    loadComparableListings()
-  }, [showInsights, propertyType, cityQuery, userArea, bedrooms, epcLabel, userPricePerM2])
+  async function startMarktRadar() {
+    setIsAnalyzing(true)
+    setAnalysisError(null)
+    setAnalysisResult(null)
 
-  useEffect(() => {
-    if (!isLoaded || !addressInputRef.current || !window.google?.maps?.places) return
-
-    const autocomplete = new window.google.maps.places.Autocomplete(addressInputRef.current, {
-      componentRestrictions: { country: 'be' },
-      fields: ['formatted_address', 'geometry', 'address_components'],
-      types: ['address'],
-    })
-
-    const listener = autocomplete.addListener('place_changed', () => {
-      const place = autocomplete.getPlace()
-      const formattedAddress = place.formatted_address || ''
-      const placeId = place.place_id || null
-
-      if (!formattedAddress) return
-
-      const placeCity = extractCityFromPlace(place.address_components)
-      setAddress(formattedAddress)
-      setSelectedPlaceId(placeId)
-      setCity(placeCity)
-
-      if (place.geometry?.location) {
-        setCoordinates({
-          lat: place.geometry.location.lat(),
-          lng: place.geometry.location.lng(),
-        })
-      } else {
-        setCoordinates(null)
-      }
-    })
-
-    return () => {
-      window.google.maps.event.removeListener(listener)
+    if (!radarForm.address.trim() || !radarForm.city.trim()) {
+      setAnalysisError('Vul eerst minstens het adres en de gemeente in.')
+      setIsAnalyzing(false)
+      return
     }
-  }, [isLoaded])
 
+    if (!hasHouseNumber) {
+      setAnalysisError('Vul ook het huisnummer in, anders kan Google het verkeerde pand tonen.')
+      setIsAnalyzing(false)
+      return
+    }
+
+    try {
+      const response = await fetch('/api/marktradar', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(radarForm),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok || data?.success === false) {
+        throw new Error(data?.error || 'MarktRadar analyse kon niet worden uitgevoerd')
+      }
+
+      const outputText =
+        data?.analysis ||
+        data?.result?.output_text ||
+        data?.result?.output
+          ?.flatMap((item: any) => item?.content || [])
+          ?.map((content: any) => content?.text || '')
+          ?.filter(Boolean)
+          ?.join('\n\n') ||
+        'Geen leesbaar AI-resultaat ontvangen.'
+
+      setAnalysisResult(outputText)
+    } catch (error) {
+      setAnalysisError(error instanceof Error ? error.message : 'Onbekende fout')
+    } finally {
+      setIsAnalyzing(false)
+    }
+  }
   return (
     <main className="min-h-screen bg-[#F4F7FB] text-[#071B4D]">
-      <section className="px-6 py-12 md:px-10 lg:px-16">
-        <div className="mx-auto flex max-w-[1200px] justify-center">
-          <div className="flex min-h-[560px] flex-col justify-between overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-[#071B4D] via-[#0A2463] to-[#071B4D] p-8 text-white shadow-[0_28px_90px_rgba(0,0,0,0.15)] w-full">
-            <div>
-              <span className="mb-10 inline-flex items-center rounded-full border border-white/15 bg-white/5 px-4 py-1 text-[11px] font-bold uppercase tracking-[0.25em] text-cyan-200/80 backdrop-blur-sm">
-                Slim verkopen
-              </span>
-              <h1 className="text-6xl font-black leading-[0.95] text-white">
-                Verkoop je woning slimmer
-              </h1>
-              <p className="mt-6 max-w-2xl text-xl font-semibold leading-8 text-blue-100">
-                Ontvang een slimme inschatting op basis van woningdata en marktinformatie.
-              </p>
+      <section className="px-6 pt-10 md:px-10 lg:px-16">
+        <div className="mx-auto max-w-[1400px] rounded-t-[2.5rem] bg-gradient-to-br from-[#071B4D] via-[#0A2463] to-[#071B4D] px-8 py-10 text-white shadow-[0_24px_70px_rgba(7,27,77,0.22)] md:px-12">
+            <div className="flex flex-col items-center gap-8 text-center">
+              <div>
+                <span className="inline-flex items-center rounded-full border border-white/15 bg-white/5 px-4 py-1 text-[11px] font-black uppercase tracking-[0.25em] text-cyan-200/80 backdrop-blur-sm">
+                  Slim verkopen
+                </span>
 
-              <div className="mt-8 h-[260px] overflow-hidden rounded-[1.5rem] border border-white/15 bg-white/5 shadow-[0_20px_60px_rgba(0,0,0,0.20)]">
-                {streetViewUrl ? (
-                  <iframe
-                    title="Locatiepreview woning"
-                    src={streetViewUrl}
-                    className="h-full w-full border-0"
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
-                  />
-                ) : isPreviewLoading ? (
-                  <div className="grid h-full place-items-center p-6 text-center">
-                    <p className="max-w-sm text-sm font-semibold leading-6 text-blue-100">
-                      Locatiepreview laden...
-                    </p>
-                  </div>
-                ) : previewError ? (
-                  <div className="grid h-full place-items-center p-6 text-center">
-                    <p className="max-w-sm text-sm font-semibold leading-6 text-blue-100">
-                      {previewError}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="grid h-full place-items-center p-6 text-center">
-                    <p className="max-w-sm text-sm font-semibold leading-6 text-blue-100">
-                      Vul je adres in om de ligging van je woning te bekijken.
-                    </p>
-                  </div>
-                )}
+                <h1 className="mx-auto mt-6 max-w-3xl text-4xl font-black leading-tight tracking-[-0.04em] text-white md:text-5xl">
+                  Verkoop je woning met meer inzicht
+                </h1>
+
+                <p className="mx-auto mt-4 max-w-2xl text-base font-semibold leading-7 text-blue-100">
+                  Start een AI-verkoopanalyse die je woningdata combineert met actuele marktcontext en makelaars in jouw regio.
+                </p>
               </div>
-            </div>
 
-            <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center">
-              <Link
-                href="/verkopen/schatting"
-                className="inline-flex h-14 items-center justify-center rounded-2xl bg-white px-6 text-sm font-black text-[#071B4D] shadow-xl shadow-black/15 transition hover:-translate-y-0.5 hover:shadow-2xl"
-              >
-                Start gratis inschatting
-              </Link>
-              <button
-                type="button"
-                onClick={scrollToMarketInfo}
-                className="inline-flex h-14 items-center justify-center rounded-2xl border border-white/25 px-6 text-sm font-black text-white transition hover:bg-white/10"
-              >
-                Bekijk marktdata
-              </button>
             </div>
-          </div>
-
         </div>
       </section>
 
-      <section className="px-6 pb-14 md:px-10 lg:px-16">
-        <div className="mb-6">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-blue-700">
-            Gratis indicatie
-          </p>
-          <h2 className="mt-2 text-3xl font-black tracking-[-0.035em] text-[#071B4D]">
-            Woninggegevens
-          </h2>
-        </div>
+      <section id="marktdata" className="px-6 pb-16 md:px-10 lg:px-16">
+        <div className="mx-auto max-w-[1400px] rounded-b-[2.5rem] border-x border-b border-blue-100 bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.10)] md:p-10">
+          <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
+            <div>
 
-        {!showInsights ? (
-          <form className="grid grid-cols-1 gap-4">
-            {/* Basic Required Fields */}
-            <div className="grid grid-cols-1 gap-4">
-              {/* Adres */}
-              <label className="block">
-                <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
-                  Adres
-                </span>
-                <input
-                  ref={addressInputRef}
-                  placeholder="Straat, nummer, gemeente"
-                  value={address}
-                  onChange={(event) => {
-                    setAddress(event.target.value)
-                    setCity('')
-                    setSelectedPlaceId(null)
-                    setCoordinates(null)
-                    setFormErrors((current) => ({ ...current, address: '' }))
-                    setShowInsights(false)
-                  }}
-                  className="h-13 w-full rounded-2xl border border-blue-100 bg-blue-50/30 px-4 py-4 text-sm font-bold text-[#071B4D] outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-blue-50/50"
-                />
-                {formErrors.address && (
-                  <p className="mt-2 text-xs font-semibold text-red-600">{formErrors.address}</p>
-                )}
-              </label>
+              <div className="mt-6 rounded-[1.5rem] border border-blue-100 bg-blue-50/50 p-4">
+                <p className="text-sm font-black text-[#071B4D]">Start met je woninggegevens</p>
+                <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <input
+                    value={radarForm.address}
+                    onChange={(event) => setRadarForm((prev) => ({ ...prev, address: event.target.value }))}
+                    placeholder="Straat + huisnummer"
+                    className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-[#071B4D] outline-none transition focus:border-blue-400"
+                  />
+                  <div className="relative">
+                    <input
+                      value={radarForm.city}
+                      onChange={(event) => setRadarForm((prev) => ({ ...prev, city: event.target.value }))}
+                      placeholder="Gemeente of postcode"
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-[#071B4D] outline-none transition focus:border-blue-400"
+                    />
 
-              {/* Type woning */}
-              <label className="block">
-                <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
-                  Type woning
-                </span>
-                <div className="relative">
-                  <select
-                    value={propertyType}
-                    onChange={(e) => {
-                      setPropertyType(e.target.value)
-                      setFormErrors((current) => ({ ...current, propertyType: '' }))
-                      setShowInsights(false)
-                    }}
-                    className="h-13 w-full appearance-none rounded-2xl border border-blue-100 bg-blue-50/30 px-4 py-4 pr-12 text-sm font-bold text-[#071B4D] outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-blue-50/50"
-                  >
-                    <option value="">Selecteer type woning</option>
-                    {woningTypes.map((type) => (
-                      <option key={type} value={type}>
-                        {type}
-                      </option>
-                    ))}
-                  </select>
-                  <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-slate-400">
-                    ▾
-                  </span>
-                </div>
-                {formErrors.propertyType && (
-                  <p className="mt-2 text-xs font-semibold text-red-600">{formErrors.propertyType}</p>
-                )}
-              </label>
-
-              {/* Woonoppervlakte */}
-              <label className="block">
-                <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
-                  Woonoppervlakte
-                </span>
-                <input
-                  placeholder="Bijv. 145 m²"
-                  value={livingArea}
-                  onChange={(event) => {
-                    setLivingArea(event.target.value)
-                    setFormErrors((current) => ({ ...current, livingArea: '' }))
-                    setShowInsights(false)
-                  }}
-                  className="h-13 w-full rounded-2xl border border-blue-100 bg-blue-50/30 px-4 py-4 text-sm font-bold text-[#071B4D] outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-blue-50/50"
-                />
-                {formErrors.livingArea && (
-                  <p className="mt-2 text-xs font-semibold text-red-600">{formErrors.livingArea}</p>
-                )}
-              </label>
-
-              {/* Slaapkamers */}
-              <label className="block">
-                <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
-                  Slaapkamers
-                </span>
-                <input
-                  placeholder="Bijv. 3"
-                  value={bedrooms}
-                  onChange={(event) => {
-                    setBedrooms(event.target.value)
-                    setShowInsights(false)
-                  }}
-                  className="h-13 w-full rounded-2xl border border-blue-100 bg-blue-50/30 px-4 py-4 text-sm font-bold text-[#071B4D] outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-blue-50/50"
-                />
-              </label>
-
-              {/* EPC-label */}
-              <label className="block">
-                <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
-                  EPC-label
-                </span>
-                <input
-                  placeholder="A, B, C..."
-                  value={epcLabel}
-                  onChange={(event) => {
-                    setEpcLabel(event.target.value)
-                    setShowInsights(false)
-                  }}
-                  className="h-13 w-full rounded-2xl border border-blue-100 bg-blue-50/30 px-4 py-4 text-sm font-bold text-[#071B4D] outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-blue-50/50"
-                />
-              </label>
-
-              {/* Staat van de woning - REQUIRED */}
-              <label className="block">
-                <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
-                  Staat van de woning
-                </span>
-                <div className="relative">
-                  <select
-                    value={woningStaat}
-                    onChange={(e) => {
-                      setWoningStaat(e.target.value)
-                      setFormErrors((current) => ({ ...current, woningStaat: '' }))
-                      setShowInsights(false)
-                    }}
-                    className="h-13 w-full appearance-none rounded-2xl border border-blue-100 bg-blue-50/30 px-4 py-4 pr-12 text-sm font-bold text-[#071B4D] outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-blue-50/50"
-                  >
-                    <option value="">Selecteer staat van de woning</option>
-                    <option value="Instapklaar">Instapklaar</option>
-                    <option value="Goed onderhouden">Goed onderhouden</option>
-                    <option value="Te renoveren">Te renoveren</option>
-                    <option value="Grondige renovatie nodig">Grondige renovatie nodig</option>
-                  </select>
-                  <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-slate-400">
-                    ▾
-                  </span>
-                </div>
-                {formErrors.woningStaat && (
-                  <p className="mt-2 text-xs font-semibold text-red-600">{formErrors.woningStaat}</p>
-                )}
-              </label>
-
-              {/* Richtprijs / gewenste vraagprijs - OPTIONAL */}
-              <label className="block">
-                <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
-                  Richtprijs / gewenste vraagprijs
-                </span>
-                <input
-                  placeholder="Optioneel, bijv. € 425.000"
-                  value={expectedPrice}
-                  onChange={(event) => {
-                    setExpectedPrice(event.target.value)
-                    setShowInsights(false)
-                  }}
-                  className="h-13 w-full rounded-2xl border border-blue-100 bg-blue-50/30 px-4 py-4 text-sm font-bold text-[#071B4D] outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-blue-50/50"
-                />
-              </label>
-            </div>
-
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <button
-                type="button"
-                onClick={handleSubmitForm}
-                className="flex-1 rounded-2xl bg-[#071B4D] px-5 py-4 text-sm font-black text-white shadow-lg shadow-blue-900/15 transition hover:-translate-y-0.5 hover:bg-[#0B2A6B]"
-              >
-                Bereken slimme inschatting
-              </button>
-              <Link
-                href="/verkopen/schatting"
-                className="flex-1 rounded-2xl border border-slate-200 bg-white px-5 py-4 text-center text-sm font-black text-[#071B4D] shadow-lg shadow-blue-900/10 transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-lg"
-              >
-                Uitgebreide schatting
-              </Link>
-            </div>
-          </form>
-        ) : (
-          <div className="grid grid-cols-1 gap-4">
-            <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5 text-sm text-slate-700">
-              <h3 className="text-lg font-black text-[#071B4D]">Indicatieve woninginzichten</h3>
-
-              <div className="mt-4 space-y-4">
-                <div>
-                  <p className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-500">
-                    Ingevulde gegevens
-                  </p>
-                  <ul className="mt-3 space-y-2 text-sm text-slate-700">
-                    <li>Adres: {address || '-'}</li>
-                    <li>Type woning: {propertyType || '-'}</li>
-                    <li>Woonoppervlakte: {livingArea ? `${livingArea} m²` : '-'}</li>
-                    <li>Slaapkamers: {bedrooms || '-'}</li>
-                    <li>Badkamers: {bathrooms || '-'}</li>
-                    <li>EPC-label: {epcLabel || '-'}</li>
-                    <li>Staat van de woning: {woningStaat || '-'}</li>
-                    <li>Richtprijs / gewenste vraagprijs: {expectedPrice ? expectedPrice : '-'} </li>
-                    {buildYear && <li>Bouwjaar: {buildYear}</li>}
-                    {landArea && <li>Perceeloppervlakte: {landArea}</li>}
-                    {buitenruimte && <li>Buitenruimte: {buitenruimte}</li>}
-                    {parking && <li>Parking: {parking}</li>}
-                    {lift && <li>Lift aanwezig: {lift}</li>}
-                    {renovationYear && <li>Renovatiejaar: {renovationYear}</li>}
-                    {heatingType && <li>Verwarmingstype: {heatingType}</li>}
-                    {solarPanels && <li>Zonnepanelen: {solarPanels}</li>}
-                    {doubleGlass && <li>Dubbel glas: {doubleGlass}</li>}
-                  </ul>
-                </div>
-
-                <div>
-                  <p className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-500">
-                    Prijs per m²
-                  </p>
-                  {!expectedPrice.trim() ? (
-                    <p className="mt-3 text-sm text-slate-700">
-                      Geen richtprijs ingevuld. We tonen alleen inzichten op basis van woninggegevens en beschikbare marktinformatie.
-                    </p>
-                  ) : hasValidPricePerM2 ? (
-                    <p className="mt-3 text-sm text-slate-700">
-                      Prijs per m²: ± {getFormattedNumber(userPricePerM2)}/m²
-                    </p>
-                  ) : (
-                    <p className="mt-3 text-sm text-slate-700">
-                      Prijs per m² kan niet worden berekend zonder een geldige vraagprijs en woonoppervlakte.
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <p className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-500">
-                    Vergelijkingsbasis
-                  </p>
-                  <div className="mt-3 text-sm text-slate-700">
-                    {comparisonLoading ? (
-                      <p>Beschikbare woningdata wordt geladen...</p>
-                    ) : hasEnoughComparables ? (
-                      <>
-                        <p>
-                          Deze vergelijking is gemaakt met beschikbare woningdata die overeenkomt met je regio, type woning en oppervlakte.
-                        </p>
-                        <div className="mt-4 space-y-2 rounded-2xl bg-white p-4 text-slate-700 shadow-sm">
-                          <p>
-                            Aantal vergelijkbare panden: <span className="font-semibold">{comparableCount}</span>
-                          </p>
-                          <p>
-                            Gemiddelde prijs per m²: <span className="font-semibold">{getFormattedNumber(comparableAvgPricePerM2)}/m²</span>
-                          </p>
-                          <p>
-                            Ingevoerde prijs per m²: <span className="font-semibold">{hasValidPricePerM2 ? `${getFormattedNumber(userPricePerM2)}/m²` : '-'}</span>
-                          </p>
-                          <p>
-                            Verschil: <span className="font-semibold">{Number.isFinite(comparableDifferencePercent) ? getRoundedPercent(comparableDifferencePercent) : '-'}</span>
-                          </p>
-                        </div>
-                      </>
-                    ) : (
-                      <p>{comparisonMessage}</p>
+                    {citySuggestions.length > 0 && (
+                      <div className="absolute left-0 right-0 top-full z-20 mt-2 overflow-hidden rounded-2xl border border-blue-100 bg-white shadow-xl shadow-blue-950/10">
+                        {citySuggestions.map((option) => (
+                          <button
+                            key={option.label}
+                            type="button"
+                            onClick={() => {
+                              setRadarForm((prev) => ({ ...prev, city: option.postcode ? `${option.postcode} ${option.name}` : option.name }))
+                              setCitySuggestions([])
+                            }}
+                            className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm font-black text-[#071B4D] transition hover:bg-blue-50"
+                          >
+                            <span>{option.name || option.label}</span>
+                            {option.postcode && (
+                              <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700">
+                                {option.postcode}
+                              </span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
                     )}
                   </div>
+                  <input
+                    value={radarForm.propertyType}
+                    onChange={(event) => setRadarForm((prev) => ({ ...prev, propertyType: event.target.value }))}
+                    placeholder="Type woning"
+                    className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-[#071B4D] outline-none transition focus:border-blue-400"
+                  />
+                  <input
+                    value={radarForm.livingArea}
+                    onChange={(event) => setRadarForm((prev) => ({ ...prev, livingArea: event.target.value }))}
+                    placeholder="Bewoonbare oppervlakte m²"
+                    className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-[#071B4D] outline-none transition focus:border-blue-400"
+                  />
+                  <input
+                    value={radarForm.bedrooms}
+                    onChange={(event) => setRadarForm((prev) => ({ ...prev, bedrooms: event.target.value }))}
+                    placeholder="Slaapkamers"
+                    className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-[#071B4D] outline-none transition focus:border-blue-400"
+                  />
+                  <input
+                    value={radarForm.epc}
+                    onChange={(event) => setRadarForm((prev) => ({ ...prev, epc: event.target.value }))}
+                    placeholder="EPC-label"
+                    className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-[#071B4D] outline-none transition focus:border-blue-400"
+                  />
                 </div>
+                <textarea
+                  value={radarForm.description}
+                  onChange={(event) => setRadarForm((prev) => ({ ...prev, description: event.target.value }))}
+                  placeholder="Korte beschrijving van de woning"
+                  rows={3}
+                  className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-[#071B4D] outline-none transition focus:border-blue-400"
+                />
+                {streetViewUrl && (
+                  <div className="mt-4 overflow-hidden rounded-[1.5rem] border border-blue-100 bg-white shadow-sm">
+                    <div className="flex items-center justify-between gap-3 px-4 py-3">
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-700">
+                          Interactieve kaart
+                        </p>
+                        <p className="mt-1 text-sm font-bold text-slate-600">
+                          {streetViewAddress}
+                        </p>
+                        {!hasHouseNumber && (
+                          <p className="mt-2 text-xs font-black text-amber-600">
+                            Voeg een huisnummer toe voor een correcte gevelweergave.
+                          </p>
+                        )}
+                      </div>
 
-                <div>
-                  <p className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-500">
-                    Aandachtspunten
+                      {streetViewOpenUrl && (
+                        <a
+                          href={streetViewOpenUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex h-10 shrink-0 items-center justify-center rounded-2xl bg-blue-700 px-4 text-xs font-black text-white transition hover:bg-blue-800"
+                        >
+                          Street View openen
+                        </a>
+                      )}
+                    </div>
+                    <iframe
+                      src={streetViewUrl}
+                      width="100%"
+                      height="256"
+                      style={{ border: 0 }}
+                      allowFullScreen
+                      loading="lazy"
+                      referrerPolicy="no-referrer-when-downgrade"
+                      title={`Kaart van ${streetViewAddress}`}
+                      className="h-64 w-full object-cover"
+                    />
+                  </div>
+                )}
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                  <button
+                    type="button"
+                    onClick={startMarktRadar}
+                    disabled={isAnalyzing}
+                    className="inline-flex h-12 flex-1 items-center justify-center rounded-2xl bg-blue-700 px-6 text-sm font-black text-white shadow-lg shadow-blue-900/15 transition hover:bg-blue-800 disabled:cursor-wait disabled:opacity-70"
+                  >
+                    {isAnalyzing ? 'Analyse loopt...' : 'Analyse starten'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRadarForm({
+                        address: '',
+                        city: '',
+                        propertyType: '',
+                        livingArea: '',
+                        bedrooms: '',
+                        epc: '',
+                        description: '',
+                      })
+                      setAnalysisResult(null)
+                      setAnalysisError(null)
+                      setDashboardError(null)
+                      setCitySuggestions([])
+                      setStreetViewOpenUrl(null)
+                    }}
+                    className="inline-flex h-12 flex-1 items-center justify-center rounded-2xl border border-red-200 bg-white px-6 text-sm font-black text-red-600 transition hover:bg-red-50"
+                  >
+                    Wissen
+                  </button>
+                  <button
+                    type="button"
+                    onClick={goToDashboard}
+                    className="inline-flex h-12 flex-1 items-center justify-center rounded-2xl border border-blue-200 bg-white px-6 text-sm font-black text-blue-700 transition hover:bg-blue-50"
+                  >
+                    Naar dashboard
+                  </button>
+                </div>
+                {dashboardError && (
+                  <p className="mt-3 rounded-2xl bg-red-50 px-4 py-3 text-sm font-black text-red-600">
+                    {dashboardError}
                   </p>
-                  <ul className="mt-3 space-y-2 text-sm text-slate-700">
-                    <li>Deze inzichten zijn indicatief en gebaseerd op de ingevulde gegevens en beschikbare woningdata.</li>
-                    <li>Dit is geen officiële waardebepaling of vastgoedadvies.</li>
-                    {!hasValidPricePerM2 ? (
-                      <li>Controleer of vraagprijs en woonoppervlakte correct zijn ingevuld voor een betere berekening.</li>
-                    ) : null}
-                  </ul>
+                )}
+              </div>
+
+            </div>
+
+            <div className="relative h-fit text-[#071B4D]">
+              <div>
+
+                <div className="mt-8">
+                  <div className="flex items-end justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-bold text-blue-700">MarktRadar resultaten</p>
+                      <p className="mt-1 text-3xl font-black text-[#071B4D]">{isAnalyzing ? 'Live marktcheck...' : 'Klaar voor analyse'}</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 grid grid-cols-3 gap-4">
+                    {marktRadarResults.map((result) => {
+                      const isPlaceholder = result.value === 'Nog niet berekend'
+
+                      return (
+                        <div key={result.label} className="rounded-2xl bg-[#F8FBFF] p-5 min-h-[96px]">
+                          <p className="text-sm font-black text-slate-600">{result.label}</p>
+                          <p className={`mt-2 font-black text-blue-700 ${isPlaceholder ? 'text-xs leading-4' : 'text-lg leading-6'}`}>
+                            {result.value}
+                          </p>
+                        </div>
+                      )
+                    })}
+                  </div>
                 </div>
+
+
+                {!analysisResult && !analysisError && !isAnalyzing && (
+                  <div className="mt-8 rounded-[1.5rem] border border-dashed border-blue-200 bg-white/40 p-8 text-center">
+                    <p className="text-lg font-black text-[#071B4D]">
+                      Je MarktRadar-analyse verschijnt hier
+                    </p>
+                    <p className="mx-auto mt-3 max-w-md text-sm font-semibold leading-6 text-slate-500">
+                      Vul je woninggegevens in en klik op Analyse starten. SlimWoning toont hier daarna je waarderaming, marktpositie en verkoopadvies.
+                    </p>
+                  </div>
+                )}
+                {(analysisResult || analysisError) && (
+                  <div className="mt-5 rounded-[1.25rem] bg-white/60 p-4">
+                    <p className="text-sm font-black text-[#071B4D]">
+                      {analysisError ? 'Analyse fout' : 'Samenvatting'}
+                    </p>
+
+                    {analysisError ? (
+                      <p className="mt-3 text-sm font-semibold leading-6 text-red-600">
+                        {analysisError}
+                      </p>
+                    ) : (
+                      <>
+                        <p className="mt-3 whitespace-pre-wrap text-sm font-semibold leading-6 text-slate-700">
+                          {analysisSummary}
+                        </p>
+
+                        <details className="mt-4 rounded-2xl bg-[#F8FBFF] p-4">
+                          <summary className="cursor-pointer text-sm font-black text-blue-700 transition hover:text-blue-900">
+                            Lees volledig rapport
+                          </summary>
+                          <pre className="mt-4 max-h-96 overflow-auto whitespace-pre-wrap text-sm font-semibold leading-6 text-slate-700">
+                            {analysisResult}
+                          </pre>
+                        </details>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
-
-            <button
-              type="button"
-              onClick={() => setShowInsights(false)}
-              className="mt-2 inline-flex h-14 items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 text-sm font-black text-[#071B4D] shadow-lg shadow-blue-900/10 transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-lg"
-            >
-              Sluiten
-            </button>
-          </div>
-        )}
-      </section>
-
-      <section className="px-6 pb-14 md:px-10 lg:px-16">
-        <div ref={featureCardsRef} className="mx-auto grid max-w-[1400px] grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {features.map((feature) => (
-            <article
-              key={feature.title}
-              className="rounded-2xl border border-blue-100 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:border-blue-300 hover:shadow-xl"
-            >
-              <div className="mb-5 flex items-center justify-between gap-4">
-                <span className="grid h-11 w-11 place-items-center rounded-2xl bg-blue-50 text-xl">
-                  {feature.icon}
-                </span>
-                <div className="h-1.5 w-12 rounded-full bg-gradient-to-r from-blue-600 to-cyan-400" />
-              </div>
-              <h3 className="text-xl font-black text-[#071B4D]">
-                {feature.title}
-              </h3>
-              <p className="mt-3 text-sm font-semibold leading-6 text-slate-600">
-                {feature.text}
-              </p>
-            </article>
-          ))}
-        </div>
-
-        <div className="mx-auto mt-8 max-w-[1400px] rounded-[2rem] border border-blue-100 bg-white p-6 shadow-[0_18px_55px_rgba(15,23,42,0.08)] md:p-8">
-          <div className="grid gap-6 md:grid-cols-[1fr_auto] md:items-center">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-blue-700">
-                Voorbereid verkopen
-              </p>
-              <h2 className="mt-3 text-3xl font-black tracking-[-0.035em] text-[#071B4D]">
-                Krijg meer inzicht voordat je verkoopt
-              </h2>
-              <p className="mt-3 max-w-3xl text-sm font-semibold leading-7 text-slate-600">
-                Breng je woninggegevens samen, ontdek sterke punten en vergelijk je positie met relevante panden in de markt voordat je een vraagprijs bepaalt.
-              </p>
-            </div>
-
-            <a
-              href="#waardebepaling"
-              className="inline-flex h-12 items-center justify-center rounded-2xl bg-[#071B4D] px-5 text-sm font-black text-white shadow-lg shadow-blue-900/15 transition hover:-translate-y-0.5 hover:shadow-2xl"
-            >
-              Inzicht starten
-            </a>
-          </div>
-        </div>
-
-        <div className="mx-auto mt-8 max-w-[1400px] rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
-          <h2 className="text-3xl font-black tracking-[-0.035em] text-[#071B4D]">
-            Van voorbereiding tot sleuteloverdracht
-          </h2>
-          <div className="mt-4 space-y-5 text-justify text-base font-medium leading-8 text-slate-600">
-            <p>
-              Een woning verkopen begint niet bij de advertentie, maar bij een goede voorbereiding. Verzamel eerst je woninggegevens, documenten, EPC-informatie, foto's en eventuele renovatiegegevens.
-            </p>
-            <p>
-              Daarna bepaal je een realistische vraagprijs op basis van vergelijkbare woningen, ligging, staat, oppervlakte en marktinformatie. Een duidelijke presentatie helpt om de juiste koper aan te trekken.
-            </p>
-            <p>
-              Wanneer geïnteresseerden reageren, volgen bezichtigingen, vragen, onderhandelingen en eventueel een bod. Na akkoord worden de afspraken vastgelegd en begeleidt de notaris de juridische afhandeling.
-            </p>
-            <p>
-              SlimWoning helpt je om deze stappen overzichtelijk voor te bereiden, zodat je met meer inzicht en vertrouwen aan het verkoopproces begint.
-            </p>
-          </div>
-        </div>
-
-        <div className="mx-auto mt-8 max-w-[1400px]">
-          <div className="mb-5">
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-blue-700">
-              Rapportvoorbeelden
-            </p>
-            <h2 className="mt-2 text-3xl font-black tracking-[-0.035em] text-[#071B4D]">
-              Voorbeeld vergelijkingsrapporten
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            {[
-              {
-                title: 'Prijspositie',
-                text: 'Bekijk hoe een woning zich verhoudt tot vergelijkbare panden in dezelfde regio.',
-              },
-              {
-                title: 'Energieprofiel',
-                text: 'Krijg inzicht in EPC, renovatiesignalen en mogelijke impact op verkoopwaarde.',
-              },
-              {
-                title: 'Marktkansen',
-                text: 'Ontdek sterke punten, aandachtspunten en presentatiekansen voor verkoop.',
-              },
-            ].map((report) => (
-              <article
-                key={report.title}
-                className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:border-blue-200 hover:shadow-xl"
-              >
-                <div className="mb-5 h-1.5 w-12 rounded-full bg-gradient-to-r from-blue-600 to-cyan-400" />
-                <h3 className="text-xl font-black text-[#071B4D]">
-                  {report.title}
-                </h3>
-                <p className="mt-3 text-sm font-medium leading-6 text-slate-600">
-                  {report.text}
-                </p>
-              </article>
-            ))}
           </div>
         </div>
 
         <p className="mx-auto mt-6 max-w-[1400px] text-center text-xs font-semibold text-slate-500">
-          Alle inzichten zijn indicatief en gebaseerd op beschikbare woningdata en marktinformatie.
+          De MarktRadar analyse draait server-side met een beveiligde OpenAI API key. De uiteindelijke verkoopprijs hangt af van markt, staat, timing en onderhandeling.
         </p>
       </section>
     </main>

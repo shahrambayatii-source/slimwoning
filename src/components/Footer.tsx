@@ -1,94 +1,79 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
 
 const footerColumns = [
   {
     title: 'Snel naar',
     links: [
       { label: 'Woningen kopen', href: '/properties' },
-      { label: 'Woningwaarde schatten', href: '/verkopen/schatting' },
-      { label: 'EnergieScan', href: '#' },
-      { label: 'RenovatieScan', href: '#' },
-      { label: 'Vergelijk woningen', href: '/compare' },
+      { label: 'Woningwaarde schatten', href: '/schatting-maken' },
+      { label: 'EnergieScan', href: '/energiescan' },
+      { label: 'RenovatieScan', href: '/renovatiescan' },
+      { label: 'Vergelijk woningen', href: '/vergelijken' },
     ],
   },
   {
     title: 'Voor kopers',
     links: [
-      { label: 'Favorieten', href: '/favorites' },
-      { label: 'Slim zoeken', href: '/properties' },
-      { label: 'AI-score uitleg', href: '#' },
-      { label: 'Hypotheek simulatie', href: '#' },
-      { label: 'Bezichtiging voorbereiden', href: '#' },
+      { label: 'Favorieten', href: '/favorieten' },
+      { label: 'Slim zoeken', href: '/slim-zoeken' },
+      { label: 'AI-score uitleg', href: '/ai-score' },
+      { label: 'Hypotheek simulatie', href: '/hypotheek' },
+      { label: 'Bezichtiging voorbereiden', href: '/bezichtiging' },
     ],
   },
   {
     title: 'Voor verkopers',
     links: [
       { label: 'Woning verkopen', href: '/verkopen' },
-      { label: 'Gratis schatting maken', href: '/verkopen/schatting' },
-      { label: 'Verkooprapport', href: '#' },
-      { label: 'Makelaar matching', href: '#' },
-      { label: 'Nieuwbouw project plaatsen', href: '#' },
+      { label: 'Gratis schatting maken', href: '/schatting-maken' },
+      { label: 'Verkooprapport', href: '/verkooprapport' },
+      { label: 'Nieuwbouw project plaatsen', href: '/nieuwbouw/plaatsen' },
     ],
   },
   {
     title: 'SlimWoning',
     links: [
-      { label: 'Over SlimWoning', href: '#' },
-      { label: 'Contact', href: '#' },
-      { label: 'Privacybeleid', href: '#' },
-      { label: 'Algemene voorwaarden', href: '#' },
-      { label: 'Disclaimer', href: '#' },
+      { label: 'Over SlimWoning', href: '/over' },
+      { label: 'Contact', href: '/contact' },
+      { label: 'Privacybeleid', href: '/privacy' },
+      { label: 'Algemene voorwaarden', href: '/voorwaarden' },
+      { label: 'Disclaimer', href: '/disclaimer' },
     ],
   },
 ]
 
-const footerExcludedPathPrefixes = ['/dashboard', '/login', '/register']
-
-function shouldShowFooter(pathname: string) {
-  return !footerExcludedPathPrefixes.some((pathPrefix) => pathname.startsWith(pathPrefix))
-}
-
 export default function Footer() {
-  const pathname = usePathname()
-
-  if (!shouldShowFooter(pathname)) {
-    return null
-  }
-
   return (
-    <footer className="border-t border-[#dbe7f3] bg-white/95 text-[#0B1F4D]">
-      <div className="mx-auto max-w-[1500px] px-6 py-10 sm:px-8 lg:px-10">
-        <div className="grid grid-cols-1 gap-x-10 gap-y-8 sm:grid-cols-2 lg:grid-cols-4">
+    <footer className="border-t border-slate-200 bg-white">
+      <div className="mx-auto max-w-[1280px] px-6 py-12 md:px-10">
+        <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-4">
           {footerColumns.map((column) => (
-            <section key={column.title} aria-labelledby={`footer-${column.title.toLowerCase().replaceAll(' ', '-')}`}>
-              <h2
-                id={`footer-${column.title.toLowerCase().replaceAll(' ', '-')}`}
-                className="mb-4 text-[16px] font-bold tracking-[-0.01em] text-[#071B4D]"
-              >
+            <div key={column.title}>
+              <h3 className="text-base font-black text-[#071B4D]">
                 {column.title}
-              </h2>
-              <ul className="space-y-2.5 text-[15px] font-medium">
+              </h3>
+
+              <div className="mt-5 space-y-3">
                 {column.links.map((link) => (
-                  <li key={link.label}>
-                    <Link
-                      href={link.href}
-                      className="text-[#1268B3] transition hover:text-[#071B4D] hover:underline hover:underline-offset-4"
-                    >
-                      {link.label}
-                    </Link>
-                  </li>
+                  <Link
+                    key={link.label}
+                    href={link.href}
+                    className="block text-base font-medium text-blue-700 transition hover:text-blue-900 hover:underline"
+                  >
+                    {link.label}
+                  </Link>
                 ))}
-              </ul>
-            </section>
+              </div>
+            </div>
           ))}
         </div>
 
-        <div className="mt-9 border-t border-[#dbe7f3] pt-5 text-[14px] font-medium text-[#53657D]">
-          © 2026 SlimWoning. Alle rechten voorbehouden.
+        <div className="mt-10 border-t border-slate-200 pt-6">
+          <p className="text-sm font-medium text-slate-500">
+            © 2026 SlimWoning. Alle rechten voorbehouden.
+          </p>
         </div>
       </div>
     </footer>

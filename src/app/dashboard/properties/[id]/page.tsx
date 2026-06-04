@@ -1076,17 +1076,10 @@ export default function PropertyDetailsPage() {
       <div className="property-page-content mx-auto max-w-[1280px]">
         <div className="mb-5 flex items-center justify-between">
           <Link
-            href="/properties"
+            href="/dashboard"
             className="rounded-2xl bg-white px-5 py-3 font-bold text-[#111827] shadow-sm"
           >
-            ← Terug naar woningen
-          </Link>
-
-          <Link
-            href="/properties"
-            className="hidden rounded-2xl bg-blue-700 px-5 py-3 font-bold text-white md:block"
-          >
-            Te koop
+            ← Terug naar dashboard
           </Link>
         </div>
 
@@ -1199,9 +1192,9 @@ export default function PropertyDetailsPage() {
 
                     <button
                       type="button"
-                      onClick={() => openPhotoView('mosaic')}
+                      onClick={() => openPhotoView('grid')}
                       className={`flex w-full items-center justify-between px-5 py-4 text-left text-sm font-black transition hover:bg-slate-50 ${
-                        photoViewMode === 'mosaic' ? 'bg-blue-50 text-blue-700' : 'text-[#071B4D]'
+                        photoViewMode === 'grid' ? 'bg-blue-50 text-blue-700' : 'text-[#071B4D]'
                       }`}
                     >
                       <span>Foto overzicht</span>
@@ -1283,35 +1276,23 @@ export default function PropertyDetailsPage() {
                     <p className="text-xs font-black uppercase tracking-[0.24em] text-blue-700">
                       {property.city || 'Locatie niet opgegeven'}
                     </p>
-                    <h1 className="mt-2 text-4xl font-black leading-tight tracking-[-0.03em] text-[#111827]">
-                      {displayTitle}
-                    </h1>
 
-                    <div className="mt-5 flex flex-wrap gap-3">
-                      <button
-                        type="button"
-                        onClick={() => scrollToSection('energie-section')}
-                        className="rounded-full border border-emerald-200 bg-emerald-50 px-5 py-2 text-sm font-black text-emerald-700 transition hover:bg-emerald-100"
-                      >
-                        Energie
-                      </button>
+                    <div className="mt-2 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                      <h1 className="text-4xl font-black leading-tight tracking-[-0.03em] text-[#111827]">
+                        {displayTitle}
+                      </h1>
 
-                      <button
-                        type="button"
-                        onClick={() => scrollToSection('renovatie-section')}
-                        className="rounded-full border border-orange-200 bg-orange-50 px-5 py-2 text-sm font-black text-orange-700 transition hover:bg-orange-100"
-                      >
-                        Renovatie
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => scrollToSection('vergelijk-section')}
-                        className="rounded-full border border-amber-200 bg-amber-50 px-5 py-2 text-sm font-black text-amber-700 transition hover:bg-amber-100"
-                      >
-                        Vergelijk
-                      </button>
+                      <div className="shrink-0 text-left md:text-right">
+                        <p className="text-xs font-black uppercase tracking-[0.2em] text-blue-700">
+                          Vraagprijs
+                        </p>
+                        <p className="mt-1 text-3xl font-black text-blue-700">
+                          {formatPrice(property.price)}
+                        </p>
+                      </div>
                     </div>
+
+                    {/* Quick Stats Row */}
                   </div>
 
                   {/* Quick Stats Row */}
@@ -1364,7 +1345,7 @@ export default function PropertyDetailsPage() {
                   </div>
 
 
-                  {/* Features Grid */}
+                  {/* Features Grid + Beschrijving */}
                   <div className="rounded-[1.5rem] bg-white p-6 shadow-sm">
                     <h2 className="mb-4 text-2xl font-black text-[#071B4D]">Woningkenmerken</h2>
                     <div className="grid grid-cols-1 gap-x-8 gap-y-3 md:grid-cols-2">
@@ -1379,76 +1360,38 @@ export default function PropertyDetailsPage() {
                       <InfoRow label="Gemeubeld" value={yesNo(property.gemeubeld)} />
                       <InfoRow label="Dubbel glas" value={yesNo(property.dubbel_glas)} />
                     </div>
-                  </div>
-
-                  {/* Description */}
-                  <div className="mt-6 mb-6 rounded-[1.5rem] bg-white p-6 shadow-sm">
-                    <h2 className="mb-4 text-2xl font-black text-[#071B4D]">Beschrijving</h2>
-                    <p className="leading-7 text-gray-600">
-                      {property.description || 'Geen beschrijving beschikbaar.'}
-                    </p>
-                  </div>
-
-                  {/* Edit/Delete Buttons - Only for property owner */}
-                  {userId === property.user_id && (
-                    <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-2">
-                      <Link href={`/edit-property/${property.id}`}>
-                        <button className="w-full rounded-2xl bg-[#111827] p-5 font-bold text-white transition hover:bg-[#1f2937]">
-                          Bewerken
-                        </button>
-                      </Link>
-
-                      <button
-                        onClick={handleDelete}
-                        className="w-full rounded-2xl bg-red-600 p-5 font-bold text-white transition hover:bg-red-700"
-                      >
-                        Verwijderen
-                      </button>
+                    <div className="mt-8 border-t border-slate-200 pt-8">
+                      <h2 className="text-2xl font-black text-[#071B4D]">Beschrijving</h2>
+                      <p className="mt-4 leading-7 text-gray-600">
+                        {property.description || 'Geen beschrijving beschikbaar.'}
+                      </p>
                     </div>
-                  )}
+                    {userId === property.user_id && (
+                      <div className="mt-8 border-t border-slate-200 pt-6">
+                        <div className="flex flex-wrap justify-center gap-3">
+                          <Link
+                            href={`/edit-property/${property.id}`}
+                            className="flex min-w-[180px] items-center justify-center rounded-xl bg-blue-700 px-6 py-3 text-sm font-bold text-white transition hover:bg-blue-800"
+                          >
+                            Bewerken
+                          </Link>
+
+                          <button
+                            type="button"
+                            onClick={handleDelete}
+                            className="min-w-[180px] rounded-xl border-2 border-slate-900 bg-white px-6 py-3 text-sm font-bold text-slate-900 transition hover:bg-slate-50"
+                          >
+                            Verwijderen
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                 </div>
 
                 {/* Right Column: Sticky Sidebar */}
                 <div className="space-y-4 lg:sticky lg:top-8 lg:h-fit">
-                  {/* Price Card */}
-                  <div className="rounded-[1.5rem] bg-white p-6 shadow-sm">
-                    <p className="text-xs font-black uppercase tracking-[0.2em] text-blue-700">
-                      Vraagprijs
-                    </p>
-                    <p className="mt-3 text-3xl font-black text-blue-700">
-                      {formatPrice(property.price)}
-                    </p>
-                    <p className="mt-3 text-sm font-bold text-gray-600">
-                      {estimatedMonthlyPayment(property.price)} / mnd
-                    </p>
-                  </div>
-
-                  {/* Contact Card */}
-                  <div className="rounded-[1.5rem] bg-white p-6 shadow-sm">
-                    <p className="text-xs font-black uppercase tracking-[0.2em] text-blue-700">
-                      Contact
-                    </p>
-                    <p className="mt-3 font-black text-[#071B4D]">
-                      {contactNaam}
-                    </p>
-                    {contactTelefoon && (
-                      <p className="mt-2 text-sm text-gray-600">
-                        {contactTelefoon}
-                      </p>
-                    )}
-                    {contactEmail && (
-                      <a
-                        href={`mailto:${contactEmail}`}
-                        className="mt-2 block text-sm text-blue-700 hover:underline"
-                      >
-                        {contactEmail}
-                      </a>
-                    )}
-                    <button className="mt-4 w-full rounded-xl bg-blue-700 px-4 py-3 font-black text-white transition hover:bg-blue-800">
-                      Neem contact op
-                    </button>
-                  </div>
-
                   {/* Location Card */}
                   {property.address && (
                     <div className="rounded-[1.5rem] bg-white p-6 shadow-sm">
@@ -1470,13 +1413,44 @@ export default function PropertyDetailsPage() {
                     </div>
                   )}
 
-                  {/* Brochure Download */}
-                  <button
-                    onClick={() => setShowBrochurePreview(true)}
-                    className="w-full rounded-xl bg-[#071B4D] px-4 py-3 font-black text-white transition hover:bg-[#0f2851]"
-                  >
-                    Download brochure
-                  </button>
+
+
+                  {/* Makelaar matching - seller only */}
+                  <div className="rounded-[1.5rem] bg-white p-6 shadow-sm">
+                    <p className="text-xs font-black uppercase tracking-[0.2em] text-blue-700">
+                      Makelaar matching
+                    </p>
+
+                    <h3 className="mt-3 text-xl font-black text-[#071B4D]">
+                      Vind een geschikte makelaar
+                    </h3>
+
+                    <p className="mt-2 text-sm leading-6 text-gray-600">
+                      We zoeken makelaars die actief zijn in deze regio en passen bij dit type woning.
+                    </p>
+
+                    <div className="mt-4 rounded-2xl bg-blue-50 p-4">
+                      <p className="text-3xl font-black text-blue-700">15</p>
+                      <p className="mt-1 text-sm font-bold text-slate-600">makelaars actief in deze regio</p>
+                    </div>
+
+                    <div className="mt-4 grid gap-2">
+                      <Link
+                        href={`/dashboard/properties/${property.id}/makelaar-aanvraag`}
+                        className="rounded-xl bg-blue-700 px-4 py-3 text-center font-black text-white transition hover:bg-blue-800"
+                      >
+                        Bekijk makelaars
+                      </Link>
+
+                      <Link
+                        href={`/dashboard/properties/${property.id}/makelaar-aanvraag`}
+                        className="rounded-xl border-2 border-blue-700 px-4 py-3 text-center font-black text-blue-700 transition hover:bg-blue-50"
+                      >
+                        Verstuur aanvraag
+                      </Link>
+                    </div>
+                  </div>
+
                 </div>
               </div>
             </section>
@@ -1487,24 +1461,19 @@ export default function PropertyDetailsPage() {
                   controls
                   className="aspect-video w-full rounded-[1.25rem] bg-black"
                 />
-                <a
-                  href={generatedVideoUrl}
-                  download={`slimwoning-verkoopvideo-${property?.id || 'woning'}.webm`}
-                  className="mt-3 block rounded-2xl bg-white px-5 py-4 text-center text-sm font-black text-[#071B4D]"
-                >
-                  Download video
-                </a>
+                <div className="mt-3 flex justify-center">
+                  <a
+                    href={generatedVideoUrl}
+                    download={`slimwoning-verkoopvideo-${property?.id || 'woning'}.webm`}
+                    className="inline-flex items-center justify-center rounded-xl bg-white px-6 py-3 text-sm font-bold text-[#071B4D] transition hover:bg-slate-100"
+                  >
+                    Download video
+                  </a>
+                </div>
               </div>
             )}
 
 
-            <div id="vergelijk-section" className="scroll-mt-8 mx-auto mt-8 max-w-[1180px]">
-              <ComparablePropertiesSection
-                properties={similarProperties}
-                formatPrice={formatPrice}
-                getPropertyPhotos={getPropertyPhotos}
-              />
-            </div>
 
             {getWoningkenmerken(property).length > 0 && (
               <SectionCard title="Woningkenmerken">
@@ -1522,46 +1491,6 @@ export default function PropertyDetailsPage() {
             )}
 
 
-            <div id="renovatie-section" className="scroll-mt-8">
-            <AccordionSection
-              title="Slim zoeken details"
-              summary={`${getWoonMatchScore()}% matchscore op basis van locatie, prijs en kenmerken.`}
-            >
-              <div className="rounded-[1.5rem] border border-emerald-100 bg-gradient-to-br from-emerald-50/80 via-white to-blue-50/80 p-4">
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <p className="text-xs font-black uppercase tracking-[0.24em] text-emerald-700">
-                      SlimWoning woonmatch
-                    </p>
-                    <h3 className="mt-2 text-2xl font-black leading-tight text-[#071B4D]">
-                      Waarom past deze woning bij jouw zoekprofiel?
-                    </h3>
-                    <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-600">
-                      SlimWoning bekijkt locatie, prijs en woningkenmerken om sneller relevante woningen te herkennen.
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl bg-emerald-700 px-5 py-4 text-white shadow-lg shadow-emerald-900/15">
-                    <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-100">
-                      Matchscore
-                    </p>
-                    <p className="mt-1 text-3xl font-black">
-                      {getWoonMatchScore()}%
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-                  {getWoonMatchPoints().map((point) => (
-                    <div key={point.title} className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-emerald-100">
-                      <p className="text-sm font-black text-[#071B4D]">{point.title}</p>
-                      <p className="mt-1 text-sm leading-6 text-gray-500">{point.text}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </AccordionSection>
-            </div>
           </div>
 
         </div>
@@ -2064,6 +1993,25 @@ export default function PropertyDetailsPage() {
   )
 }
 
+function InfoRow({
+  label,
+  value,
+}: {
+  label: string
+  value: any
+}) {
+  const displayValue = String(value || '').trim()
+
+  return (
+    <div className="flex items-center justify-between border-b border-slate-100 py-3">
+      <span className="text-gray-500">{label}</span>
+      <span className="font-black text-[#071B4D]">
+        {displayValue || 'Niet opgegeven'}
+      </span>
+    </div>
+  )
+}
+
 type ComparableProperty = {
   id: string | number
   title?: string | null
@@ -2082,416 +2030,4 @@ type ComparableProperty = {
   epc?: string | null
   epc_code?: string | null
   ai_rank_score?: string | number | null
-  ai_score?: string | number | null
-  aiScore?: string | number | null
-  match_score?: string | number | null
-  matchScore?: string | number | null
-  rank_score?: string | number | null
-  rankScore?: string | number | null
-  photos?: unknown
-  images?: unknown
-  photo?: string | null
-  image?: string | null
-  mainImage?: string | null
-  photo_url?: string | null
-}
-
-function ComparablePropertiesSection({
-  properties,
-  formatPrice,
-  getPropertyPhotos,
-}: {
-  properties: ComparableProperty[]
-  formatPrice: (value: unknown) => string
-  getPropertyPhotos: (propertyValue: unknown) => string[]
-}) {
-  const visibleProperties = properties.slice(0, 3)
-
-  return (
-    <section className="rounded-[1.5rem] bg-white p-4 shadow-lg ring-1 ring-slate-200/70 md:p-5">
-      <div className="mb-4">
-        <h2 className="text-4xl font-black text-[#111827]">Vergelijkbare woningen</h2>
-      </div>
-
-      {visibleProperties.length > 0 ? (
-        <div className="flex flex-col gap-3">
-          {visibleProperties.map((similarProperty) => (
-            <ComparablePropertyCard
-              key={similarProperty.id}
-              property={similarProperty}
-              formatPrice={formatPrice}
-              getPropertyPhotos={getPropertyPhotos}
-            />
-          ))}
-        </div>
-      ) : (
-        <p className="mt-4 text-base font-semibold text-slate-500">
-          Er zijn momenteel geen gelijkaardige panden gevonden voor deze woning.
-        </p>
-      )}
-    </section>
-  )
-}
-
-function ComparablePropertyCard({
-  property,
-  formatPrice,
-  getPropertyPhotos,
-}: {
-  property: ComparableProperty
-  formatPrice: (value: unknown) => string
-  getPropertyPhotos: (propertyValue: unknown) => string[]
-}) {
-  const photo = getPropertyPhotos(property)[0] || ''
-  const bedrooms = numberValue(property.slaapkamers || property.bedrooms)
-  const bathrooms = numberValue(property.badkamers || property.bathrooms)
-  const area = getPropertyArea(property)
-  const epcLabel = String(property.epc || property.epc_code || '').trim()
-  const aiScore = getAvailableAiScore(property)
-  const location = formatComparableLocation(property)
-
-  return (
-    <Link
-      href={`/properties/${property.id}`}
-      className="group flex min-h-[145px] w-full overflow-hidden rounded-2xl border border-slate-200 bg-white transition hover:border-blue-200 hover:shadow-sm"
-    >
-      <div className="relative h-auto w-[38%] max-w-[210px] shrink-0 overflow-hidden bg-gradient-to-br from-slate-200 via-slate-300 to-slate-400 sm:w-[210px]">
-        {photo ? (
-          <>
-            <img
-              src={photo}
-              alt={property.title || 'Vergelijkbare woning'}
-              className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-transparent" />
-          </>
-        ) : (
-          <div className="relative flex h-full min-h-[175px] w-full items-center justify-center overflow-hidden bg-gradient-to-br from-slate-200 via-slate-300 to-slate-400">
-            <svg
-              viewBox="0 0 64 64"
-              aria-hidden="true"
-              className="h-20 w-20 text-white/80"
-              fill="none"
-            >
-              <path
-                d="M12 30L32 14L52 30"
-                stroke="currentColor"
-                strokeWidth="4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M18 29V52H46V29"
-                stroke="currentColor"
-                strokeWidth="4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M27 52V39H37V52"
-                stroke="currentColor"
-                strokeWidth="4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            <div className="absolute inset-0 bg-black/10" />
-          </div>
-        )}
-      </div>
-
-      <div className="flex min-w-0 flex-1 items-stretch">
-        <div className="flex min-w-0 flex-1 flex-col justify-center px-4 py-3.5">
-          <h3 className="truncate text-base font-black text-[#071B4D]">
-            {property.title || 'Woning zonder titel'}
-          </h3>
-
-          <p className="mt-0.5 text-lg font-black leading-tight text-blue-700">
-            {formatPrice(property.price)}
-          </p>
-
-          <p className="mt-1 truncate text-xs font-semibold text-slate-500">
-            {location}
-          </p>
-
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            <CompactBadge text={`${bedrooms || '-'} slp.`} />
-            <CompactBadge text={`${bathrooms || '-'} badk.`} />
-            <CompactBadge text={`${area || '-'} m²`} />
-            <span className="inline-flex h-6 overflow-hidden rounded-md shadow-sm">
-              <span className="flex items-center bg-[#1F3B57] px-2 text-[9px] font-black text-white">
-                EPC
-              </span>
-              <span
-                className="flex min-w-[30px] items-center justify-center px-2 text-[9px] font-black text-white"
-                style={{ backgroundColor: epcLabel ? getEpcColor(epcLabel) : '#64748b' }}
-              >
-                {epcLabel || '-'}
-              </span>
-            </span>
-            {aiScore !== null && (
-              <span className="inline-flex h-6 items-center rounded-full bg-blue-50 px-2.5 text-[10px] font-black text-blue-700 sm:hidden">
-                AI-score {aiScore}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {aiScore !== null && (
-          <div className="hidden w-[96px] shrink-0 items-center justify-center border-l border-slate-200 px-1.5 sm:flex">
-            <div className="flex w-[76px] flex-col items-center rounded-2xl border border-blue-100 bg-white px-2 py-2 text-center shadow-sm">
-              <div className="grid h-11 w-11 place-items-center rounded-full border-2 border-blue-500 text-lg font-black text-blue-700">
-                {aiScore}
-              </div>
-              <p className="mt-1 text-[11px] font-bold text-slate-700">
-                AI-score
-              </p>
-              <p className="rounded-full bg-blue-50 px-1.5 text-[10px] font-bold text-blue-700">
-                Match
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
-    </Link>
-  )
-}
-
-function formatComparableLocation(property: ComparableProperty) {
-  const address = String(property.address || '').trim()
-  const postcode = String(property.postcode || '').trim()
-  const city = String(property.city || '').trim()
-  const cityLine = [postcode, city].filter(Boolean).join(' ')
-
-  if (address && cityLine) return `${address}, ${cityLine}`
-
-  return address || cityLine || 'Locatie niet opgegeven'
-}
-
-function CompactBadge({ text }: { text: string }) {
-  return (
-    <span className="inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-gray-100 px-2.5 py-1.5 text-[11px] font-black text-gray-700">
-      {text}
-    </span>
-  )
-}
-
-function numberValue(value: unknown) {
-  const rawValue = String(value || '').trim()
-
-  if (!rawValue) return 0
-
-  const onlyNumbers = rawValue.replace(/[^\d]/g, '')
-
-  return Number(onlyNumbers) || 0
-}
-
-function getPropertyArea(property: ComparableProperty) {
-  return numberValue(
-    property.bewoonbare_oppervlakte ||
-      property.oppervlakte ||
-      property.living_area ||
-      property.grondoppervlakte
-  )
-}
-
-function getAvailableAiScore(property: ComparableProperty) {
-  const rawScore =
-    property.ai_rank_score ??
-    property.ai_score ??
-    property.aiScore ??
-    property.match_score ??
-    property.matchScore ??
-    property.rank_score ??
-    property.rankScore
-
-  const score = Number(rawScore)
-
-  if (!Number.isFinite(score) || score <= 0) return null
-
-  return Math.max(0, Math.min(100, Math.round(score)))
-}
-
-function getEpcColor(value: unknown) {
-  const cleanLabel = String(value || '').trim().toUpperCase()
-  const epcColors: Record<string, string> = {
-    'A+++++': '#0b5f2a',
-    'A++++': '#0b5f2a',
-    'A+++': '#0b5f2a',
-    'A++': '#0f6f34',
-    'A+': '#1f7a3a',
-    A: '#3f9a45',
-    B: '#a7cf20',
-    C: '#f3df00',
-    D: '#f6b428',
-    E: '#f47c20',
-    F: '#ef2a2a',
-    G: '#c8191e',
-  }
-
-  return epcColors[cleanLabel] || '#59d000'
-}
-
-function QuickStat({
-  label,
-  value,
-}: {
-  label: string
-  value: string
-}) {
-  return (
-    <div className="rounded-[1.25rem] bg-[#f8fafc] p-4">
-      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-gray-500">{label}</p>
-      <p className="mt-1 text-xl font-bold">{value}</p>
-    </div>
-  )
-}
-
-function StreetViewFrame({
-  position,
-}: {
-  position: { lat: number; lng: number }
-}) {
-  const containerRef = useRef<HTMLDivElement | null>(null)
-  const panoramaRef = useRef<any>(null)
-
-  useEffect(() => {
-    if (!containerRef.current || !window.google?.maps) return
-
-    const requestedPosition = new window.google.maps.LatLng(
-      position.lat,
-      position.lng
-    )
-
-    if (!panoramaRef.current) {
-      panoramaRef.current = new window.google.maps.StreetViewPanorama(
-        containerRef.current,
-        {
-          position: requestedPosition,
-          pov: {
-            heading: 0,
-            pitch: 0,
-          },
-          zoom: 1,
-          addressControl: false,
-          fullscreenControl: true,
-          motionTracking: false,
-          panControl: true,
-          zoomControl: true,
-          showRoadLabels: true,
-          visible: true,
-        }
-      )
-    }
-
-    const panorama = panoramaRef.current
-    const service = new window.google.maps.StreetViewService()
-
-    service.getPanorama(
-      {
-        location: requestedPosition,
-        radius: 100,
-        source: window.google.maps.StreetViewSource.OUTDOOR,
-      },
-      (data: any, status: any) => {
-        if (
-          status === window.google.maps.StreetViewStatus.OK &&
-          data?.location?.latLng
-        ) {
-          panorama.setPosition(data.location.latLng)
-          panorama.setPov({
-            heading: 0,
-            pitch: 0,
-          })
-          panorama.setVisible(true)
-          return
-        }
-
-        panorama.setPosition(requestedPosition)
-        panorama.setVisible(true)
-      }
-    )
-  }, [position.lat, position.lng])
-
-  return <div ref={containerRef} className="h-full w-full" />
-}
-
-function SectionCard({
-  title,
-  children,
-}: {
-  title: string
-  children: React.ReactNode
-}) {
-  return (
-    <div className="mx-auto mt-5 max-w-[1180px] rounded-[1.75rem] bg-white p-5 shadow-sm md:p-6">
-      <h2 className="mb-4 text-2xl font-bold">{title}</h2>
-      {children}
-    </div>
-  )
-}
-
-function AccordionSection({
-  title,
-  summary,
-  children,
-}: {
-  title: string
-  summary: string
-  children: React.ReactNode
-}) {
-  return (
-    <details className="group mx-auto mt-5 max-w-[1180px] overflow-hidden rounded-[1.5rem] bg-white shadow-sm">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 marker:content-none md:px-6 [&::-webkit-details-marker]:hidden">
-        <div>
-          <h2 className="text-xl font-black text-[#071B4D]">{title}</h2>
-          <p className="mt-1 text-sm leading-6 text-gray-500">{summary}</p>
-        </div>
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-blue-50 text-2xl font-black text-blue-700 transition group-open:rotate-45">
-          +
-        </span>
-      </summary>
-      <div className="border-t border-gray-100 px-5 py-5 md:px-6">
-        {children}
-      </div>
-    </details>
-  )
-}
-
-function CompactPointList({
-  title,
-  text,
-  tone,
-}: {
-  title: string
-  text: string
-  tone: 'positive' | 'negative'
-}) {
-  const isPositive = tone === 'positive'
-
-  return (
-    <div className={`rounded-2xl border p-4 ${isPositive ? 'border-emerald-100 bg-emerald-50/70' : 'border-amber-100 bg-amber-50/70'}`}>
-      <p className={`text-sm font-black ${isPositive ? 'text-emerald-700' : 'text-amber-700'}`}>
-        {isPositive ? '＋' : '−'} {title}
-      </p>
-      <p className="mt-2 text-sm leading-6 text-gray-600">{text}</p>
-    </div>
-  )
-}
-
-function InfoRow({
-  label,
-  value,
-}: {
-  label: string
-  value: any
-}) {
-  return (
-    <div className="grid grid-cols-[1fr_auto] items-center gap-3 border-b border-gray-100 py-2">
-      <span className="text-base text-gray-500">{label}</span>
-      <span className="min-w-[80px] text-right text-base font-bold">
-        {value || 'Niet opgegeven'}
-      </span>
-    </div>
-  )
 }

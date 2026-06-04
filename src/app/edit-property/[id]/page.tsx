@@ -367,7 +367,7 @@ export default function EditPropertyPage() {
       return
     }
 
-    router.push(`/properties/${params.id}`)
+    router.push(`/dashboard/properties/${params.id}`)
   }
 
   const activeStep = wizardSteps[currentStep]
@@ -393,10 +393,10 @@ export default function EditPropertyPage() {
           </div>
 
           <Link
-            href={`/properties/${params.id}`}
+            href="/dashboard"
             className="w-fit rounded-2xl bg-white px-5 py-3 font-bold text-[#111827] shadow-sm transition hover:bg-blue-50"
           >
-            Terug naar woning
+            Terug naar dashboard
           </Link>
         </div>
 
@@ -628,36 +628,37 @@ export default function EditPropertyPage() {
               )}
             </div>
           )}
+          <div className="mt-8 border-t border-slate-200 pt-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <button
+                type="button"
+                onClick={goToPreviousStep}
+                disabled={isFirstStep}
+                className="rounded-2xl border border-gray-200 px-5 py-4 font-bold text-[#111827] transition hover:border-blue-200 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Vorige
+              </button>
+
+              {isLastStep ? (
+                <button
+                  type="button"
+                  onClick={handleUpdateProperty}
+                  className="rounded-2xl bg-blue-700 px-5 py-4 text-lg font-bold text-white transition hover:bg-blue-800"
+                >
+                  Wijzigingen opslaan
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={goToNextStep}
+                  className="rounded-2xl bg-blue-700 px-5 py-4 text-lg font-bold text-white transition hover:bg-blue-800"
+                >
+                  Volgende
+                </button>
+              )}
+            </div>
+          </div>
         </WizardCard>
-
-        <div className="flex flex-col gap-3 rounded-[2rem] bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-          <button
-            type="button"
-            onClick={goToPreviousStep}
-            disabled={isFirstStep}
-            className="rounded-2xl border border-gray-200 px-5 py-4 font-bold text-[#111827] transition hover:border-blue-200 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            Vorige
-          </button>
-
-          {isLastStep ? (
-            <button
-              type="button"
-              onClick={handleUpdateProperty}
-              className="rounded-2xl bg-blue-700 px-5 py-4 text-lg font-bold text-white transition hover:bg-blue-800"
-            >
-              Wijzigingen opslaan
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={goToNextStep}
-              className="rounded-2xl bg-blue-700 px-5 py-4 text-lg font-bold text-white transition hover:bg-blue-800"
-            >
-              Volgende
-            </button>
-          )}
-        </div>
       </div>
     </div>
   )

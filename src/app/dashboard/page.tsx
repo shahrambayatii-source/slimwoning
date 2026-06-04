@@ -135,7 +135,7 @@ export default function DashboardPage() {
                   </div>
                 )}
 
-                <Link href={`/properties/${property.id}`}>
+                <Link href={`/dashboard/properties/${property.id}`}>
                   <button className="mt-4 w-full rounded-xl bg-[#071B4D] px-4 py-3 font-bold text-white transition hover:opacity-90">
                     Bekijk vastgoed
                   </button>
