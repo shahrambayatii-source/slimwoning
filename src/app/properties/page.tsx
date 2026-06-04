@@ -2766,15 +2766,15 @@ function PropertiesContent() {
     )
   }
   return (
-    <div className="min-h-screen bg-[#f6f8fb] px-5 pb-8 pt-3 text-[#111827] md:px-10 md:pt-4">
-      <div className="mx-auto max-w-[1500px]">
+    <div className="min-h-screen overflow-x-hidden bg-[#f6f8fb] px-5 pb-8 pt-3 text-[#111827] md:px-10 md:pt-4">
+      <div className="mx-auto max-w-[1500px] min-w-0">
         <div className="mb-8 space-y-4">
           <form
             onSubmit={handleSearchSubmit}
             className="rounded-[2rem] border border-blue-100 bg-white p-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)]"
           >
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-              <div className="flex min-h-16 flex-1 items-center rounded-[1.5rem] border border-gray-200 bg-white px-5 shadow-inner shadow-gray-100 transition focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-50">
+            <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center">
+              <div className="flex min-h-16 min-w-0 flex-1 items-center rounded-[1.5rem] border border-gray-200 bg-white px-5 shadow-inner shadow-gray-100 transition focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-50">
                 <button
                   type="button"
                   onClick={handleUseCurrentLocation}
@@ -2814,7 +2814,7 @@ function PropertiesContent() {
                     if (e.key === 'Enter') handleSearchSubmit(e)
                   }}
                   autoComplete="off"
-                  className="h-16 flex-1 bg-transparent text-lg font-semibold text-[#071B4D] outline-none placeholder:text-gray-400"
+                  className="h-16 min-w-0 flex-1 bg-transparent text-lg font-semibold text-[#071B4D] outline-none placeholder:text-gray-400"
                 />
               </div>
 
@@ -2884,7 +2884,7 @@ function PropertiesContent() {
                 </button>
 
                 {openFilter === 'price' && (
-                  <div className="absolute left-0 top-[calc(100%+0.75rem)] z-50 w-[390px] rounded-[1.5rem] border border-gray-100 bg-white p-6 shadow-[0_24px_70px_rgba(15,23,42,0.18)]">
+                  <div className="absolute left-0 top-[calc(100%+0.75rem)] z-50 w-[calc(100vw-2rem)] max-w-[390px] rounded-[1.5rem] border border-gray-100 bg-white p-6 shadow-[0_24px_70px_rgba(15,23,42,0.18)] sm:w-[390px]">
                     <p className="text-xl font-black text-[#071B4D]">
                       {isRentPage ? 'Huurprijs per maand' : 'Prijs'}
                     </p>
@@ -3039,7 +3039,7 @@ function PropertiesContent() {
                 </button>
 
                 {openFilter === 'type' && (
-                  <div className="absolute left-0 top-[calc(100%+0.75rem)] z-50 max-h-[430px] w-[390px] overflow-y-auto rounded-[1.5rem] border border-gray-100 bg-white py-3 shadow-[0_24px_70px_rgba(15,23,42,0.18)]">
+                  <div className="absolute left-0 top-[calc(100%+0.75rem)] z-50 max-h-[430px] w-[calc(100vw-2rem)] max-w-[390px] overflow-y-auto rounded-[1.5rem] border border-gray-100 bg-white py-3 shadow-[0_24px_70px_rgba(15,23,42,0.18)] sm:w-[390px]">
                     {[
                       'Huis',
                       'Appartement',
@@ -3115,7 +3115,7 @@ function PropertiesContent() {
                 </button>
 
                 {openFilter === 'offered' && (
-                  <div className="absolute left-0 top-[calc(100%+0.75rem)] z-50 w-[390px] rounded-[1.5rem] border border-gray-100 bg-white p-6 shadow-[0_24px_70px_rgba(15,23,42,0.18)]">
+                  <div className="absolute left-0 top-[calc(100%+0.75rem)] z-50 w-[calc(100vw-2rem)] max-w-[390px] rounded-[1.5rem] border border-gray-100 bg-white p-6 shadow-[0_24px_70px_rgba(15,23,42,0.18)] sm:w-[390px]">
                     <p className="text-xl font-black text-[#071B4D]">Aangeboden</p>
 
                     <div className="mt-5 space-y-3">
@@ -3195,7 +3195,7 @@ function PropertiesContent() {
                 </button>
 
                 {openFilter === 'area' && (
-                  <div className="absolute left-0 top-[calc(100%+0.75rem)] z-50 w-[430px] rounded-[1.5rem] border border-gray-100 bg-white p-6 shadow-[0_24px_70px_rgba(15,23,42,0.18)]">
+                  <div className="absolute left-0 top-[calc(100%+0.75rem)] z-50 w-[calc(100vw-2rem)] max-w-[430px] rounded-[1.5rem] border border-gray-100 bg-white p-6 shadow-[0_24px_70px_rgba(15,23,42,0.18)] sm:w-[430px]">
                     <p className="text-xl font-black text-[#071B4D]">Woonoppervlakte</p>
 
                     <div className="mt-5 grid grid-cols-2 gap-4">
@@ -3283,7 +3283,7 @@ function PropertiesContent() {
                 </button>
 
                 {openFilter === 'bedrooms' && (
-                  <div className="absolute left-0 top-[calc(100%+0.75rem)] z-50 w-[390px] rounded-[1.5rem] border border-gray-100 bg-white p-6 shadow-[0_24px_70px_rgba(15,23,42,0.18)]">
+                  <div className="absolute left-0 top-[calc(100%+0.75rem)] z-50 w-[calc(100vw-2rem)] max-w-[390px] rounded-[1.5rem] border border-gray-100 bg-white p-6 shadow-[0_24px_70px_rgba(15,23,42,0.18)] sm:w-[390px]">
                     <p className="text-xl font-black text-[#071B4D]">Slaapkamers</p>
 
                     <div className="mt-5 grid grid-cols-2 gap-4">
@@ -3974,16 +3974,16 @@ function PropertiesContent() {
           </div>
         </div>
 
-        <div className={showMap ? 'grid gap-8 xl:grid-cols-[0.92fr_1.08fr]' : 'grid grid-cols-1'}>
+        <div className={showMap ? 'grid min-w-0 gap-8 xl:grid-cols-[0.92fr_1.08fr]' : 'grid min-w-0 grid-cols-1'}>
         {showMap && (
-          <aside className="order-1 xl:order-2">
+          <aside className="order-1 min-w-0 max-w-full xl:order-2">
           <div className="self-start rounded-[2rem] border border-blue-100 bg-white p-4 shadow-[0_20px_60px_rgba(15,23,42,0.10)] md:p-5 xl:sticky xl:top-24">
               {/* MAP + INSIGHTS LAYOUT START */}
               <div className="grid grid-cols-1 items-start gap-5">
                 <div>
-                  <div className="mb-4 flex items-start justify-between gap-4">
+                  <div className="mb-4 flex flex-col items-start justify-between gap-4 sm:flex-row">
                     <div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex flex-wrap items-center gap-3">
                         <h2 className="text-2xl font-black text-[#071B4D]">
                           Bekijk woningen op kaart
                         </h2>
@@ -4013,8 +4013,8 @@ function PropertiesContent() {
                     </div>
                   </div>
 
-                  <div className="overflow-hidden rounded-[1.75rem] border border-gray-100">
-                    <div className="h-[420px] w-full xl:h-[620px]">
+                  <div className="max-w-full overflow-hidden rounded-[1.75rem] border border-gray-100">
+                    <div className="h-[420px] w-full max-w-full xl:h-[620px]">
                     {!isLoaded && (
                       <div className="flex h-full items-center justify-center text-xl font-bold">
                         Kaart laden...
@@ -4067,7 +4067,7 @@ function PropertiesContent() {
                             }}
                             onCloseClick={() => setSelectedMapProperty(null)}
                           >
-                            <div className="w-[240px] overflow-hidden rounded-2xl bg-white text-[#111827]">
+                            <div className="w-[min(240px,calc(100vw-4rem))] overflow-hidden rounded-2xl bg-white text-[#111827] sm:w-[240px]">
                               {selectedMapProperty.image && (
                                 <img
                                   src={selectedMapProperty.image}
@@ -4102,7 +4102,7 @@ function PropertiesContent() {
                     </div>
                   </div>
 
-                  <div className="mt-4 grid grid-cols-3 gap-3">
+                  <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
                     <button
                       type="button"
                       onClick={() => discoverNearbyListings(5000)}
@@ -4236,8 +4236,8 @@ function PropertiesContent() {
           </aside>
         )}
 
-        <section className="order-2 w-full max-w-[860px] xl:order-1">
-        <div className="mb-3 flex w-[676px] max-w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-6 py-5 shadow-sm">
+        <section className="order-2 min-w-0 w-full max-w-[860px] xl:order-1">
+        <div className="mb-3 flex w-full max-w-full flex-col gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-5 shadow-sm sm:w-[676px] sm:flex-row sm:items-center sm:justify-between sm:px-6">
             <div className="min-w-0">
               <p className="text-lg font-black text-[#071B4D]">
                 {filteredProperties.length} woningen gevonden
@@ -4247,7 +4247,7 @@ function PropertiesContent() {
               </p>
             </div>
 
-            <div className="flex items-center gap-2 sm:min-w-[230px]">
+            <div className="flex min-w-0 items-center gap-2 sm:min-w-[230px]">
               <span className="shrink-0 text-xs font-black uppercase tracking-wide text-slate-400">
                 Sorteer op
               </span>
@@ -4272,7 +4272,7 @@ function PropertiesContent() {
 
                 {isSortDropdownOpen && (
                   <div
-                    className="absolute right-0 z-50 mt-2 w-full min-w-[230px] overflow-hidden rounded-2xl border border-blue-100 bg-white shadow-xl"
+                    className="absolute right-0 z-50 mt-2 w-full min-w-0 overflow-hidden rounded-2xl border border-blue-100 bg-white shadow-xl sm:min-w-[230px]"
                     role="listbox"
                     aria-label="Sorteer woningen"
                   >
@@ -4428,9 +4428,9 @@ function PropertiesContent() {
               <Link
                 href={`/properties/${property.id}`}
                 key={property.id}
-                className="flex h-[175px] w-full max-w-[820px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+                className="flex h-auto min-w-0 w-full max-w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm sm:h-[175px] sm:max-w-[820px] sm:flex-row"
               >
-                <div className="relative h-[175px] w-[250px] shrink-0 overflow-hidden">
+                <div className="relative h-44 w-full shrink-0 overflow-hidden sm:h-[175px] sm:w-[250px]">
                   {property.image ? (
                     <>
                       <img
@@ -4502,7 +4502,7 @@ function PropertiesContent() {
 
                 </div>
 
-                <div className="min-w-[330px] flex-1 px-4 py-3.5 pr-4">
+                <div className="min-w-0 flex-1 px-4 py-3.5 pr-4 sm:min-w-[330px]">
                   <div className="min-w-0">
                     <h2 className="truncate text-base font-black text-[#071B4D]">
                       {displayTitle}
@@ -4544,7 +4544,7 @@ function PropertiesContent() {
                     </div>
                   </div>
 
-                  <div className="mt-3 flex w-full flex-nowrap items-center gap-1.5">
+                  <div className="mt-3 flex w-full flex-wrap items-center gap-1.5 sm:flex-nowrap">
                     <button
                       type="button"
                       onClick={(event) => {
@@ -4584,7 +4584,7 @@ function PropertiesContent() {
                   </div>
                 </div>
 
-                <div className="flex h-fit w-[96px] shrink-0 self-center flex-col items-center justify-center border-l border-slate-200 px-1.5">
+                <div className="flex h-fit w-full shrink-0 flex-row items-center justify-between border-t border-slate-200 px-4 py-3 sm:w-[96px] sm:flex-col sm:justify-center sm:self-center sm:border-l sm:border-t-0 sm:px-1.5 sm:py-0">
                   <button
                     type="button"
                     onClick={(event) => {

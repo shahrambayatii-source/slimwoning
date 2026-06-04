@@ -49,18 +49,18 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="SlimWoning" />
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
-      <body className="bg-[#f6f8fb] text-[#111827]">
-        <div className="min-h-screen bg-[#f6f8fb]">
-          <header className="sticky top-0 z-50 border-b border-white/10 bg-gradient-to-r from-[#071B4D] via-[#0A2463] to-[#071B4D] text-white shadow-[0_8px_30px_rgba(2,6,23,0.25)] backdrop-blur-xl">
-            <div className="mx-auto flex h-[84px] max-w-[1500px] items-center justify-between gap-10 pl-4 pr-8">
-              <Link href="/" className="flex items-center transition hover:opacity-90">
+      <body className="overflow-x-hidden bg-[#f6f8fb] text-[#111827]">
+        <div className="min-h-screen overflow-x-hidden bg-[#f6f8fb]">
+          <header className="sticky top-0 z-50 overflow-hidden border-b border-white/10 bg-gradient-to-r from-[#071B4D] via-[#0A2463] to-[#071B4D] text-white shadow-[0_8px_30px_rgba(2,6,23,0.25)] backdrop-blur-xl">
+            <div className="mx-auto flex min-h-[72px] max-w-full flex-wrap items-center gap-4 overflow-hidden px-3 py-2 lg:h-[84px] lg:max-w-[1500px] lg:flex-nowrap lg:justify-between lg:gap-10 lg:py-0 lg:pl-4 lg:pr-8">
+              <Link href="/" className="flex shrink-0 items-center transition hover:opacity-90">
                 <img
                   src="/logo.png"
                   alt="SlimWoning"
-                  className="h-20 w-auto object-contain brightness-0 invert"
+                  className="h-16 w-auto object-contain brightness-0 invert lg:h-20"
                 />
               </Link>
-              <nav className="flex items-center gap-9 text-[18px] font-semibold tracking-[-0.01em]">
+              <nav className="flex min-w-0 flex-wrap items-center gap-4 text-[15px] font-semibold tracking-[-0.01em] lg:flex-nowrap lg:gap-9 lg:text-[18px]">
                 <Link
                   href="/properties"
                   className={`transition hover:opacity-80 ${pathname.startsWith('/properties') ? activeNavClass : ''}`}
@@ -96,7 +96,7 @@ export default function RootLayout({
                 </Link>
               </nav>
 
-              <nav className="flex items-center gap-8 text-[18px] font-semibold tracking-[-0.01em]">
+              <nav className="flex min-w-0 flex-wrap items-center gap-4 text-[15px] font-semibold tracking-[-0.01em] lg:flex-nowrap lg:gap-8 lg:text-[18px]">
                 <Link
                   href="/verkopen/schatting"
                   className={`flex items-center gap-2 transition hover:opacity-80 ${
