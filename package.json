@@ -11,7 +11,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "next typegen && tsc --noEmit --incremental false"
   },
   "dependencies": {
     "@react-google-maps/api": "^2.20.8",
