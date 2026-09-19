@@ -2,16 +2,15 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
-First, run the development server:
+With nvm installed and installation separately approved, use Node `24.21.0` and npm `11.19.0` only; stop if either version check differs.
 
 ```bash
+nvm install
+nvm use
+node --version
+npm --version
+npm ci
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
