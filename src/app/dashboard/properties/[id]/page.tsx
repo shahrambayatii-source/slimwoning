@@ -268,7 +268,7 @@ export default function PropertyDetailsPage() {
     return text
   }
 
-  function capitalizeFirstLetter(value: any) {
+  function capitalizeFirstLetter(value: unknown) {
     const text = String(value || '').trim()
 
     if (!text) return ''
@@ -1198,7 +1198,7 @@ export default function PropertyDetailsPage() {
                       }`}
                     >
                       <span>Foto overzicht</span>
-                      <span className="text-xs text-slate-400">alle foto's</span>
+                      <span className="text-xs text-slate-400">alle foto&apos;s</span>
                     </button>
                   </div>
                 </div>
@@ -1998,7 +1998,7 @@ function InfoRow({
   value,
 }: {
   label: string
-  value: any
+  value: unknown
 }) {
   const displayValue = String(value || '').trim()
 
