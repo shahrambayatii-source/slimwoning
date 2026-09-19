@@ -1,6 +1,7 @@
 # Environment contract
 
-Status: P0-A initial documentation milestone only. This is an inventory of
+Status: P0-A initial documentation milestone, extended by the P0-B runtime
+contract under Runtime and package-manager evidence requirements. This is an inventory of
 configuration names and evidence requirements, not provider configuration or
 production-readiness certification. SW-041, SW-042, SW-044 and SW-046 remain open;
 SW-044 and SW-046 remain OPEN / NOT VERIFIED LIVE.
@@ -8,8 +9,9 @@ SW-044 and SW-046 remain OPEN / NOT VERIFIED LIVE.
 The accepted repository/HEAD, source ledger and milestone boundaries are in
 [launch contract](launch-contract.md). Repository evidence below is anchored to
 `6264cf8b03a306aa0cae6600825a74599319fcae`. No environment-variable values,
-credentials, provider IDs, deployed domains or selected runtime versions are
-recorded here. A name appearing in code does not prove it is configured or valid.
+credentials, provider IDs or deployed domains are recorded here; selected local
+runtime versions are recorded in the runtime section below. A name appearing in
+code does not prove it is configured or valid.
 
 ## Consumed configuration names
 
@@ -61,7 +63,7 @@ selection, configuration and implementation are outside P0-A.
 
 ## Runtime and package-manager evidence requirements
 
-Repository evidence: [package.json](../package.json), line 5;
+Accepted baseline evidence (before P0-B): [package.json](../package.json), line 5;
 [package-lock.json](../package-lock.json), lines 1 and 2151;
 [eslint.config.mjs](../eslint.config.mjs), line 5;
 [tsconfig.json](../tsconfig.json), line 7.
@@ -70,12 +72,39 @@ The accepted scripts cover development, build, start and lint. The lockfile is
 resolution evidence, not proof of a supported or reproduced runtime. No passing
 build, test, coverage gate, required-check policy or deployed runtime is claimed.
 
-SW-042 requires a later authorized slice to determine the full framework/SDK/lint
-dependency engine intersection, declare compatible Node/package-manager versions,
-and reproduce a clean locked installation and verification in an isolated
-environment. Selected versions are UNKNOWN here. Actual local/CI/Vercel alignment
-is NOT VERIFIED. Preserve strict/no-emit TypeScript, required framework packages,
-lockfile reproducibility and genuine lint/build intent under PR-039.
+Selected P0-B contract: Node `24.21.0` and npm `11.19.0`.
+`.nvmrc` selects Node; `packageManager` records npm. Engine families are `24.x` and `11.x`; these declarations alone do not establish enforcement.
+
+Evidence reviewed 2026-09-11: [Node release archive](https://nodejs.org/en/download/archive/v24.21.0) confirms the exact bundled pair.
+[Next.js 16 requirements](https://nextjs.org/docs/app/guides/upgrading/version-16) specify Node >=20.9.0, matching locked Next.js `16.2.4`.
+Captured lockfile evidence: 60 distinct Node engine ranges across 322 package entries;
+their intersection is `^20.19.0 || ^22.13.0 || >=24.0.0`, satisfied by Node `24.21.0`. This is static evidence only.
+[Vercel](https://vercel.com/docs/functions/runtimes/node-js/node-js-versions) permits major-version selection only and manages minor/patch updates.
+An exact local pin does not certify the deployed patch. CI/Vercel alignment remains NOT VERIFIED.
+
+Accepted D3-v7-R1 evidence: one isolated, network-denied offline `npm ci`
+completed with exit code 0 on macOS using Node `24.21.0` and npm `11.19.0`.
+The three expected dependency hooks returned exit code 0 with paired results.
+All seven root lifecycle dispatches were verified no-ops; root `prepare`
+was not a dependency prepare event.
+
+`DEPENDENCY_PREPARE_DURING_CONSUMER_NPM_CI = VERIFIED_FALSE` applies only to
+this exact candidate and its certified registry-only lockfile on that platform
+and toolchain. Git, directory and linked dependencies are excluded.
+Opening and closing repository/candidate integrity passed. Index-to-HEAD
+equality is inherited from the certified raw-index hash and pinned HEAD,
+not a fresh cached-diff verification.
+
+Accepted FIX-5 R2C evidence: one isolated, network-denied, non-emitting
+`tsc --project tsconfig.json --noEmit --incremental false` run using TypeScript
+5.9.3 and pinned Node 24.21.0 completed with exit code 0 and no diagnostics on
+the retained candidate.
+
+Project-wide build, lint, Next-generated type-check, tests, runtime behaviour,
+CI, deployment and production readiness remain NOT VERIFIED. SW-042 remains open.
+Further installation or verification requires separate explicit authorization
+and an isolated environment; this document authorizes neither.
+Preserve strict/no-emit TypeScript, required framework packages, lockfile reproducibility and genuine lint/build intent under PR-039.
 
 SW-041 requires later executable test/CI scaffolding and revision-attributed
 critical-flow evidence, extended through domain phases and final acceptance in

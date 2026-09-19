@@ -268,7 +268,7 @@ export default function PropertyDetailsPage() {
     return text
   }
 
-  function capitalizeFirstLetter(value: any) {
+  function capitalizeFirstLetter(value: unknown) {
     const text = String(value || '').trim()
 
     if (!text) return ''
@@ -1205,7 +1205,7 @@ export default function PropertyDetailsPage() {
                       }`}
                     >
                       <span>Foto overzicht</span>
-                      <span className="text-xs text-slate-400">alle foto's</span>
+                      <span className="text-xs text-slate-400">alle foto&apos;s</span>
                     </button>
                   </div>
                 </div>
@@ -2484,7 +2484,7 @@ function InfoRow({
   value,
 }: {
   label: string
-  value: any
+  value: React.ReactNode
 }) {
   return (
     <div className="grid grid-cols-[1fr_auto] items-center gap-3 border-b border-gray-100 py-2">

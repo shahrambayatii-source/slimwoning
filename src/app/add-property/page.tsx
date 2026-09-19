@@ -1558,7 +1558,7 @@ export default function AddPropertyPage() {
         )}
 
         <section className="h-fit w-full rounded-3xl border border-[#E2E8F0] bg-white p-5 shadow-sm md:p-7">
-          <h2 className="mb-4 text-2xl font-bold">Vastgoedfoto's</h2>
+          <h2 className="mb-4 text-2xl font-bold">Vastgoedfoto&apos;s</h2>
 
           <p className="mb-5 text-sm text-gray-500">
             Upload minstens 5 duidelijke foto’s van het vastgoed. Met {selectedPresentationStyle.title} kun je maximaal {selectedPresentationStyle.maxPhotos} foto’s toevoegen.
@@ -1755,7 +1755,7 @@ export default function AddPropertyPage() {
         </section>
         {/* Stedenbouw en risico's */}
         <section className="h-fit w-full rounded-3xl border border-[#E2E8F0] bg-white p-5 shadow-sm md:p-7">
-          <h2 className="mb-4 text-2xl font-bold">Stedenbouw en risico's</h2>
+          <h2 className="mb-4 text-2xl font-bold">Stedenbouw en risico&apos;s</h2>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="[&_button]:!bg-[#F8FAFC]">
