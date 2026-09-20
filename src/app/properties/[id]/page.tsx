@@ -3,11 +3,10 @@
 import {
   GoogleMap,
   Marker,
-  StreetViewPanorama,
   useJsApiLoader,
 } from '@react-google-maps/api'
 
-import React, { useState, useEffect, useRef, useMemo } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
