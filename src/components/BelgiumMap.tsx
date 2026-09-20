@@ -610,6 +610,7 @@ export default function BelgiumMap({
               >
                 <img
                   src={property.image}
+                  alt=""
                   onError={(e) => {
                     ;(e.currentTarget as HTMLImageElement).src =
                       'https://images.unsplash.com/photo-1568605114967-8130f3a36994?q=80&w=1200&auto=format&fit=crop'
