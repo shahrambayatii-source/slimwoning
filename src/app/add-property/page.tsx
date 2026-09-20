@@ -65,7 +65,7 @@ export default function AddPropertyPage() {
   const [beschikbaarheid, setBeschikbaarheid] = useState('')
   const [tuinligging, setTuinligging] = useState('')
   const [bestemming, setBestemming] = useState('')
-  const [ligging, setLigging] = useState('')
+  const [ligging] = useState('')
   const [liggingTags, setLiggingTags] = useState<string[]>([])
   const [liggingSearch, setLiggingSearch] = useState('')
   const [openHuis, setOpenHuis] = useState('')
