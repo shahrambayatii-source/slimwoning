@@ -9,7 +9,7 @@ export const WONINGKENMERKEN_OPTIONS = [
   'Dichtbij openbaar vervoer',
 ]
 
-export function getWoningkenmerken(property: any): string[] {
+export function getWoningkenmerken(property: Record<string, unknown> | null | undefined): string[] {
   return Array.isArray(property?.woningkenmerken)
     ? property.woningkenmerken.filter((item: unknown): item is string => typeof item === 'string' && Boolean(item.trim()))
     : []
