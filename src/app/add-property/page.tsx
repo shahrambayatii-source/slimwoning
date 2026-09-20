@@ -41,7 +41,7 @@ export default function AddPropertyPage() {
   const [latitude, setLatitude] = useState<number | null>(null)
   const [longitude, setLongitude] = useState<number | null>(null)
   const [description, setDescription] = useState('')
-  const [image, setImage] = useState('')
+  const [, setImage] = useState('')
   const [images, setImages] = useState<string[]>([])
   const [makelaarLogo, setMakelaarLogo] = useState('')
   const [makelaarKantoornaam, setMakelaarKantoornaam] = useState('')
