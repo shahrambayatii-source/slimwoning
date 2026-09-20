@@ -586,9 +586,20 @@ export default function HomePage() {
       setQuestionSent(true)
       setQuestionText('')
       setQuestionEmail('')
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.log(error)
-      alert(error?.message || 'Vraag kon niet worden verzonden.')
+
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : typeof error === 'object' &&
+              error !== null &&
+              'message' in error &&
+              typeof error.message === 'string'
+            ? error.message
+            : ''
+
+      alert(errorMessage || 'Vraag kon niet worden verzonden.')
     } finally {
       setSendingQuestion(false)
     }
