@@ -46,7 +46,7 @@ export default function CheckoutPage() {
           const safeUrl = new URL(data.url)
           window.location.href = safeUrl.toString()
           return
-        } catch (error) {
+        } catch {
           console.error('Malformed Stripe URL:', data.url)
         }
       }
