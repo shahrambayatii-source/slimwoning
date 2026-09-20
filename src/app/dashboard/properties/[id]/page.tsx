@@ -3,11 +3,10 @@
 import {
   GoogleMap,
   Marker,
-  StreetViewPanorama,
   useJsApiLoader,
 } from '@react-google-maps/api'
 
-import React, { useState, useEffect, useRef, useMemo } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
@@ -2094,24 +2093,4 @@ function SectionCard({
       {children}
     </div>
   )
-}
-
-type ComparableProperty = {
-  id: string | number
-  title?: string | null
-  address?: string | null
-  city?: string | null
-  postcode?: string | number | null
-  price?: string | number | null
-  slaapkamers?: string | number | null
-  bedrooms?: string | number | null
-  badkamers?: string | number | null
-  bathrooms?: string | number | null
-  bewoonbare_oppervlakte?: string | number | null
-  oppervlakte?: string | number | null
-  living_area?: string | number | null
-  grondoppervlakte?: string | number | null
-  epc?: string | null
-  epc_code?: string | null
-  ai_rank_score?: string | number | null
 }
