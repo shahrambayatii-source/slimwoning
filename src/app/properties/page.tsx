@@ -1080,23 +1080,6 @@ function PropertiesContent() {
     return offerType === 'Huur' ? `${formattedPrice} / maand` : formattedPrice
   }
 
-  function formatPricePerM2(property: any) {
-    const price = numberValue(property.price)
-    const area = numberValue(
-      property.bewoonbare_oppervlakte ||
-        property.oppervlakte ||
-        property.living_area
-    )
-
-    if (!price || !area) return null
-
-    return `± ${new Intl.NumberFormat('nl-BE', {
-      style: 'currency',
-      currency: 'EUR',
-      maximumFractionDigits: 0,
-    }).format(price / area)} / m²`
-  }
-
   function getPropertyArea(property: any) {
     return numberValue(
       property.bewoonbare_oppervlakte ||
