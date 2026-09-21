@@ -876,21 +876,6 @@ function getPropertyPricePerM2(property: any) {
   return price / area
 }
 
-function getCityAveragePricePerM2(property: any, properties: any[]) {
-  const city = String(property.city || '').trim().toLowerCase()
-
-  if (!city) return 0
-
-  const comparablePrices = properties
-    .filter((item) => String(item.city || '').trim().toLowerCase() === city)
-    .map((item) => getPropertyPricePerM2(item))
-    .filter((value) => value > 0)
-
-  if (comparablePrices.length < 2) return 0
-
-  return comparablePrices.reduce((total, value) => total + value, 0) / comparablePrices.length
-}
-
 function getComparablePool(properties: any[], marketComparables: any[]) {
   const normalizedMarketComparables = marketComparables.map((item) => ({
     ...item,
