@@ -51,7 +51,7 @@ function PropertiesContent() {
   const [favoriteIds, setFavoriteIds] = useState<number[]>([])
   const [compareIds, setCompareIds] = useState<number[]>([])
   const [userId, setUserId] = useState('')
-  const [userEmail, setUserEmail] = useState('')
+  const [, setUserEmail] = useState('')
   const [search, setSearch] = useState('')
   const [appliedSearch, setAppliedSearch] = useState('')
   const [city, setCity] = useState('')
