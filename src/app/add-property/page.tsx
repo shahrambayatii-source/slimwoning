@@ -131,7 +131,6 @@ export default function AddPropertyPage() {
   const inputClass =
     'rounded-xl border border-[#CBD5E1] bg-white p-4 text-[#071B4D] placeholder-gray-500 outline-none focus:border-[#071B4D] focus:ring-2 focus:ring-[#071B4D]/10'
 
-  const selectClass = `${inputClass} h-[58px] appearance-none bg-[url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23071B4D'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E")] bg-[length:18px_18px] bg-[right_1rem_center] bg-no-repeat pr-12`
 
   const yesNoOptions = ['Ja', 'Nee', 'Niet gespecificeerd']
   const scoreOptions = ['A', 'B', 'C', 'D', 'Niet gespecificeerd']
