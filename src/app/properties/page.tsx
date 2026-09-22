@@ -568,11 +568,6 @@ function PropertiesContent() {
     router.push(`/compare?${params.toString()}`)
   }
 
-  async function handleLogout() {
-    await supabase.auth.signOut()
-    router.push('/login')
-  }
-
   async function getProperties() {
     if (isRentPage) {
       const rentalResult = await supabase
