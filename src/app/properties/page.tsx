@@ -1166,24 +1166,6 @@ function PropertiesContent() {
     return price / area
   }
 
-  function getCityAveragePricePerM2(property: any) {
-    const currentCity = String(property.city || '').toLowerCase()
-
-    const cityProperties = properties.filter((item) => {
-      const itemCity = String(item.city || '').toLowerCase()
-      return itemCity === currentCity && getPropertyPricePerM2(item) > 0
-    })
-
-    if (cityProperties.length < 2) return 0
-
-    const total = cityProperties.reduce(
-      (sum, item) => sum + getPropertyPricePerM2(item),
-      0
-    )
-
-    return total / cityProperties.length
-  }
-
   function getComparableProperties(property: any) {
     const city = String(property.city || '').trim().toLowerCase()
     const type = getPropertyTypeForAnalysis(property)
@@ -1991,66 +1973,6 @@ function PropertiesContent() {
       )
     ).size
   }, [filteredPropertiesWithLocation])
-
-  const marketInsights = useMemo(() => {
-    const priceFormatter = new Intl.NumberFormat('nl-BE', {
-      style: 'currency',
-      currency: 'EUR',
-      maximumFractionDigits: 0,
-    })
-
-    const propertiesWithPricePerM2 = filteredProperties.filter(
-      (property) => getPropertyPricePerM2(property) > 0
-    )
-    const firstPropertyWithMarketData = propertiesWithPricePerM2.find(
-      (property) => getCityAveragePricePerM2(property) > 0
-    )
-    const visibleAveragePricePerM2 = propertiesWithPricePerM2.length > 0
-      ? propertiesWithPricePerM2.reduce((sum, property) => sum + getPropertyPricePerM2(property), 0) / propertiesWithPricePerM2.length
-      : 0
-    const averagePricePerM2 = firstPropertyWithMarketData
-      ? getCityAveragePricePerM2(firstPropertyWithMarketData)
-      : visibleAveragePricePerM2
-
-    const epcCounts = filteredProperties.reduce<Record<string, number>>((counts, property) => {
-      const epc = String(property.epc || property.epc_code || '').trim().toUpperCase()
-      if (!epc) return counts
-
-      counts[epc] = (counts[epc] || 0) + 1
-      return counts
-    }, {})
-    const mostCommonEpc = Object.entries(epcCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || ''
-
-    const bestDeal = propertiesWithPricePerM2.reduce(
-      (best, property) => {
-        const cityAverage = getCityAveragePricePerM2(property)
-        const pricePerM2 = getPropertyPricePerM2(property)
-
-        if (!cityAverage || !pricePerM2 || pricePerM2 >= cityAverage) return best
-
-        const percentageBelowMarket = Math.round(((cityAverage - pricePerM2) / cityAverage) * 100)
-
-        return percentageBelowMarket > best.percentage ? { percentage: percentageBelowMarket } : best
-      },
-      { percentage: 0 }
-    )
-
-    const aiInsight =
-      filteredProperties.length < 2
-        ? 'Onvoldoende gegevens beschikbaar voor een betrouwbare inschatting.'
-        : mostCommonEpc && ['A+++++', 'A++++', 'A+++', 'A++', 'A+', 'A', 'B'].includes(mostCommonEpc)
-          ? 'Op basis van de huidige resultaten komen gunstige EPC-labels relatief vaak voor. Dit is indicatief.'
-          : filteredProperties.some((property) => String(property.type || property.woning_type || property.title || '').toLowerCase().includes('appartement'))
-            ? 'Er staan appartementen in de huidige resultaten. Marktvraag kan niet betrouwbaar worden afgeleid zonder externe marktdata.'
-            : 'Beperkte betrouwbaarheid: marktgedrag wordt hier niet extern gevalideerd.'
-
-    return {
-      averagePricePerM2: averagePricePerM2 ? `${priceFormatter.format(averagePricePerM2)} / m²` : 'Niet beschikbaar',
-      averageEpc: mostCommonEpc || 'Onbekend',
-      bestDeal: bestDeal.percentage > 0 ? `${bestDeal.percentage}% onder eigen dataset` : 'Geen analyse',
-      aiInsight,
-    }
-  }, [filteredProperties])
 
   useEffect(() => {
     if (!mapInstance || !isLoaded) return
