@@ -47,7 +47,7 @@ function PropertiesContent() {
 
     return properties.find((property) => Number(property.id) === openRenovatieScanId) || null
   }, [openRenovatieScanId, properties])
-  const [marketComparables, setMarketComparables] = useState<any[]>([])
+  const [marketComparables, setMarketComparables] = useState<Record<string, unknown>[]>([])
   const [favoriteIds, setFavoriteIds] = useState<number[]>([])
   const [compareIds, setCompareIds] = useState<number[]>([])
   const [userId, setUserId] = useState('')
