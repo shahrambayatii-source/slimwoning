@@ -3969,11 +3969,16 @@ function PropertiesContent() {
                           >
                             <div className="w-[min(240px,calc(100vw-4rem))] overflow-hidden rounded-2xl bg-white text-[#111827] sm:w-[240px]">
                               {selectedMapProperty.image && (
-                                <img
-                                  src={selectedMapProperty.image}
-                                  alt={selectedMapProperty.title}
-                                  className="mb-3 h-32 w-full rounded-xl object-cover"
-                                />
+                                <div className="relative mb-3 h-32 w-full overflow-hidden rounded-xl">
+                                  <Image
+                                    src={selectedMapProperty.image}
+                                    alt={selectedMapProperty.title}
+                                    fill
+                                    unoptimized
+                                    sizes="min(240px, calc(100vw - 4rem))"
+                                    className="object-cover"
+                                  />
+                                </div>
                               )}
 
                               <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-700">
