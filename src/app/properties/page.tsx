@@ -398,7 +398,7 @@ function PropertiesContent() {
     router.replace(queryString ? `${routeBase}?${queryString}` : routeBase, {
       scroll: false,
     })
-  }, [search, appliedSearch])
+  }, [search, appliedSearch, searchParams, router, routeBase])
 
 
   function houseMarkerIcon() {
